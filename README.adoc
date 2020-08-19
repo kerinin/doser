@@ -1,0 +1,24 @@
+# doser
+Aquarium Doser
+
+## ATO
+
+Reads from some number of water level sensors, periodically fills until a sensor is triggered. 
+Configurable fill rate (mL/s), frequency (cron), and max fill amount.
+Should alert if the sensor doesn't trigger after some amount of time (pump failure) or if backup sensors trigger (sensor failure).
+There may be an opportunity to use a variation on PID control logic.
+
+
+## AWC
+
+Paired set of pumps that always run at the same rate.
+Configurable exchange rate (L/day)
+One pump adds fresh water, one removes old water.
+
+
+## Doser
+
+Set of pumps that always run at different times.
+Configurable dose rate for each pump (mL/day)
+Each pump adds a specific additive.
+Eventually the dosing rate could be driven by an automated tester.
