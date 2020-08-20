@@ -36,10 +36,14 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	AutoTopOff() AutoTopOffResolver
+	AutoWaterChange() AutoWaterChangeResolver
+	DoserComponent() DoserComponentResolver
 	Firmata() FirmataResolver
 	Mutation() MutationResolver
 	Pump() PumpResolver
 	Query() QueryResolver
+	WaterLevelSensor() WaterLevelSensorResolver
 }
 
 type DirectiveRoot struct {
@@ -118,6 +122,17 @@ type ComplexityRoot struct {
 	}
 }
 
+type AutoTopOffResolver interface {
+	Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error)
+	LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error)
+}
+type AutoWaterChangeResolver interface {
+	FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
+	WastePump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
+}
+type DoserComponentResolver interface {
+	Pump(ctx context.Context, obj *models.DoserComponent) (*models.Pump, error)
+}
 type FirmataResolver interface {
 	Pumps(ctx context.Context, obj *models.Firmata) ([]*models.Pump, error)
 }
@@ -125,9 +140,9 @@ type MutationResolver interface {
 	CreateFirmata(ctx context.Context, input model.NewFirmataInput) (*models.Firmata, error)
 	CreatePump(ctx context.Context, input model.NewPumpInput) (*models.Pump, error)
 	CalibratePump(ctx context.Context, input model.CalibratePumpInput) (*models.Calibration, error)
-	CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*model.WaterLevelSensor, error)
-	CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*model.AutoTopOff, error)
-	CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*model.AutoWaterChange, error)
+	CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*models.WaterLevelSensor, error)
+	CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error)
+	CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*models.AutoWaterChange, error)
 	CreateDosers(ctx context.Context, input model.NewDosersInput) (*model.Dosers, error)
 }
 type PumpResolver interface {
@@ -139,10 +154,15 @@ type PumpResolver interface {
 type QueryResolver interface {
 	Firmatas(ctx context.Context) ([]*models.Firmata, error)
 	Pumps(ctx context.Context) ([]*models.Pump, error)
-	WaterLevelSensors(ctx context.Context) ([]*model.WaterLevelSensor, error)
-	AutoTopOff(ctx context.Context) ([]*model.AutoTopOff, error)
-	AutoWaterChanges(ctx context.Context) ([]*model.AutoWaterChange, error)
+	WaterLevelSensors(ctx context.Context) ([]*models.WaterLevelSensor, error)
+	AutoTopOff(ctx context.Context) ([]*models.AutoTopOff, error)
+	AutoWaterChanges(ctx context.Context) ([]*models.AutoWaterChange, error)
 	Dosers(ctx context.Context) ([]*model.Dosers, error)
+}
+type WaterLevelSensorResolver interface {
+	Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error)
+
+	Kind(ctx context.Context, obj *models.WaterLevelSensor) (*model.SensorKind, error)
 }
 
 type executableSchema struct {
@@ -866,7 +886,7 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _AutoTopOff_id(ctx context.Context, field graphql.CollectedField, obj *model.AutoTopOff) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoTopOff_id(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -900,7 +920,7 @@ func (ec *executionContext) _AutoTopOff_id(ctx context.Context, field graphql.Co
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoTopOff_pump(ctx context.Context, field graphql.CollectedField, obj *model.AutoTopOff) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoTopOff_pump(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -911,13 +931,13 @@ func (ec *executionContext) _AutoTopOff_pump(ctx context.Context, field graphql.
 		Object:   "AutoTopOff",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Pump, nil
+		return ec.resolvers.AutoTopOff().Pump(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -934,7 +954,7 @@ func (ec *executionContext) _AutoTopOff_pump(ctx context.Context, field graphql.
 	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoTopOff_level_sensors(ctx context.Context, field graphql.CollectedField, obj *model.AutoTopOff) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoTopOff_level_sensors(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -945,13 +965,13 @@ func (ec *executionContext) _AutoTopOff_level_sensors(ctx context.Context, field
 		Object:   "AutoTopOff",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.LevelSensors, nil
+		return ec.resolvers.AutoTopOff().LevelSensors(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -963,12 +983,12 @@ func (ec *executionContext) _AutoTopOff_level_sensors(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.WaterLevelSensor)
+	res := resTmp.([]*models.WaterLevelSensor)
 	fc.Result = res
-	return ec.marshalNWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensorᚄ(ctx, field.Selections, res)
+	return ec.marshalNWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensorᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoTopOff_fill_rate(ctx context.Context, field graphql.CollectedField, obj *model.AutoTopOff) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoTopOff_fill_rate(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1002,7 +1022,7 @@ func (ec *executionContext) _AutoTopOff_fill_rate(ctx context.Context, field gra
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoTopOff_fill_frequency(ctx context.Context, field graphql.CollectedField, obj *model.AutoTopOff) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoTopOff_fill_frequency(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1028,12 +1048,12 @@ func (ec *executionContext) _AutoTopOff_fill_frequency(ctx context.Context, fiel
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoTopOff_max_fill_volume(ctx context.Context, field graphql.CollectedField, obj *model.AutoTopOff) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoTopOff_max_fill_volume(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1059,12 +1079,12 @@ func (ec *executionContext) _AutoTopOff_max_fill_volume(ctx context.Context, fie
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*float64)
+	res := resTmp.(float64)
 	fc.Result = res
-	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+	return ec.marshalOFloat2float64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoWaterChange_id(ctx context.Context, field graphql.CollectedField, obj *model.AutoWaterChange) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoWaterChange_id(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1098,7 +1118,7 @@ func (ec *executionContext) _AutoWaterChange_id(ctx context.Context, field graph
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoWaterChange_fresh_pump(ctx context.Context, field graphql.CollectedField, obj *model.AutoWaterChange) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoWaterChange_fresh_pump(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1109,13 +1129,13 @@ func (ec *executionContext) _AutoWaterChange_fresh_pump(ctx context.Context, fie
 		Object:   "AutoWaterChange",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.FreshPump, nil
+		return ec.resolvers.AutoWaterChange().FreshPump(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1132,7 +1152,7 @@ func (ec *executionContext) _AutoWaterChange_fresh_pump(ctx context.Context, fie
 	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoWaterChange_waste_pump(ctx context.Context, field graphql.CollectedField, obj *model.AutoWaterChange) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoWaterChange_waste_pump(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1143,13 +1163,13 @@ func (ec *executionContext) _AutoWaterChange_waste_pump(ctx context.Context, fie
 		Object:   "AutoWaterChange",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.WastePump, nil
+		return ec.resolvers.AutoWaterChange().WastePump(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1166,7 +1186,7 @@ func (ec *executionContext) _AutoWaterChange_waste_pump(ctx context.Context, fie
 	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AutoWaterChange_exchange_rate(ctx context.Context, field graphql.CollectedField, obj *model.AutoWaterChange) (ret graphql.Marshaler) {
+func (ec *executionContext) _AutoWaterChange_exchange_rate(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1200,7 +1220,7 @@ func (ec *executionContext) _AutoWaterChange_exchange_rate(ctx context.Context, 
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _DoserComponent_pump(ctx context.Context, field graphql.CollectedField, obj *model.DoserComponent) (ret graphql.Marshaler) {
+func (ec *executionContext) _DoserComponent_pump(ctx context.Context, field graphql.CollectedField, obj *models.DoserComponent) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1211,13 +1231,13 @@ func (ec *executionContext) _DoserComponent_pump(ctx context.Context, field grap
 		Object:   "DoserComponent",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Pump, nil
+		return ec.resolvers.DoserComponent().Pump(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1234,7 +1254,7 @@ func (ec *executionContext) _DoserComponent_pump(ctx context.Context, field grap
 	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _DoserComponent_dose_rate(ctx context.Context, field graphql.CollectedField, obj *model.DoserComponent) (ret graphql.Marshaler) {
+func (ec *executionContext) _DoserComponent_dose_rate(ctx context.Context, field graphql.CollectedField, obj *models.DoserComponent) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1328,9 +1348,9 @@ func (ec *executionContext) _Dosers_component(ctx context.Context, field graphql
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.DoserComponent)
+	res := resTmp.([]*models.DoserComponent)
 	fc.Result = res
-	return ec.marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponentᚄ(ctx, field.Selections, res)
+	return ec.marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponentᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Firmata_id(ctx context.Context, field graphql.CollectedField, obj *models.Firmata) (ret graphql.Marshaler) {
@@ -1591,9 +1611,9 @@ func (ec *executionContext) _Mutation_createWaterLevelSensor(ctx context.Context
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.WaterLevelSensor)
+	res := resTmp.(*models.WaterLevelSensor)
 	fc.Result = res
-	return ec.marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensor(ctx, field.Selections, res)
+	return ec.marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensor(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createAutoTopOff(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1632,9 +1652,9 @@ func (ec *executionContext) _Mutation_createAutoTopOff(ctx context.Context, fiel
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.AutoTopOff)
+	res := resTmp.(*models.AutoTopOff)
 	fc.Result = res
-	return ec.marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOff(ctx, field.Selections, res)
+	return ec.marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1673,9 +1693,9 @@ func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context,
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.AutoWaterChange)
+	res := resTmp.(*models.AutoWaterChange)
 	fc.Result = res
-	return ec.marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChange(ctx, field.Selections, res)
+	return ec.marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createDosers(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1971,9 +1991,9 @@ func (ec *executionContext) _Query_water_level_sensors(ctx context.Context, fiel
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.WaterLevelSensor)
+	res := resTmp.([]*models.WaterLevelSensor)
 	fc.Result = res
-	return ec.marshalOWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensorᚄ(ctx, field.Selections, res)
+	return ec.marshalOWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensorᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_auto_top_off(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2002,9 +2022,9 @@ func (ec *executionContext) _Query_auto_top_off(ctx context.Context, field graph
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.AutoTopOff)
+	res := resTmp.([]*models.AutoTopOff)
 	fc.Result = res
-	return ec.marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOffᚄ(ctx, field.Selections, res)
+	return ec.marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOffᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_auto_water_changes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2033,9 +2053,9 @@ func (ec *executionContext) _Query_auto_water_changes(ctx context.Context, field
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.AutoWaterChange)
+	res := resTmp.([]*models.AutoWaterChange)
 	fc.Result = res
-	return ec.marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChangeᚄ(ctx, field.Selections, res)
+	return ec.marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChangeᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_dosers(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2206,7 +2226,7 @@ func (ec *executionContext) _TwoPointCalibration_measured_volume(ctx context.Con
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _WaterLevelSensor_id(ctx context.Context, field graphql.CollectedField, obj *model.WaterLevelSensor) (ret graphql.Marshaler) {
+func (ec *executionContext) _WaterLevelSensor_id(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2240,7 +2260,7 @@ func (ec *executionContext) _WaterLevelSensor_id(ctx context.Context, field grap
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _WaterLevelSensor_firmata(ctx context.Context, field graphql.CollectedField, obj *model.WaterLevelSensor) (ret graphql.Marshaler) {
+func (ec *executionContext) _WaterLevelSensor_firmata(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2251,13 +2271,13 @@ func (ec *executionContext) _WaterLevelSensor_firmata(ctx context.Context, field
 		Object:   "WaterLevelSensor",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Firmata, nil
+		return ec.resolvers.WaterLevelSensor().Firmata(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2274,7 +2294,7 @@ func (ec *executionContext) _WaterLevelSensor_firmata(ctx context.Context, field
 	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _WaterLevelSensor_pin(ctx context.Context, field graphql.CollectedField, obj *model.WaterLevelSensor) (ret graphql.Marshaler) {
+func (ec *executionContext) _WaterLevelSensor_pin(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2303,12 +2323,12 @@ func (ec *executionContext) _WaterLevelSensor_pin(ctx context.Context, field gra
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _WaterLevelSensor_kind(ctx context.Context, field graphql.CollectedField, obj *model.WaterLevelSensor) (ret graphql.Marshaler) {
+func (ec *executionContext) _WaterLevelSensor_kind(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2319,13 +2339,13 @@ func (ec *executionContext) _WaterLevelSensor_kind(ctx context.Context, field gr
 		Object:   "WaterLevelSensor",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Kind, nil
+		return ec.resolvers.WaterLevelSensor().Kind(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3684,7 +3704,7 @@ func (ec *executionContext) unmarshalInputNewPumpInput(ctx context.Context, obj 
 
 var autoTopOffImplementors = []string{"AutoTopOff"}
 
-func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSet, obj *model.AutoTopOff) graphql.Marshaler {
+func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSet, obj *models.AutoTopOff) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, autoTopOffImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -3696,22 +3716,40 @@ func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSe
 		case "id":
 			out.Values[i] = ec._AutoTopOff_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "pump":
-			out.Values[i] = ec._AutoTopOff_pump(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoTopOff_pump(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "level_sensors":
-			out.Values[i] = ec._AutoTopOff_level_sensors(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoTopOff_level_sensors(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "fill_rate":
 			out.Values[i] = ec._AutoTopOff_fill_rate(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "fill_frequency":
 			out.Values[i] = ec._AutoTopOff_fill_frequency(ctx, field, obj)
@@ -3730,7 +3768,7 @@ func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSe
 
 var autoWaterChangeImplementors = []string{"AutoWaterChange"}
 
-func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.SelectionSet, obj *model.AutoWaterChange) graphql.Marshaler {
+func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.SelectionSet, obj *models.AutoWaterChange) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, autoWaterChangeImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -3742,22 +3780,40 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 		case "id":
 			out.Values[i] = ec._AutoWaterChange_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "fresh_pump":
-			out.Values[i] = ec._AutoWaterChange_fresh_pump(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoWaterChange_fresh_pump(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "waste_pump":
-			out.Values[i] = ec._AutoWaterChange_waste_pump(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoWaterChange_waste_pump(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "exchange_rate":
 			out.Values[i] = ec._AutoWaterChange_exchange_rate(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -3772,7 +3828,7 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 
 var doserComponentImplementors = []string{"DoserComponent"}
 
-func (ec *executionContext) _DoserComponent(ctx context.Context, sel ast.SelectionSet, obj *model.DoserComponent) graphql.Marshaler {
+func (ec *executionContext) _DoserComponent(ctx context.Context, sel ast.SelectionSet, obj *models.DoserComponent) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, doserComponentImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -3782,14 +3838,23 @@ func (ec *executionContext) _DoserComponent(ctx context.Context, sel ast.Selecti
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("DoserComponent")
 		case "pump":
-			out.Values[i] = ec._DoserComponent_pump(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._DoserComponent_pump(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "dose_rate":
 			out.Values[i] = ec._DoserComponent_dose_rate(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -4133,7 +4198,7 @@ func (ec *executionContext) _TwoPointCalibration(ctx context.Context, sel ast.Se
 
 var waterLevelSensorImplementors = []string{"WaterLevelSensor"}
 
-func (ec *executionContext) _WaterLevelSensor(ctx context.Context, sel ast.SelectionSet, obj *model.WaterLevelSensor) graphql.Marshaler {
+func (ec *executionContext) _WaterLevelSensor(ctx context.Context, sel ast.SelectionSet, obj *models.WaterLevelSensor) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, waterLevelSensorImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -4145,20 +4210,38 @@ func (ec *executionContext) _WaterLevelSensor(ctx context.Context, sel ast.Selec
 		case "id":
 			out.Values[i] = ec._WaterLevelSensor_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "firmata":
-			out.Values[i] = ec._WaterLevelSensor_firmata(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._WaterLevelSensor_firmata(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "pin":
 			out.Values[i] = ec._WaterLevelSensor_pin(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "kind":
-			out.Values[i] = ec._WaterLevelSensor_kind(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._WaterLevelSensor_kind(ctx, field, obj)
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4415,11 +4498,11 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
-func (ec *executionContext) marshalNAutoTopOff2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOff(ctx context.Context, sel ast.SelectionSet, v model.AutoTopOff) graphql.Marshaler {
+func (ec *executionContext) marshalNAutoTopOff2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx context.Context, sel ast.SelectionSet, v models.AutoTopOff) graphql.Marshaler {
 	return ec._AutoTopOff(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOff(ctx context.Context, sel ast.SelectionSet, v *model.AutoTopOff) graphql.Marshaler {
+func (ec *executionContext) marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx context.Context, sel ast.SelectionSet, v *models.AutoTopOff) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -4429,11 +4512,11 @@ func (ec *executionContext) marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoser
 	return ec._AutoTopOff(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNAutoWaterChange2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChange(ctx context.Context, sel ast.SelectionSet, v model.AutoWaterChange) graphql.Marshaler {
+func (ec *executionContext) marshalNAutoWaterChange2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx context.Context, sel ast.SelectionSet, v models.AutoWaterChange) graphql.Marshaler {
 	return ec._AutoWaterChange(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChange(ctx context.Context, sel ast.SelectionSet, v *model.AutoWaterChange) graphql.Marshaler {
+func (ec *executionContext) marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx context.Context, sel ast.SelectionSet, v *models.AutoWaterChange) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -4468,7 +4551,7 @@ func (ec *executionContext) unmarshalNCreateWaterLevelSensor2githubᚗcomᚋkeri
 	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponent(ctx context.Context, sel ast.SelectionSet, v *model.DoserComponent) graphql.Marshaler {
+func (ec *executionContext) marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponent(ctx context.Context, sel ast.SelectionSet, v *models.DoserComponent) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -4669,11 +4752,11 @@ func (ec *executionContext) marshalNTwoPointCalibration2ᚖgithubᚗcomᚋkerini
 	return ec._TwoPointCalibration(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNWaterLevelSensor2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensor(ctx context.Context, sel ast.SelectionSet, v model.WaterLevelSensor) graphql.Marshaler {
+func (ec *executionContext) marshalNWaterLevelSensor2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensor(ctx context.Context, sel ast.SelectionSet, v models.WaterLevelSensor) graphql.Marshaler {
 	return ec._WaterLevelSensor(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.WaterLevelSensor) graphql.Marshaler {
+func (ec *executionContext) marshalNWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensorᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.WaterLevelSensor) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -4697,7 +4780,7 @@ func (ec *executionContext) marshalNWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerini
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensor(ctx, sel, v[i])
+			ret[i] = ec.marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensor(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4710,7 +4793,7 @@ func (ec *executionContext) marshalNWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerini
 	return ret
 }
 
-func (ec *executionContext) marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensor(ctx context.Context, sel ast.SelectionSet, v *model.WaterLevelSensor) graphql.Marshaler {
+func (ec *executionContext) marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensor(ctx context.Context, sel ast.SelectionSet, v *models.WaterLevelSensor) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -4949,7 +5032,7 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
-func (ec *executionContext) marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOffᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.AutoTopOff) graphql.Marshaler {
+func (ec *executionContext) marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOffᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.AutoTopOff) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -4976,7 +5059,7 @@ func (ec *executionContext) marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdo
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOff(ctx, sel, v[i])
+			ret[i] = ec.marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4989,7 +5072,7 @@ func (ec *executionContext) marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdo
 	return ret
 }
 
-func (ec *executionContext) marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChangeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.AutoWaterChange) graphql.Marshaler {
+func (ec *executionContext) marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChangeᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.AutoWaterChange) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -5016,7 +5099,7 @@ func (ec *executionContext) marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerinin
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChange(ctx, sel, v[i])
+			ret[i] = ec.marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -5053,7 +5136,7 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return graphql.MarshalBoolean(*v)
 }
 
-func (ec *executionContext) marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponentᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.DoserComponent) graphql.Marshaler {
+func (ec *executionContext) marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponentᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.DoserComponent) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -5080,7 +5163,7 @@ func (ec *executionContext) marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerinin�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponent(ctx, sel, v[i])
+			ret[i] = ec.marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponent(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -5171,6 +5254,15 @@ func (ec *executionContext) marshalOFirmata2ᚕᚖgithubᚗcomᚋkerininᚋdoser
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) unmarshalOFloat2float64(ctx context.Context, v interface{}) (float64, error) {
+	res, err := graphql.UnmarshalFloat(v)
+	return res, graphql.WrapErrorWithInputPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOFloat2float64(ctx context.Context, sel ast.SelectionSet, v float64) graphql.Marshaler {
+	return graphql.MarshalFloat(v)
 }
 
 func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v interface{}) (*float64, error) {
@@ -5314,7 +5406,7 @@ func (ec *executionContext) marshalOTwoPointCalibration2ᚖgithubᚗcomᚋkerini
 	return ec._TwoPointCalibration(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalOWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensorᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.WaterLevelSensor) graphql.Marshaler {
+func (ec *executionContext) marshalOWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensorᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.WaterLevelSensor) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -5341,7 +5433,7 @@ func (ec *executionContext) marshalOWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerini
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensor(ctx, sel, v[i])
+			ret[i] = ec.marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensor(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

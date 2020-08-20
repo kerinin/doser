@@ -572,6 +572,84 @@ func testFirmataToManyFirmatumPumps(t *testing.T) {
 	}
 }
 
+func testFirmataToManyFirmatumWaterLevelSensors(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Firmata
+	var b, c WaterLevelSensor
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, firmataDBTypes, true, firmataColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Firmata struct: %s", err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = randomize.Struct(seed, &b, waterLevelSensorDBTypes, false, waterLevelSensorColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, waterLevelSensorDBTypes, false, waterLevelSensorColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+
+	b.FirmataID = a.ID
+	c.FirmataID = a.ID
+
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := a.FirmatumWaterLevelSensors().All(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range check {
+		if v.FirmataID == b.FirmataID {
+			bFound = true
+		}
+		if v.FirmataID == c.FirmataID {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := FirmataSlice{&a}
+	if err = a.L.LoadFirmatumWaterLevelSensors(ctx, tx, false, (*[]*Firmata)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.FirmatumWaterLevelSensors); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.FirmatumWaterLevelSensors = nil
+	if err = a.L.LoadFirmatumWaterLevelSensors(ctx, tx, true, &a, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.FirmatumWaterLevelSensors); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", check)
+	}
+}
+
 func testFirmataToManyAddOpFirmatumPumps(t *testing.T) {
 	var err error
 
@@ -639,6 +717,81 @@ func testFirmataToManyAddOpFirmatumPumps(t *testing.T) {
 		}
 
 		count, err := a.FirmatumPumps().Count(ctx, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
+func testFirmataToManyAddOpFirmatumWaterLevelSensors(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Firmata
+	var b, c, d, e WaterLevelSensor
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, firmataDBTypes, false, strmangle.SetComplement(firmataPrimaryKeyColumns, firmataColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*WaterLevelSensor{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, waterLevelSensorDBTypes, false, strmangle.SetComplement(waterLevelSensorPrimaryKeyColumns, waterLevelSensorColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*WaterLevelSensor{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddFirmatumWaterLevelSensors(ctx, tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if a.ID != first.FirmataID {
+			t.Error("foreign key was wrong value", a.ID, first.FirmataID)
+		}
+		if a.ID != second.FirmataID {
+			t.Error("foreign key was wrong value", a.ID, second.FirmataID)
+		}
+
+		if first.R.Firmatum != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.Firmatum != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.FirmatumWaterLevelSensors[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.FirmatumWaterLevelSensors[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.FirmatumWaterLevelSensors().Count(ctx, tx)
 		if err != nil {
 			t.Fatal(err)
 		}

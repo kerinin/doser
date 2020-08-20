@@ -494,6 +494,240 @@ func testPumpsInsertWhitelist(t *testing.T) {
 	}
 }
 
+func testPumpToManyAutoTopOffs(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Pump
+	var b, c AutoTopOff
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, pumpDBTypes, true, pumpColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Pump struct: %s", err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = randomize.Struct(seed, &b, autoTopOffDBTypes, false, autoTopOffColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, autoTopOffDBTypes, false, autoTopOffColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+
+	b.PumpID = a.ID
+	c.PumpID = a.ID
+
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := a.AutoTopOffs().All(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range check {
+		if v.PumpID == b.PumpID {
+			bFound = true
+		}
+		if v.PumpID == c.PumpID {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := PumpSlice{&a}
+	if err = a.L.LoadAutoTopOffs(ctx, tx, false, (*[]*Pump)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.AutoTopOffs); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.AutoTopOffs = nil
+	if err = a.L.LoadAutoTopOffs(ctx, tx, true, &a, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.AutoTopOffs); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", check)
+	}
+}
+
+func testPumpToManyWastePumpAutoWaterChanges(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Pump
+	var b, c AutoWaterChange
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, pumpDBTypes, true, pumpColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Pump struct: %s", err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = randomize.Struct(seed, &b, autoWaterChangeDBTypes, false, autoWaterChangeColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, autoWaterChangeDBTypes, false, autoWaterChangeColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+
+	b.WastePumpID = a.ID
+	c.WastePumpID = a.ID
+
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := a.WastePumpAutoWaterChanges().All(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range check {
+		if v.WastePumpID == b.WastePumpID {
+			bFound = true
+		}
+		if v.WastePumpID == c.WastePumpID {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := PumpSlice{&a}
+	if err = a.L.LoadWastePumpAutoWaterChanges(ctx, tx, false, (*[]*Pump)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.WastePumpAutoWaterChanges); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.WastePumpAutoWaterChanges = nil
+	if err = a.L.LoadWastePumpAutoWaterChanges(ctx, tx, true, &a, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.WastePumpAutoWaterChanges); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", check)
+	}
+}
+
+func testPumpToManyFreshPumpAutoWaterChanges(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Pump
+	var b, c AutoWaterChange
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, pumpDBTypes, true, pumpColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Pump struct: %s", err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = randomize.Struct(seed, &b, autoWaterChangeDBTypes, false, autoWaterChangeColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, autoWaterChangeDBTypes, false, autoWaterChangeColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+
+	b.FreshPumpID = a.ID
+	c.FreshPumpID = a.ID
+
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := a.FreshPumpAutoWaterChanges().All(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range check {
+		if v.FreshPumpID == b.FreshPumpID {
+			bFound = true
+		}
+		if v.FreshPumpID == c.FreshPumpID {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := PumpSlice{&a}
+	if err = a.L.LoadFreshPumpAutoWaterChanges(ctx, tx, false, (*[]*Pump)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.FreshPumpAutoWaterChanges); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.FreshPumpAutoWaterChanges = nil
+	if err = a.L.LoadFreshPumpAutoWaterChanges(ctx, tx, true, &a, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.FreshPumpAutoWaterChanges); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", check)
+	}
+}
+
 func testPumpToManyCalibrations(t *testing.T) {
 	var err error
 	ctx := context.Background()
@@ -572,6 +806,309 @@ func testPumpToManyCalibrations(t *testing.T) {
 	}
 }
 
+func testPumpToManyDoserComponents(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Pump
+	var b, c DoserComponent
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, pumpDBTypes, true, pumpColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Pump struct: %s", err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = randomize.Struct(seed, &b, doserComponentDBTypes, false, doserComponentColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, doserComponentDBTypes, false, doserComponentColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+
+	b.PumpID = a.ID
+	c.PumpID = a.ID
+
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := a.DoserComponents().All(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range check {
+		if v.PumpID == b.PumpID {
+			bFound = true
+		}
+		if v.PumpID == c.PumpID {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := PumpSlice{&a}
+	if err = a.L.LoadDoserComponents(ctx, tx, false, (*[]*Pump)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.DoserComponents); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.DoserComponents = nil
+	if err = a.L.LoadDoserComponents(ctx, tx, true, &a, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.DoserComponents); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", check)
+	}
+}
+
+func testPumpToManyAddOpAutoTopOffs(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Pump
+	var b, c, d, e AutoTopOff
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, pumpDBTypes, false, strmangle.SetComplement(pumpPrimaryKeyColumns, pumpColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*AutoTopOff{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, autoTopOffDBTypes, false, strmangle.SetComplement(autoTopOffPrimaryKeyColumns, autoTopOffColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*AutoTopOff{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddAutoTopOffs(ctx, tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if a.ID != first.PumpID {
+			t.Error("foreign key was wrong value", a.ID, first.PumpID)
+		}
+		if a.ID != second.PumpID {
+			t.Error("foreign key was wrong value", a.ID, second.PumpID)
+		}
+
+		if first.R.Pump != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.Pump != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.AutoTopOffs[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.AutoTopOffs[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.AutoTopOffs().Count(ctx, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
+func testPumpToManyAddOpWastePumpAutoWaterChanges(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Pump
+	var b, c, d, e AutoWaterChange
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, pumpDBTypes, false, strmangle.SetComplement(pumpPrimaryKeyColumns, pumpColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*AutoWaterChange{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, autoWaterChangeDBTypes, false, strmangle.SetComplement(autoWaterChangePrimaryKeyColumns, autoWaterChangeColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*AutoWaterChange{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddWastePumpAutoWaterChanges(ctx, tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if a.ID != first.WastePumpID {
+			t.Error("foreign key was wrong value", a.ID, first.WastePumpID)
+		}
+		if a.ID != second.WastePumpID {
+			t.Error("foreign key was wrong value", a.ID, second.WastePumpID)
+		}
+
+		if first.R.WastePump != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.WastePump != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.WastePumpAutoWaterChanges[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.WastePumpAutoWaterChanges[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.WastePumpAutoWaterChanges().Count(ctx, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
+func testPumpToManyAddOpFreshPumpAutoWaterChanges(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Pump
+	var b, c, d, e AutoWaterChange
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, pumpDBTypes, false, strmangle.SetComplement(pumpPrimaryKeyColumns, pumpColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*AutoWaterChange{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, autoWaterChangeDBTypes, false, strmangle.SetComplement(autoWaterChangePrimaryKeyColumns, autoWaterChangeColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*AutoWaterChange{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddFreshPumpAutoWaterChanges(ctx, tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if a.ID != first.FreshPumpID {
+			t.Error("foreign key was wrong value", a.ID, first.FreshPumpID)
+		}
+		if a.ID != second.FreshPumpID {
+			t.Error("foreign key was wrong value", a.ID, second.FreshPumpID)
+		}
+
+		if first.R.FreshPump != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.FreshPump != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.FreshPumpAutoWaterChanges[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.FreshPumpAutoWaterChanges[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.FreshPumpAutoWaterChanges().Count(ctx, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
 func testPumpToManyAddOpCalibrations(t *testing.T) {
 	var err error
 
@@ -639,6 +1176,81 @@ func testPumpToManyAddOpCalibrations(t *testing.T) {
 		}
 
 		count, err := a.Calibrations().Count(ctx, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
+func testPumpToManyAddOpDoserComponents(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Pump
+	var b, c, d, e DoserComponent
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, pumpDBTypes, false, strmangle.SetComplement(pumpPrimaryKeyColumns, pumpColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*DoserComponent{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, doserComponentDBTypes, false, strmangle.SetComplement(doserComponentPrimaryKeyColumns, doserComponentColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*DoserComponent{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddDoserComponents(ctx, tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if a.ID != first.PumpID {
+			t.Error("foreign key was wrong value", a.ID, first.PumpID)
+		}
+		if a.ID != second.PumpID {
+			t.Error("foreign key was wrong value", a.ID, second.PumpID)
+		}
+
+		if first.R.Pump != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.Pump != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.DoserComponents[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.DoserComponents[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.DoserComponents().Count(ctx, tx)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -17,6 +17,26 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
+func (r *autoTopOffResolver) Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *autoTopOffResolver) LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *autoWaterChangeResolver) FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *autoWaterChangeResolver) WastePump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *doserComponentResolver) Pump(ctx context.Context, obj *models.DoserComponent) (*models.Pump, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (r *firmataResolver) Pumps(ctx context.Context, obj *models.Firmata) ([]*models.Pump, error) {
 	pumps, err := obj.FirmatumPumps().All(ctx, r.db)
 	if err == sql.ErrNoRows {
@@ -78,15 +98,15 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, input model.Calibr
 	return m, nil
 }
 
-func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*model.WaterLevelSensor, error) {
+func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*models.WaterLevelSensor, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*model.AutoTopOff, error) {
+func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*model.AutoWaterChange, error) {
+func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*models.AutoWaterChange, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
@@ -143,20 +163,41 @@ func (r *queryResolver) Pumps(ctx context.Context) ([]*models.Pump, error) {
 	return pumps, nil
 }
 
-func (r *queryResolver) WaterLevelSensors(ctx context.Context) ([]*model.WaterLevelSensor, error) {
+func (r *queryResolver) WaterLevelSensors(ctx context.Context) ([]*models.WaterLevelSensor, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *queryResolver) AutoTopOff(ctx context.Context) ([]*model.AutoTopOff, error) {
+func (r *queryResolver) AutoTopOff(ctx context.Context) ([]*models.AutoTopOff, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *queryResolver) AutoWaterChanges(ctx context.Context) ([]*model.AutoWaterChange, error) {
+func (r *queryResolver) AutoWaterChanges(ctx context.Context) ([]*models.AutoWaterChange, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
 func (r *queryResolver) Dosers(ctx context.Context) ([]*model.Dosers, error) {
 	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *waterLevelSensorResolver) Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLevelSensor) (*model.SensorKind, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
+// AutoTopOff returns generated.AutoTopOffResolver implementation.
+func (r *Resolver) AutoTopOff() generated.AutoTopOffResolver { return &autoTopOffResolver{r} }
+
+// AutoWaterChange returns generated.AutoWaterChangeResolver implementation.
+func (r *Resolver) AutoWaterChange() generated.AutoWaterChangeResolver {
+	return &autoWaterChangeResolver{r}
+}
+
+// DoserComponent returns generated.DoserComponentResolver implementation.
+func (r *Resolver) DoserComponent() generated.DoserComponentResolver {
+	return &doserComponentResolver{r}
 }
 
 // Firmata returns generated.FirmataResolver implementation.
@@ -171,10 +212,19 @@ func (r *Resolver) Pump() generated.PumpResolver { return &pumpResolver{r} }
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
+// WaterLevelSensor returns generated.WaterLevelSensorResolver implementation.
+func (r *Resolver) WaterLevelSensor() generated.WaterLevelSensorResolver {
+	return &waterLevelSensorResolver{r}
+}
+
+type autoTopOffResolver struct{ *Resolver }
+type autoWaterChangeResolver struct{ *Resolver }
+type doserComponentResolver struct{ *Resolver }
 type firmataResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
 type pumpResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+type waterLevelSensorResolver struct{ *Resolver }
 
 // !!! WARNING !!!
 // The code below was going to be deleted when updating resolvers. It has been copied here so you have

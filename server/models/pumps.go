@@ -111,17 +111,29 @@ var PumpWhere = struct {
 
 // PumpRels is where relationship names are stored.
 var PumpRels = struct {
-	Firmatum     string
-	Calibrations string
+	Firmatum                  string
+	AutoTopOffs               string
+	WastePumpAutoWaterChanges string
+	FreshPumpAutoWaterChanges string
+	Calibrations              string
+	DoserComponents           string
 }{
-	Firmatum:     "Firmatum",
-	Calibrations: "Calibrations",
+	Firmatum:                  "Firmatum",
+	AutoTopOffs:               "AutoTopOffs",
+	WastePumpAutoWaterChanges: "WastePumpAutoWaterChanges",
+	FreshPumpAutoWaterChanges: "FreshPumpAutoWaterChanges",
+	Calibrations:              "Calibrations",
+	DoserComponents:           "DoserComponents",
 }
 
 // pumpR is where relationships are stored.
 type pumpR struct {
-	Firmatum     *Firmata         `boil:"Firmatum" json:"Firmatum" toml:"Firmatum" yaml:"Firmatum"`
-	Calibrations CalibrationSlice `boil:"Calibrations" json:"Calibrations" toml:"Calibrations" yaml:"Calibrations"`
+	Firmatum                  *Firmata             `boil:"Firmatum" json:"Firmatum" toml:"Firmatum" yaml:"Firmatum"`
+	AutoTopOffs               AutoTopOffSlice      `boil:"AutoTopOffs" json:"AutoTopOffs" toml:"AutoTopOffs" yaml:"AutoTopOffs"`
+	WastePumpAutoWaterChanges AutoWaterChangeSlice `boil:"WastePumpAutoWaterChanges" json:"WastePumpAutoWaterChanges" toml:"WastePumpAutoWaterChanges" yaml:"WastePumpAutoWaterChanges"`
+	FreshPumpAutoWaterChanges AutoWaterChangeSlice `boil:"FreshPumpAutoWaterChanges" json:"FreshPumpAutoWaterChanges" toml:"FreshPumpAutoWaterChanges" yaml:"FreshPumpAutoWaterChanges"`
+	Calibrations              CalibrationSlice     `boil:"Calibrations" json:"Calibrations" toml:"Calibrations" yaml:"Calibrations"`
+	DoserComponents           DoserComponentSlice  `boil:"DoserComponents" json:"DoserComponents" toml:"DoserComponents" yaml:"DoserComponents"`
 }
 
 // NewStruct creates a new relationship struct
@@ -428,6 +440,69 @@ func (o *Pump) Firmatum(mods ...qm.QueryMod) firmataQuery {
 	return query
 }
 
+// AutoTopOffs retrieves all the auto_top_off's AutoTopOffs with an executor.
+func (o *Pump) AutoTopOffs(mods ...qm.QueryMod) autoTopOffQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"auto_top_offs\".\"pump_id\"=?", o.ID),
+	)
+
+	query := AutoTopOffs(queryMods...)
+	queries.SetFrom(query.Query, "\"auto_top_offs\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"auto_top_offs\".*"})
+	}
+
+	return query
+}
+
+// WastePumpAutoWaterChanges retrieves all the auto_water_change's AutoWaterChanges with an executor via waste_pump_id column.
+func (o *Pump) WastePumpAutoWaterChanges(mods ...qm.QueryMod) autoWaterChangeQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"auto_water_changes\".\"waste_pump_id\"=?", o.ID),
+	)
+
+	query := AutoWaterChanges(queryMods...)
+	queries.SetFrom(query.Query, "\"auto_water_changes\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"auto_water_changes\".*"})
+	}
+
+	return query
+}
+
+// FreshPumpAutoWaterChanges retrieves all the auto_water_change's AutoWaterChanges with an executor via fresh_pump_id column.
+func (o *Pump) FreshPumpAutoWaterChanges(mods ...qm.QueryMod) autoWaterChangeQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"auto_water_changes\".\"fresh_pump_id\"=?", o.ID),
+	)
+
+	query := AutoWaterChanges(queryMods...)
+	queries.SetFrom(query.Query, "\"auto_water_changes\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"auto_water_changes\".*"})
+	}
+
+	return query
+}
+
 // Calibrations retrieves all the calibration's Calibrations with an executor.
 func (o *Pump) Calibrations(mods ...qm.QueryMod) calibrationQuery {
 	var queryMods []qm.QueryMod
@@ -444,6 +519,27 @@ func (o *Pump) Calibrations(mods ...qm.QueryMod) calibrationQuery {
 
 	if len(queries.GetSelect(query.Query)) == 0 {
 		queries.SetSelect(query.Query, []string{"\"calibrations\".*"})
+	}
+
+	return query
+}
+
+// DoserComponents retrieves all the doser_component's DoserComponents with an executor.
+func (o *Pump) DoserComponents(mods ...qm.QueryMod) doserComponentQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"doser_components\".\"pump_id\"=?", o.ID),
+	)
+
+	query := DoserComponents(queryMods...)
+	queries.SetFrom(query.Query, "\"doser_components\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"doser_components\".*"})
 	}
 
 	return query
@@ -553,6 +649,300 @@ func (pumpL) LoadFirmatum(ctx context.Context, e boil.ContextExecutor, singular 
 	return nil
 }
 
+// LoadAutoTopOffs allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (pumpL) LoadAutoTopOffs(ctx context.Context, e boil.ContextExecutor, singular bool, maybePump interface{}, mods queries.Applicator) error {
+	var slice []*Pump
+	var object *Pump
+
+	if singular {
+		object = maybePump.(*Pump)
+	} else {
+		slice = *maybePump.(*[]*Pump)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &pumpR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &pumpR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`auto_top_offs`),
+		qm.WhereIn(`auto_top_offs.pump_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load auto_top_offs")
+	}
+
+	var resultSlice []*AutoTopOff
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice auto_top_offs")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on auto_top_offs")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for auto_top_offs")
+	}
+
+	if len(autoTopOffAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.AutoTopOffs = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &autoTopOffR{}
+			}
+			foreign.R.Pump = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.PumpID {
+				local.R.AutoTopOffs = append(local.R.AutoTopOffs, foreign)
+				if foreign.R == nil {
+					foreign.R = &autoTopOffR{}
+				}
+				foreign.R.Pump = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadWastePumpAutoWaterChanges allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (pumpL) LoadWastePumpAutoWaterChanges(ctx context.Context, e boil.ContextExecutor, singular bool, maybePump interface{}, mods queries.Applicator) error {
+	var slice []*Pump
+	var object *Pump
+
+	if singular {
+		object = maybePump.(*Pump)
+	} else {
+		slice = *maybePump.(*[]*Pump)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &pumpR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &pumpR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`auto_water_changes`),
+		qm.WhereIn(`auto_water_changes.waste_pump_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load auto_water_changes")
+	}
+
+	var resultSlice []*AutoWaterChange
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice auto_water_changes")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on auto_water_changes")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for auto_water_changes")
+	}
+
+	if len(autoWaterChangeAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.WastePumpAutoWaterChanges = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &autoWaterChangeR{}
+			}
+			foreign.R.WastePump = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.WastePumpID {
+				local.R.WastePumpAutoWaterChanges = append(local.R.WastePumpAutoWaterChanges, foreign)
+				if foreign.R == nil {
+					foreign.R = &autoWaterChangeR{}
+				}
+				foreign.R.WastePump = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadFreshPumpAutoWaterChanges allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (pumpL) LoadFreshPumpAutoWaterChanges(ctx context.Context, e boil.ContextExecutor, singular bool, maybePump interface{}, mods queries.Applicator) error {
+	var slice []*Pump
+	var object *Pump
+
+	if singular {
+		object = maybePump.(*Pump)
+	} else {
+		slice = *maybePump.(*[]*Pump)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &pumpR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &pumpR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`auto_water_changes`),
+		qm.WhereIn(`auto_water_changes.fresh_pump_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load auto_water_changes")
+	}
+
+	var resultSlice []*AutoWaterChange
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice auto_water_changes")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on auto_water_changes")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for auto_water_changes")
+	}
+
+	if len(autoWaterChangeAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.FreshPumpAutoWaterChanges = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &autoWaterChangeR{}
+			}
+			foreign.R.FreshPump = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.FreshPumpID {
+				local.R.FreshPumpAutoWaterChanges = append(local.R.FreshPumpAutoWaterChanges, foreign)
+				if foreign.R == nil {
+					foreign.R = &autoWaterChangeR{}
+				}
+				foreign.R.FreshPump = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // LoadCalibrations allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
 func (pumpL) LoadCalibrations(ctx context.Context, e boil.ContextExecutor, singular bool, maybePump interface{}, mods queries.Applicator) error {
@@ -651,6 +1041,104 @@ func (pumpL) LoadCalibrations(ctx context.Context, e boil.ContextExecutor, singu
 	return nil
 }
 
+// LoadDoserComponents allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (pumpL) LoadDoserComponents(ctx context.Context, e boil.ContextExecutor, singular bool, maybePump interface{}, mods queries.Applicator) error {
+	var slice []*Pump
+	var object *Pump
+
+	if singular {
+		object = maybePump.(*Pump)
+	} else {
+		slice = *maybePump.(*[]*Pump)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &pumpR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &pumpR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`doser_components`),
+		qm.WhereIn(`doser_components.pump_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load doser_components")
+	}
+
+	var resultSlice []*DoserComponent
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice doser_components")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on doser_components")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for doser_components")
+	}
+
+	if len(doserComponentAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.DoserComponents = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &doserComponentR{}
+			}
+			foreign.R.Pump = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.PumpID {
+				local.R.DoserComponents = append(local.R.DoserComponents, foreign)
+				if foreign.R == nil {
+					foreign.R = &doserComponentR{}
+				}
+				foreign.R.Pump = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetFirmatum of the pump to the related item.
 // Sets o.R.Firmatum to related.
 // Adds o to related.R.FirmatumPumps.
@@ -698,6 +1186,165 @@ func (o *Pump) SetFirmatum(ctx context.Context, exec boil.ContextExecutor, inser
 	return nil
 }
 
+// AddAutoTopOffs adds the given related objects to the existing relationships
+// of the pump, optionally inserting them as new records.
+// Appends related to o.R.AutoTopOffs.
+// Sets related.R.Pump appropriately.
+func (o *Pump) AddAutoTopOffs(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AutoTopOff) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.PumpID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"auto_top_offs\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 0, []string{"pump_id"}),
+				strmangle.WhereClause("\"", "\"", 0, autoTopOffPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.PumpID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &pumpR{
+			AutoTopOffs: related,
+		}
+	} else {
+		o.R.AutoTopOffs = append(o.R.AutoTopOffs, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &autoTopOffR{
+				Pump: o,
+			}
+		} else {
+			rel.R.Pump = o
+		}
+	}
+	return nil
+}
+
+// AddWastePumpAutoWaterChanges adds the given related objects to the existing relationships
+// of the pump, optionally inserting them as new records.
+// Appends related to o.R.WastePumpAutoWaterChanges.
+// Sets related.R.WastePump appropriately.
+func (o *Pump) AddWastePumpAutoWaterChanges(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AutoWaterChange) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.WastePumpID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"auto_water_changes\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 0, []string{"waste_pump_id"}),
+				strmangle.WhereClause("\"", "\"", 0, autoWaterChangePrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.WastePumpID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &pumpR{
+			WastePumpAutoWaterChanges: related,
+		}
+	} else {
+		o.R.WastePumpAutoWaterChanges = append(o.R.WastePumpAutoWaterChanges, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &autoWaterChangeR{
+				WastePump: o,
+			}
+		} else {
+			rel.R.WastePump = o
+		}
+	}
+	return nil
+}
+
+// AddFreshPumpAutoWaterChanges adds the given related objects to the existing relationships
+// of the pump, optionally inserting them as new records.
+// Appends related to o.R.FreshPumpAutoWaterChanges.
+// Sets related.R.FreshPump appropriately.
+func (o *Pump) AddFreshPumpAutoWaterChanges(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AutoWaterChange) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.FreshPumpID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"auto_water_changes\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 0, []string{"fresh_pump_id"}),
+				strmangle.WhereClause("\"", "\"", 0, autoWaterChangePrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.FreshPumpID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &pumpR{
+			FreshPumpAutoWaterChanges: related,
+		}
+	} else {
+		o.R.FreshPumpAutoWaterChanges = append(o.R.FreshPumpAutoWaterChanges, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &autoWaterChangeR{
+				FreshPump: o,
+			}
+		} else {
+			rel.R.FreshPump = o
+		}
+	}
+	return nil
+}
+
 // AddCalibrations adds the given related objects to the existing relationships
 // of the pump, optionally inserting them as new records.
 // Appends related to o.R.Calibrations.
@@ -742,6 +1389,59 @@ func (o *Pump) AddCalibrations(ctx context.Context, exec boil.ContextExecutor, i
 	for _, rel := range related {
 		if rel.R == nil {
 			rel.R = &calibrationR{
+				Pump: o,
+			}
+		} else {
+			rel.R.Pump = o
+		}
+	}
+	return nil
+}
+
+// AddDoserComponents adds the given related objects to the existing relationships
+// of the pump, optionally inserting them as new records.
+// Appends related to o.R.DoserComponents.
+// Sets related.R.Pump appropriately.
+func (o *Pump) AddDoserComponents(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*DoserComponent) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.PumpID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"doser_components\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 0, []string{"pump_id"}),
+				strmangle.WhereClause("\"", "\"", 0, doserComponentPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.PumpID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &pumpR{
+			DoserComponents: related,
+		}
+	} else {
+		o.R.DoserComponents = append(o.R.DoserComponents, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &doserComponentR{
 				Pump: o,
 			}
 		} else {

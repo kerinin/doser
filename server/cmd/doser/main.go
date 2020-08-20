@@ -12,7 +12,6 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/kerinin/doser/service/graph"
 	"github.com/kerinin/doser/service/graph/generated"
-	migrations "github.com/kerinin/doser/service/sql"
 )
 
 var (
@@ -26,14 +25,6 @@ func main() {
 		log.Fatalf("Failed to create SQLite DB: %s", err)
 	}
 	defer db.Close()
-
-	applied, err := migrations.Migrate(db, "sqlite3")
-	if err != nil {
-		log.Fatalf("Failed to migrate DB: %s", err)
-	}
-	if applied > 0 {
-		log.Printf("Applied %d migrations", applied)
-	}
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: graph.NewResolver(db),

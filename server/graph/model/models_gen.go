@@ -10,22 +10,6 @@ import (
 	"github.com/kerinin/doser/service/models"
 )
 
-type AutoTopOff struct {
-	ID            string              `json:"id"`
-	Pump          *models.Pump        `json:"pump"`
-	LevelSensors  []*WaterLevelSensor `json:"level_sensors"`
-	FillRate      float64             `json:"fill_rate"`
-	FillFrequency *string             `json:"fill_frequency"`
-	MaxFillVolume *float64            `json:"max_fill_volume"`
-}
-
-type AutoWaterChange struct {
-	ID           string       `json:"id"`
-	FreshPump    *models.Pump `json:"fresh_pump"`
-	WastePump    *models.Pump `json:"waste_pump"`
-	ExchangeRate float64      `json:"exchange_rate"`
-}
-
 type CalibratePumpInput struct {
 	PumpID         string  `json:"pump_id"`
 	TargetVolume   float64 `json:"target_volume"`
@@ -38,14 +22,9 @@ type CreateWaterLevelSensor struct {
 	Kind    *SensorKind `json:"kind"`
 }
 
-type DoserComponent struct {
-	Pump     *models.Pump `json:"pump"`
-	DoseRate float64      `json:"dose_rate"`
-}
-
 type Dosers struct {
-	ID        string            `json:"id"`
-	Component []*DoserComponent `json:"component"`
+	ID        string                   `json:"id"`
+	Component []*models.DoserComponent `json:"component"`
 }
 
 type NewAutoTopOff struct {
@@ -81,13 +60,6 @@ type NewPumpInput struct {
 	StepPin   int    `json:"step_pin"`
 	DirPin    *int   `json:"dir_pin"`
 	EnPin     *int   `json:"en_pin"`
-}
-
-type WaterLevelSensor struct {
-	ID      string          `json:"id"`
-	Firmata *models.Firmata `json:"firmata"`
-	Pin     int             `json:"pin"`
-	Kind    *SensorKind     `json:"kind"`
 }
 
 type SensorKind string

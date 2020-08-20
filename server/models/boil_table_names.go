@@ -4,13 +4,25 @@
 package models
 
 var TableNames = struct {
-	Calibrations   string
-	Firmatas       string
-	GorpMigrations string
-	Pumps          string
+	AutoTopOffs                  string
+	AutoTopOffsWaterLevelSensors string
+	AutoWaterChanges             string
+	Calibrations                 string
+	DoserComponents              string
+	Dosers                       string
+	Firmatas                     string
+	GorpMigrations               string
+	Pumps                        string
+	WaterLevelSensors            string
 }{
-	Calibrations:   "calibrations",
-	Firmatas:       "firmatas",
-	GorpMigrations: "gorp_migrations",
-	Pumps:          "pumps",
+	AutoTopOffs:                  "auto_top_offs",
+	AutoTopOffsWaterLevelSensors: "auto_top_offs_water_level_sensors",
+	AutoWaterChanges:             "auto_water_changes",
+	Calibrations:                 "calibrations",
+	DoserComponents:              "doser_components",
+	Dosers:                       "dosers",
+	Firmatas:                     "firmatas",
+	GorpMigrations:               "gorp_migrations",
+	Pumps:                        "pumps",
+	WaterLevelSensors:            "water_level_sensors",
 }

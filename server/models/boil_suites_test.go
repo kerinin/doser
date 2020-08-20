@@ -12,98 +12,169 @@ import "testing"
 // It does NOT run each operation group in parallel.
 // Separating the tests thusly grants avoidance of Postgres deadlocks.
 func TestParent(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffs)
+	t.Run("AutoWaterChanges", testAutoWaterChanges)
 	t.Run("Calibrations", testCalibrations)
+	t.Run("DoserComponents", testDoserComponents)
+	t.Run("Dosers", testDosers)
 	t.Run("Firmatas", testFirmatas)
 	t.Run("GorpMigrations", testGorpMigrations)
 	t.Run("Pumps", testPumps)
+	t.Run("WaterLevelSensors", testWaterLevelSensors)
 }
 
 func TestDelete(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsDelete)
+	t.Run("AutoWaterChanges", testAutoWaterChangesDelete)
 	t.Run("Calibrations", testCalibrationsDelete)
+	t.Run("DoserComponents", testDoserComponentsDelete)
+	t.Run("Dosers", testDosersDelete)
 	t.Run("Firmatas", testFirmatasDelete)
 	t.Run("GorpMigrations", testGorpMigrationsDelete)
 	t.Run("Pumps", testPumpsDelete)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsDelete)
 }
 
 func TestQueryDeleteAll(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsQueryDeleteAll)
+	t.Run("AutoWaterChanges", testAutoWaterChangesQueryDeleteAll)
 	t.Run("Calibrations", testCalibrationsQueryDeleteAll)
+	t.Run("DoserComponents", testDoserComponentsQueryDeleteAll)
+	t.Run("Dosers", testDosersQueryDeleteAll)
 	t.Run("Firmatas", testFirmatasQueryDeleteAll)
 	t.Run("GorpMigrations", testGorpMigrationsQueryDeleteAll)
 	t.Run("Pumps", testPumpsQueryDeleteAll)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsQueryDeleteAll)
 }
 
 func TestSliceDeleteAll(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsSliceDeleteAll)
+	t.Run("AutoWaterChanges", testAutoWaterChangesSliceDeleteAll)
 	t.Run("Calibrations", testCalibrationsSliceDeleteAll)
+	t.Run("DoserComponents", testDoserComponentsSliceDeleteAll)
+	t.Run("Dosers", testDosersSliceDeleteAll)
 	t.Run("Firmatas", testFirmatasSliceDeleteAll)
 	t.Run("GorpMigrations", testGorpMigrationsSliceDeleteAll)
 	t.Run("Pumps", testPumpsSliceDeleteAll)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsSliceDeleteAll)
 }
 
 func TestExists(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsExists)
+	t.Run("AutoWaterChanges", testAutoWaterChangesExists)
 	t.Run("Calibrations", testCalibrationsExists)
+	t.Run("DoserComponents", testDoserComponentsExists)
+	t.Run("Dosers", testDosersExists)
 	t.Run("Firmatas", testFirmatasExists)
 	t.Run("GorpMigrations", testGorpMigrationsExists)
 	t.Run("Pumps", testPumpsExists)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsExists)
 }
 
 func TestFind(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsFind)
+	t.Run("AutoWaterChanges", testAutoWaterChangesFind)
 	t.Run("Calibrations", testCalibrationsFind)
+	t.Run("DoserComponents", testDoserComponentsFind)
+	t.Run("Dosers", testDosersFind)
 	t.Run("Firmatas", testFirmatasFind)
 	t.Run("GorpMigrations", testGorpMigrationsFind)
 	t.Run("Pumps", testPumpsFind)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsFind)
 }
 
 func TestBind(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsBind)
+	t.Run("AutoWaterChanges", testAutoWaterChangesBind)
 	t.Run("Calibrations", testCalibrationsBind)
+	t.Run("DoserComponents", testDoserComponentsBind)
+	t.Run("Dosers", testDosersBind)
 	t.Run("Firmatas", testFirmatasBind)
 	t.Run("GorpMigrations", testGorpMigrationsBind)
 	t.Run("Pumps", testPumpsBind)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsBind)
 }
 
 func TestOne(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsOne)
+	t.Run("AutoWaterChanges", testAutoWaterChangesOne)
 	t.Run("Calibrations", testCalibrationsOne)
+	t.Run("DoserComponents", testDoserComponentsOne)
+	t.Run("Dosers", testDosersOne)
 	t.Run("Firmatas", testFirmatasOne)
 	t.Run("GorpMigrations", testGorpMigrationsOne)
 	t.Run("Pumps", testPumpsOne)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsOne)
 }
 
 func TestAll(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsAll)
+	t.Run("AutoWaterChanges", testAutoWaterChangesAll)
 	t.Run("Calibrations", testCalibrationsAll)
+	t.Run("DoserComponents", testDoserComponentsAll)
+	t.Run("Dosers", testDosersAll)
 	t.Run("Firmatas", testFirmatasAll)
 	t.Run("GorpMigrations", testGorpMigrationsAll)
 	t.Run("Pumps", testPumpsAll)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsAll)
 }
 
 func TestCount(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsCount)
+	t.Run("AutoWaterChanges", testAutoWaterChangesCount)
 	t.Run("Calibrations", testCalibrationsCount)
+	t.Run("DoserComponents", testDoserComponentsCount)
+	t.Run("Dosers", testDosersCount)
 	t.Run("Firmatas", testFirmatasCount)
 	t.Run("GorpMigrations", testGorpMigrationsCount)
 	t.Run("Pumps", testPumpsCount)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsCount)
 }
 
 func TestHooks(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsHooks)
+	t.Run("AutoWaterChanges", testAutoWaterChangesHooks)
 	t.Run("Calibrations", testCalibrationsHooks)
+	t.Run("DoserComponents", testDoserComponentsHooks)
+	t.Run("Dosers", testDosersHooks)
 	t.Run("Firmatas", testFirmatasHooks)
 	t.Run("GorpMigrations", testGorpMigrationsHooks)
 	t.Run("Pumps", testPumpsHooks)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsHooks)
 }
 
 func TestInsert(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsInsert)
+	t.Run("AutoTopOffs", testAutoTopOffsInsertWhitelist)
+	t.Run("AutoWaterChanges", testAutoWaterChangesInsert)
+	t.Run("AutoWaterChanges", testAutoWaterChangesInsertWhitelist)
 	t.Run("Calibrations", testCalibrationsInsert)
 	t.Run("Calibrations", testCalibrationsInsertWhitelist)
+	t.Run("DoserComponents", testDoserComponentsInsert)
+	t.Run("DoserComponents", testDoserComponentsInsertWhitelist)
+	t.Run("Dosers", testDosersInsert)
+	t.Run("Dosers", testDosersInsertWhitelist)
 	t.Run("Firmatas", testFirmatasInsert)
 	t.Run("Firmatas", testFirmatasInsertWhitelist)
 	t.Run("GorpMigrations", testGorpMigrationsInsert)
 	t.Run("GorpMigrations", testGorpMigrationsInsertWhitelist)
 	t.Run("Pumps", testPumpsInsert)
 	t.Run("Pumps", testPumpsInsertWhitelist)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsInsert)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsInsertWhitelist)
 }
 
 // TestToOne tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToOne(t *testing.T) {
+	t.Run("AutoTopOffToPumpUsingPump", testAutoTopOffToOnePumpUsingPump)
+	t.Run("AutoWaterChangeToPumpUsingWastePump", testAutoWaterChangeToOnePumpUsingWastePump)
+	t.Run("AutoWaterChangeToPumpUsingFreshPump", testAutoWaterChangeToOnePumpUsingFreshPump)
 	t.Run("CalibrationToPumpUsingPump", testCalibrationToOnePumpUsingPump)
+	t.Run("DoserComponentToPumpUsingPump", testDoserComponentToOnePumpUsingPump)
+	t.Run("DoserComponentToDoserUsingDoser", testDoserComponentToOneDoserUsingDoser)
 	t.Run("PumpToFirmataUsingFirmatum", testPumpToOneFirmataUsingFirmatum)
+	t.Run("WaterLevelSensorToFirmataUsingFirmatum", testWaterLevelSensorToOneFirmataUsingFirmatum)
 }
 
 // TestOneToOne tests cannot be run in parallel
@@ -113,15 +184,29 @@ func TestOneToOne(t *testing.T) {}
 // TestToMany tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToMany(t *testing.T) {
+	t.Run("AutoTopOffToWaterLevelSensors", testAutoTopOffToManyWaterLevelSensors)
+	t.Run("DoserToDoserComponents", testDoserToManyDoserComponents)
 	t.Run("FirmataToFirmatumPumps", testFirmataToManyFirmatumPumps)
+	t.Run("FirmataToFirmatumWaterLevelSensors", testFirmataToManyFirmatumWaterLevelSensors)
+	t.Run("PumpToAutoTopOffs", testPumpToManyAutoTopOffs)
+	t.Run("PumpToWastePumpAutoWaterChanges", testPumpToManyWastePumpAutoWaterChanges)
+	t.Run("PumpToFreshPumpAutoWaterChanges", testPumpToManyFreshPumpAutoWaterChanges)
 	t.Run("PumpToCalibrations", testPumpToManyCalibrations)
+	t.Run("PumpToDoserComponents", testPumpToManyDoserComponents)
+	t.Run("WaterLevelSensorToAutoTopOffs", testWaterLevelSensorToManyAutoTopOffs)
 }
 
 // TestToOneSet tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToOneSet(t *testing.T) {
+	t.Run("AutoTopOffToPumpUsingAutoTopOffs", testAutoTopOffToOneSetOpPumpUsingPump)
+	t.Run("AutoWaterChangeToPumpUsingWastePumpAutoWaterChanges", testAutoWaterChangeToOneSetOpPumpUsingWastePump)
+	t.Run("AutoWaterChangeToPumpUsingFreshPumpAutoWaterChanges", testAutoWaterChangeToOneSetOpPumpUsingFreshPump)
 	t.Run("CalibrationToPumpUsingCalibrations", testCalibrationToOneSetOpPumpUsingPump)
+	t.Run("DoserComponentToPumpUsingDoserComponents", testDoserComponentToOneSetOpPumpUsingPump)
+	t.Run("DoserComponentToDoserUsingDoserComponents", testDoserComponentToOneSetOpDoserUsingDoser)
 	t.Run("PumpToFirmataUsingFirmatumPumps", testPumpToOneSetOpFirmataUsingFirmatum)
+	t.Run("WaterLevelSensorToFirmataUsingFirmatumWaterLevelSensors", testWaterLevelSensorToOneSetOpFirmataUsingFirmatum)
 }
 
 // TestToOneRemove tests cannot be run in parallel
@@ -139,49 +224,88 @@ func TestOneToOneRemove(t *testing.T) {}
 // TestToManyAdd tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToManyAdd(t *testing.T) {
+	t.Run("AutoTopOffToWaterLevelSensors", testAutoTopOffToManyAddOpWaterLevelSensors)
+	t.Run("DoserToDoserComponents", testDoserToManyAddOpDoserComponents)
 	t.Run("FirmataToFirmatumPumps", testFirmataToManyAddOpFirmatumPumps)
+	t.Run("FirmataToFirmatumWaterLevelSensors", testFirmataToManyAddOpFirmatumWaterLevelSensors)
+	t.Run("PumpToAutoTopOffs", testPumpToManyAddOpAutoTopOffs)
+	t.Run("PumpToWastePumpAutoWaterChanges", testPumpToManyAddOpWastePumpAutoWaterChanges)
+	t.Run("PumpToFreshPumpAutoWaterChanges", testPumpToManyAddOpFreshPumpAutoWaterChanges)
 	t.Run("PumpToCalibrations", testPumpToManyAddOpCalibrations)
+	t.Run("PumpToDoserComponents", testPumpToManyAddOpDoserComponents)
+	t.Run("WaterLevelSensorToAutoTopOffs", testWaterLevelSensorToManyAddOpAutoTopOffs)
 }
 
 // TestToManySet tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToManySet(t *testing.T) {}
+func TestToManySet(t *testing.T) {
+	t.Run("AutoTopOffToWaterLevelSensors", testAutoTopOffToManySetOpWaterLevelSensors)
+	t.Run("WaterLevelSensorToAutoTopOffs", testWaterLevelSensorToManySetOpAutoTopOffs)
+}
 
 // TestToManyRemove tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToManyRemove(t *testing.T) {}
+func TestToManyRemove(t *testing.T) {
+	t.Run("AutoTopOffToWaterLevelSensors", testAutoTopOffToManyRemoveOpWaterLevelSensors)
+	t.Run("WaterLevelSensorToAutoTopOffs", testWaterLevelSensorToManyRemoveOpAutoTopOffs)
+}
 
 func TestReload(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsReload)
+	t.Run("AutoWaterChanges", testAutoWaterChangesReload)
 	t.Run("Calibrations", testCalibrationsReload)
+	t.Run("DoserComponents", testDoserComponentsReload)
+	t.Run("Dosers", testDosersReload)
 	t.Run("Firmatas", testFirmatasReload)
 	t.Run("GorpMigrations", testGorpMigrationsReload)
 	t.Run("Pumps", testPumpsReload)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsReload)
 }
 
 func TestReloadAll(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsReloadAll)
+	t.Run("AutoWaterChanges", testAutoWaterChangesReloadAll)
 	t.Run("Calibrations", testCalibrationsReloadAll)
+	t.Run("DoserComponents", testDoserComponentsReloadAll)
+	t.Run("Dosers", testDosersReloadAll)
 	t.Run("Firmatas", testFirmatasReloadAll)
 	t.Run("GorpMigrations", testGorpMigrationsReloadAll)
 	t.Run("Pumps", testPumpsReloadAll)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsReloadAll)
 }
 
 func TestSelect(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsSelect)
+	t.Run("AutoWaterChanges", testAutoWaterChangesSelect)
 	t.Run("Calibrations", testCalibrationsSelect)
+	t.Run("DoserComponents", testDoserComponentsSelect)
+	t.Run("Dosers", testDosersSelect)
 	t.Run("Firmatas", testFirmatasSelect)
 	t.Run("GorpMigrations", testGorpMigrationsSelect)
 	t.Run("Pumps", testPumpsSelect)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsSelect)
 }
 
 func TestUpdate(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsUpdate)
+	t.Run("AutoWaterChanges", testAutoWaterChangesUpdate)
 	t.Run("Calibrations", testCalibrationsUpdate)
+	t.Run("DoserComponents", testDoserComponentsUpdate)
+	t.Run("Dosers", testDosersUpdate)
 	t.Run("Firmatas", testFirmatasUpdate)
 	t.Run("GorpMigrations", testGorpMigrationsUpdate)
 	t.Run("Pumps", testPumpsUpdate)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsUpdate)
 }
 
 func TestSliceUpdateAll(t *testing.T) {
+	t.Run("AutoTopOffs", testAutoTopOffsSliceUpdateAll)
+	t.Run("AutoWaterChanges", testAutoWaterChangesSliceUpdateAll)
 	t.Run("Calibrations", testCalibrationsSliceUpdateAll)
+	t.Run("DoserComponents", testDoserComponentsSliceUpdateAll)
+	t.Run("Dosers", testDosersSliceUpdateAll)
 	t.Run("Firmatas", testFirmatasSliceUpdateAll)
 	t.Run("GorpMigrations", testGorpMigrationsSliceUpdateAll)
 	t.Run("Pumps", testPumpsSliceUpdateAll)
+	t.Run("WaterLevelSensors", testWaterLevelSensorsSliceUpdateAll)
 }

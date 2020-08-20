@@ -44,3 +44,13 @@ models:
     model: github.com/kerinin/doser/service/models.Pump
   TwoPointCalibration:
     model: github.com/kerinin/doser/service/models.Calibration
+  WaterLevelSensor:
+    model: github.com/kerinin/doser/service/models.WaterLevelSensor
+  AutoTopOff:
+    model: github.com/kerinin/doser/service/models.AutoTopOff
+  AutoWaterChange:
+    model: github.com/kerinin/doser/service/models.AutoWaterChange
+  Doser:
+    model: github.com/kerinin/doser/service/models.Doser
+  DoserComponent:
+    model: github.com/kerinin/doser/service/models.DoserComponent
