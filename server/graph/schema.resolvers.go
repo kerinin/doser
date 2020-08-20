@@ -292,11 +292,3 @@ type mutationResolver struct{ *Resolver }
 type pumpResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type waterLevelSensorResolver struct{ *Resolver }
-
-func NullInt64ToIntPtr(v null.Int64) *int {
-	if !v.Valid {
-		return nil
-	}
-	vNew := int(v.Int64)
-	return &vNew
-}
