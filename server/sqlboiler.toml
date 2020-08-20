@@ -1,0 +1,8 @@
+[sqlite3]
+dbname = "data.db"
+
+[aliases.tables.firmatas]
+up_plural     = "Firmatas"
+up_singular   = "Firmata"
+down_plural   = "firmatas"
+down_singular = "firmata"

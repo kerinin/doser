@@ -1,0 +1,154 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  firmatas: [Firmata!]
+  pumps: [Pump!]
+  water_level_sensors: [WaterLevelSensor!]
+  auto_top_off: [AutoTopOff!]
+  auto_water_changes: [AutoWaterChange!]
+  dosers: [Dosers!]
+}
+
+# Firmata microcontroller device configuration
+type Firmata {
+  id: ID!
+  pumps: [Pump!]
+
+  # The serial port on the host system, ie /dev/tty...
+  serial_port: String!
+}
+
+# A pump driven via the AccelStepperFirmata protocol
+type Pump {
+  id: ID!
+  firmata: Firmata!
+  # The pin to use for the step signal
+  step_pin: Int!
+  # The pin to use for the engage signal, if used
+  en_pin: Int
+  # The pump's volume calibration
+  calibration: TwoPointCalibration
+}
+
+type TwoPointCalibration {
+  # The intended volume pumped for the calibration run
+  target_volume: Float!
+  # The actual volume measured after the calibration run
+  measured_volume: Float!
+}
+
+enum SensorKind {
+  # Low-water level sensor
+  LOW
+  # High-water level sensor
+  HIGH
+  # Alert sensor
+  ALERT
+}
+
+type WaterLevelSensor {
+  id: ID!
+  firmata: Firmata!
+  # The pin to use for the sensor. 
+  # The pin is assumed to be a digital input. A HIGH value indicates the
+  # presence of water.
+  pin: Int!
+  # The kind of sensor
+  kind: SensorKind
+}
+
+type AutoTopOff {
+  id: ID!
+  pump: Pump!
+  # Water level sensors to use when topping off.
+  # Sensors of kind LOW will trigger an top off run if their value changes from HIGH to LOW
+  # Sensors of kind HIGH will terminate a top off run when their value chagnes from LOW to HIGH
+  # Sensors of kind ALERT will terminate a top off run and cause an alert if their value chagnes from LOW to HIGH
+  level_sensors: [WaterLevelSensor!]!
+  # The rate in mL/s to pump during top off runs
+  fill_rate: Float!
+  # How frequently top off runs should be scheduled.
+  # Uses standard cron tab formatting.
+  fill_frequency: String
+  # The maximum volume in mL to fill in a single run.
+  # Causes an alert if this volume is exceeded
+  max_fill_volume: Float
+}
+
+type AutoWaterChange {
+  id: ID!
+  fresh_pump: Pump!
+  waste_pump: Pump!
+  # The rate in L/day to exchange (each pump will deliver this many liters each day)
+  exchange_rate: Float!
+}
+
+type Dosers {
+  id: ID!
+  component: [DoserComponent!]
+}
+type DoserComponent {
+  pump: Pump!
+  # The rate to dose in mL/day
+  dose_rate: Float!
+}
+
+type Mutation {
+  createFirmata(input: NewFirmataInput!): Firmata!
+  createPump(input: NewPumpInput!): Pump!
+  calibratePump(input: CalibratePumpInput!): TwoPointCalibration!
+  createWaterLevelSensor(input: CreateWaterLevelSensor!): WaterLevelSensor!
+  createAutoTopOff(input: NewAutoTopOff!): AutoTopOff!
+  createAutoWaterChange(input: NewAutoWaterChangeInput!): AutoWaterChange!
+  createDosers(input: NewDosersInput!): Dosers!
+}
+
+input NewFirmataInput {
+  serial_port: String!
+}
+
+input NewPumpInput {
+  firmata_id: ID!
+  device_id: Int!
+  step_pin: Int!
+  dir_pin: Int
+  en_pin: Int
+}
+
+input CalibratePumpInput {
+  pump_id: ID!
+  target_volume: Float!
+  measured_volume: Float!
+}
+
+input CreateWaterLevelSensor {
+  firmata: ID!
+  pin: Int!
+  kind: SensorKind
+}
+
+input NewAutoTopOff {
+  level_sensors: [ID!]!
+  pump: ID!
+  fill_rate: Float!
+  fill_frequency: String
+  max_fill_folume: Float
+}
+
+input NewAutoWaterChangeInput {
+  exchange_rate: Int!
+  fresh_pump_id: ID!
+  waste_pump_id: ID!
+}
+
+input NewDosersInput {
+  components: [NewDoserComponentInput!]
+}
+
+input NewDoserComponentInput {
+  pump: ID!
+  dose_rate: Float!
+}

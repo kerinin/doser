@@ -1,7 +1,7 @@
 package graph
 
 import (
-	badger "github.com/dgraph-io/badger/v2"
+	"database/sql"
 )
 
 // This file will not be regenerated automatically.
@@ -9,9 +9,9 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	db *badger.DB
+	db *sql.DB
 }
 
-func NewResolver(db *badger.DB) *Resolver {
+func NewResolver(db *sql.DB) *Resolver {
 	return &Resolver{db}
 }

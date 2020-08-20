@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+
+	"github.com/kerinin/doser/service/models"
 )
 
 type AutoTopOff struct {
 	ID            string              `json:"id"`
-	Pump          *Pump               `json:"pump"`
+	Pump          *models.Pump        `json:"pump"`
 	LevelSensors  []*WaterLevelSensor `json:"level_sensors"`
 	FillRate      float64             `json:"fill_rate"`
 	FillFrequency *string             `json:"fill_frequency"`
@@ -18,13 +20,14 @@ type AutoTopOff struct {
 }
 
 type AutoWaterChange struct {
-	ID           string  `json:"id"`
-	FreshPump    *Pump   `json:"fresh_pump"`
-	WastePump    *Pump   `json:"waste_pump"`
-	ExchangeRate float64 `json:"exchange_rate"`
+	ID           string       `json:"id"`
+	FreshPump    *models.Pump `json:"fresh_pump"`
+	WastePump    *models.Pump `json:"waste_pump"`
+	ExchangeRate float64      `json:"exchange_rate"`
 }
 
 type CalibratePumpInput struct {
+	PumpID         string  `json:"pump_id"`
 	TargetVolume   float64 `json:"target_volume"`
 	MeasuredVolume float64 `json:"measured_volume"`
 }
@@ -36,18 +39,13 @@ type CreateWaterLevelSensor struct {
 }
 
 type DoserComponent struct {
-	Pump     *Pump   `json:"pump"`
-	DoseRate float64 `json:"dose_rate"`
+	Pump     *models.Pump `json:"pump"`
+	DoseRate float64      `json:"dose_rate"`
 }
 
 type Dosers struct {
 	ID        string            `json:"id"`
 	Component []*DoserComponent `json:"component"`
-}
-
-type Firmata struct {
-	ID         string `json:"id"`
-	SerialPort string `json:"serial_port"`
 }
 
 type NewAutoTopOff struct {
@@ -78,31 +76,18 @@ type NewFirmataInput struct {
 }
 
 type NewPumpInput struct {
-	SerialPort string `json:"serial_port"`
-	DeviceID   int    `json:"device_id"`
-	StepPin    int    `json:"step_pin"`
-	DirPin     *int   `json:"dir_pin"`
-	EnPin      *int   `json:"en_pin"`
-}
-
-type Pump struct {
-	ID          string               `json:"id"`
-	Firmata     *Firmata             `json:"firmata"`
-	StepPin     int                  `json:"step_pin"`
-	EnPin       *int                 `json:"en_pin"`
-	Calibration *TwoPointCalibration `json:"calibration"`
-}
-
-type TwoPointCalibration struct {
-	TargetVolume   float64 `json:"target_volume"`
-	MeasuredVolume float64 `json:"measured_volume"`
+	FirmataID string `json:"firmata_id"`
+	DeviceID  int    `json:"device_id"`
+	StepPin   int    `json:"step_pin"`
+	DirPin    *int   `json:"dir_pin"`
+	EnPin     *int   `json:"en_pin"`
 }
 
 type WaterLevelSensor struct {
-	ID      string      `json:"id"`
-	Firmata *Firmata    `json:"firmata"`
-	Pin     int         `json:"pin"`
-	Kind    *SensorKind `json:"kind"`
+	ID      string          `json:"id"`
+	Firmata *models.Firmata `json:"firmata"`
+	Pin     int             `json:"pin"`
+	Kind    *SensorKind     `json:"kind"`
 }
 
 type SensorKind string

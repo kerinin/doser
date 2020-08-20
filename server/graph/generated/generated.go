@@ -8,10 +8,12 @@ import (
 	"errors"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/introspection"
 	"github.com/kerinin/doser/service/graph/model"
+	"github.com/kerinin/doser/service/models"
 	gqlparser "github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -34,7 +36,9 @@ type Config struct {
 }
 
 type ResolverRoot interface {
+	Firmata() FirmataResolver
 	Mutation() MutationResolver
+	Pump() PumpResolver
 	Query() QueryResolver
 }
 
@@ -70,6 +74,7 @@ type ComplexityRoot struct {
 
 	Firmata struct {
 		ID         func(childComplexity int) int
+		Pumps      func(childComplexity int) int
 		SerialPort func(childComplexity int) int
 	}
 
@@ -95,7 +100,7 @@ type ComplexityRoot struct {
 		AutoTopOff        func(childComplexity int) int
 		AutoWaterChanges  func(childComplexity int) int
 		Dosers            func(childComplexity int) int
-		Firmata           func(childComplexity int) int
+		Firmatas          func(childComplexity int) int
 		Pumps             func(childComplexity int) int
 		WaterLevelSensors func(childComplexity int) int
 	}
@@ -113,18 +118,27 @@ type ComplexityRoot struct {
 	}
 }
 
+type FirmataResolver interface {
+	Pumps(ctx context.Context, obj *models.Firmata) ([]*models.Pump, error)
+}
 type MutationResolver interface {
-	CreateFirmata(ctx context.Context, input model.NewFirmataInput) (*model.Firmata, error)
-	CreatePump(ctx context.Context, input model.NewPumpInput) (*model.Pump, error)
-	CalibratePump(ctx context.Context, input model.CalibratePumpInput) (*model.Pump, error)
+	CreateFirmata(ctx context.Context, input model.NewFirmataInput) (*models.Firmata, error)
+	CreatePump(ctx context.Context, input model.NewPumpInput) (*models.Pump, error)
+	CalibratePump(ctx context.Context, input model.CalibratePumpInput) (*models.Calibration, error)
 	CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*model.WaterLevelSensor, error)
 	CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*model.AutoTopOff, error)
 	CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*model.AutoWaterChange, error)
 	CreateDosers(ctx context.Context, input model.NewDosersInput) (*model.Dosers, error)
 }
+type PumpResolver interface {
+	Firmata(ctx context.Context, obj *models.Pump) (*models.Firmata, error)
+
+	EnPin(ctx context.Context, obj *models.Pump) (*int, error)
+	Calibration(ctx context.Context, obj *models.Pump) (*models.Calibration, error)
+}
 type QueryResolver interface {
-	Firmata(ctx context.Context) (*model.Firmata, error)
-	Pumps(ctx context.Context) ([]*model.Pump, error)
+	Firmatas(ctx context.Context) ([]*models.Firmata, error)
+	Pumps(ctx context.Context) ([]*models.Pump, error)
 	WaterLevelSensors(ctx context.Context) ([]*model.WaterLevelSensor, error)
 	AutoTopOff(ctx context.Context) ([]*model.AutoTopOff, error)
 	AutoWaterChanges(ctx context.Context) ([]*model.AutoWaterChange, error)
@@ -250,6 +264,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Firmata.ID(childComplexity), true
+
+	case "Firmata.pumps":
+		if e.complexity.Firmata.Pumps == nil {
+			break
+		}
+
+		return e.complexity.Firmata.Pumps(childComplexity), true
 
 	case "Firmata.serial_port":
 		if e.complexity.Firmata.SerialPort == nil {
@@ -398,12 +419,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Dosers(childComplexity), true
 
-	case "Query.firmata":
-		if e.complexity.Query.Firmata == nil {
+	case "Query.firmatas":
+		if e.complexity.Query.Firmatas == nil {
 			break
 		}
 
-		return e.complexity.Query.Firmata(childComplexity), true
+		return e.complexity.Query.Firmatas(childComplexity), true
 
 	case "Query.pumps":
 		if e.complexity.Query.Pumps == nil {
@@ -531,7 +552,7 @@ var sources = []*ast.Source{
 }
 
 type Query {
-  firmata: Firmata
+  firmatas: [Firmata!]
   pumps: [Pump!]
   water_level_sensors: [WaterLevelSensor!]
   auto_top_off: [AutoTopOff!]
@@ -542,6 +563,7 @@ type Query {
 # Firmata microcontroller device configuration
 type Firmata {
   id: ID!
+  pumps: [Pump!]
 
   # The serial port on the host system, ie /dev/tty...
   serial_port: String!
@@ -625,7 +647,7 @@ type DoserComponent {
 type Mutation {
   createFirmata(input: NewFirmataInput!): Firmata!
   createPump(input: NewPumpInput!): Pump!
-  calibratePump(input: CalibratePumpInput!): Pump!
+  calibratePump(input: CalibratePumpInput!): TwoPointCalibration!
   createWaterLevelSensor(input: CreateWaterLevelSensor!): WaterLevelSensor!
   createAutoTopOff(input: NewAutoTopOff!): AutoTopOff!
   createAutoWaterChange(input: NewAutoWaterChangeInput!): AutoWaterChange!
@@ -637,7 +659,7 @@ input NewFirmataInput {
 }
 
 input NewPumpInput {
-  serial_port: String!
+  firmata_id: ID!
   device_id: Int!
   step_pin: Int!
   dir_pin: Int
@@ -645,6 +667,7 @@ input NewPumpInput {
 }
 
 input CalibratePumpInput {
+  pump_id: ID!
   target_volume: Float!
   measured_volume: Float!
 }
@@ -906,9 +929,9 @@ func (ec *executionContext) _AutoTopOff_pump(ctx context.Context, field graphql.
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pump)
+	res := resTmp.(*models.Pump)
 	fc.Result = res
-	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx, field.Selections, res)
+	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoTopOff_level_sensors(ctx context.Context, field graphql.CollectedField, obj *model.AutoTopOff) (ret graphql.Marshaler) {
@@ -1104,9 +1127,9 @@ func (ec *executionContext) _AutoWaterChange_fresh_pump(ctx context.Context, fie
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pump)
+	res := resTmp.(*models.Pump)
 	fc.Result = res
-	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx, field.Selections, res)
+	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoWaterChange_waste_pump(ctx context.Context, field graphql.CollectedField, obj *model.AutoWaterChange) (ret graphql.Marshaler) {
@@ -1138,9 +1161,9 @@ func (ec *executionContext) _AutoWaterChange_waste_pump(ctx context.Context, fie
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pump)
+	res := resTmp.(*models.Pump)
 	fc.Result = res
-	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx, field.Selections, res)
+	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoWaterChange_exchange_rate(ctx context.Context, field graphql.CollectedField, obj *model.AutoWaterChange) (ret graphql.Marshaler) {
@@ -1206,9 +1229,9 @@ func (ec *executionContext) _DoserComponent_pump(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pump)
+	res := resTmp.(*models.Pump)
 	fc.Result = res
-	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx, field.Selections, res)
+	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _DoserComponent_dose_rate(ctx context.Context, field graphql.CollectedField, obj *model.DoserComponent) (ret graphql.Marshaler) {
@@ -1310,7 +1333,7 @@ func (ec *executionContext) _Dosers_component(ctx context.Context, field graphql
 	return ec.marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponentᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Firmata_id(ctx context.Context, field graphql.CollectedField, obj *model.Firmata) (ret graphql.Marshaler) {
+func (ec *executionContext) _Firmata_id(ctx context.Context, field graphql.CollectedField, obj *models.Firmata) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1344,7 +1367,38 @@ func (ec *executionContext) _Firmata_id(ctx context.Context, field graphql.Colle
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Firmata_serial_port(ctx context.Context, field graphql.CollectedField, obj *model.Firmata) (ret graphql.Marshaler) {
+func (ec *executionContext) _Firmata_pumps(ctx context.Context, field graphql.CollectedField, obj *models.Firmata) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Firmata",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Firmata().Pumps(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*models.Pump)
+	fc.Result = res
+	return ec.marshalOPump2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPumpᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Firmata_serial_port(ctx context.Context, field graphql.CollectedField, obj *models.Firmata) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1414,9 +1468,9 @@ func (ec *executionContext) _Mutation_createFirmata(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Firmata)
+	res := resTmp.(*models.Firmata)
 	fc.Result = res
-	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFirmata(ctx, field.Selections, res)
+	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createPump(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1455,9 +1509,9 @@ func (ec *executionContext) _Mutation_createPump(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pump)
+	res := resTmp.(*models.Pump)
 	fc.Result = res
-	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx, field.Selections, res)
+	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_calibratePump(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1496,9 +1550,9 @@ func (ec *executionContext) _Mutation_calibratePump(ctx context.Context, field g
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Pump)
+	res := resTmp.(*models.Calibration)
 	fc.Result = res
-	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx, field.Selections, res)
+	return ec.marshalNTwoPointCalibration2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐCalibration(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createWaterLevelSensor(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1665,7 +1719,7 @@ func (ec *executionContext) _Mutation_createDosers(ctx context.Context, field gr
 	return ec.marshalNDosers2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDosers(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Pump_id(ctx context.Context, field graphql.CollectedField, obj *model.Pump) (ret graphql.Marshaler) {
+func (ec *executionContext) _Pump_id(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1699,7 +1753,7 @@ func (ec *executionContext) _Pump_id(ctx context.Context, field graphql.Collecte
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Pump_firmata(ctx context.Context, field graphql.CollectedField, obj *model.Pump) (ret graphql.Marshaler) {
+func (ec *executionContext) _Pump_firmata(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1710,13 +1764,13 @@ func (ec *executionContext) _Pump_firmata(ctx context.Context, field graphql.Col
 		Object:   "Pump",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Firmata, nil
+		return ec.resolvers.Pump().Firmata(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1728,12 +1782,12 @@ func (ec *executionContext) _Pump_firmata(ctx context.Context, field graphql.Col
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Firmata)
+	res := resTmp.(*models.Firmata)
 	fc.Result = res
-	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFirmata(ctx, field.Selections, res)
+	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Pump_step_pin(ctx context.Context, field graphql.CollectedField, obj *model.Pump) (ret graphql.Marshaler) {
+func (ec *executionContext) _Pump_step_pin(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1762,12 +1816,12 @@ func (ec *executionContext) _Pump_step_pin(ctx context.Context, field graphql.Co
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Pump_en_pin(ctx context.Context, field graphql.CollectedField, obj *model.Pump) (ret graphql.Marshaler) {
+func (ec *executionContext) _Pump_en_pin(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1778,13 +1832,13 @@ func (ec *executionContext) _Pump_en_pin(ctx context.Context, field graphql.Coll
 		Object:   "Pump",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.EnPin, nil
+		return ec.resolvers.Pump().EnPin(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1798,7 +1852,7 @@ func (ec *executionContext) _Pump_en_pin(ctx context.Context, field graphql.Coll
 	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Pump_calibration(ctx context.Context, field graphql.CollectedField, obj *model.Pump) (ret graphql.Marshaler) {
+func (ec *executionContext) _Pump_calibration(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1809,13 +1863,13 @@ func (ec *executionContext) _Pump_calibration(ctx context.Context, field graphql
 		Object:   "Pump",
 		Field:    field,
 		Args:     nil,
-		IsMethod: false,
+		IsMethod: true,
 	}
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Calibration, nil
+		return ec.resolvers.Pump().Calibration(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1824,12 +1878,12 @@ func (ec *executionContext) _Pump_calibration(ctx context.Context, field graphql
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.TwoPointCalibration)
+	res := resTmp.(*models.Calibration)
 	fc.Result = res
-	return ec.marshalOTwoPointCalibration2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐTwoPointCalibration(ctx, field.Selections, res)
+	return ec.marshalOTwoPointCalibration2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐCalibration(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Query_firmata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_firmatas(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1846,7 +1900,7 @@ func (ec *executionContext) _Query_firmata(ctx context.Context, field graphql.Co
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Firmata(rctx)
+		return ec.resolvers.Query().Firmatas(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1855,9 +1909,9 @@ func (ec *executionContext) _Query_firmata(ctx context.Context, field graphql.Co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Firmata)
+	res := resTmp.([]*models.Firmata)
 	fc.Result = res
-	return ec.marshalOFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFirmata(ctx, field.Selections, res)
+	return ec.marshalOFirmata2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmataᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_pumps(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1886,9 +1940,9 @@ func (ec *executionContext) _Query_pumps(ctx context.Context, field graphql.Coll
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Pump)
+	res := resTmp.([]*models.Pump)
 	fc.Result = res
-	return ec.marshalOPump2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPumpᚄ(ctx, field.Selections, res)
+	return ec.marshalOPump2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPumpᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_water_level_sensors(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -2084,7 +2138,7 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _TwoPointCalibration_target_volume(ctx context.Context, field graphql.CollectedField, obj *model.TwoPointCalibration) (ret graphql.Marshaler) {
+func (ec *executionContext) _TwoPointCalibration_target_volume(ctx context.Context, field graphql.CollectedField, obj *models.Calibration) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2118,7 +2172,7 @@ func (ec *executionContext) _TwoPointCalibration_target_volume(ctx context.Conte
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _TwoPointCalibration_measured_volume(ctx context.Context, field graphql.CollectedField, obj *model.TwoPointCalibration) (ret graphql.Marshaler) {
+func (ec *executionContext) _TwoPointCalibration_measured_volume(ctx context.Context, field graphql.CollectedField, obj *models.Calibration) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2215,9 +2269,9 @@ func (ec *executionContext) _WaterLevelSensor_firmata(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Firmata)
+	res := resTmp.(*models.Firmata)
 	fc.Result = res
-	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFirmata(ctx, field.Selections, res)
+	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _WaterLevelSensor_pin(ctx context.Context, field graphql.CollectedField, obj *model.WaterLevelSensor) (ret graphql.Marshaler) {
@@ -3346,6 +3400,14 @@ func (ec *executionContext) unmarshalInputCalibratePumpInput(ctx context.Context
 
 	for k, v := range asMap {
 		switch k {
+		case "pump_id":
+			var err error
+
+			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pump_id"))
+			it.PumpID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "target_volume":
 			var err error
 
@@ -3566,11 +3628,11 @@ func (ec *executionContext) unmarshalInputNewPumpInput(ctx context.Context, obj 
 
 	for k, v := range asMap {
 		switch k {
-		case "serial_port":
+		case "firmata_id":
 			var err error
 
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("serial_port"))
-			it.SerialPort, err = ec.unmarshalNString2string(ctx, v)
+			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("firmata_id"))
+			it.FirmataID, err = ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3771,7 +3833,7 @@ func (ec *executionContext) _Dosers(ctx context.Context, sel ast.SelectionSet, o
 
 var firmataImplementors = []string{"Firmata"}
 
-func (ec *executionContext) _Firmata(ctx context.Context, sel ast.SelectionSet, obj *model.Firmata) graphql.Marshaler {
+func (ec *executionContext) _Firmata(ctx context.Context, sel ast.SelectionSet, obj *models.Firmata) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, firmataImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -3783,12 +3845,23 @@ func (ec *executionContext) _Firmata(ctx context.Context, sel ast.SelectionSet, 
 		case "id":
 			out.Values[i] = ec._Firmata_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
+		case "pumps":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Firmata_pumps(ctx, field, obj)
+				return res
+			})
 		case "serial_port":
 			out.Values[i] = ec._Firmata_serial_port(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -3864,7 +3937,7 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 
 var pumpImplementors = []string{"Pump"}
 
-func (ec *executionContext) _Pump(ctx context.Context, sel ast.SelectionSet, obj *model.Pump) graphql.Marshaler {
+func (ec *executionContext) _Pump(ctx context.Context, sel ast.SelectionSet, obj *models.Pump) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, pumpImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -3876,22 +3949,49 @@ func (ec *executionContext) _Pump(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._Pump_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "firmata":
-			out.Values[i] = ec._Pump_firmata(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Pump_firmata(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
 		case "step_pin":
 			out.Values[i] = ec._Pump_step_pin(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "en_pin":
-			out.Values[i] = ec._Pump_en_pin(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Pump_en_pin(ctx, field, obj)
+				return res
+			})
 		case "calibration":
-			out.Values[i] = ec._Pump_calibration(ctx, field, obj)
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Pump_calibration(ctx, field, obj)
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3918,7 +4018,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "firmata":
+		case "firmatas":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
 				defer func() {
@@ -3926,7 +4026,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_firmata(ctx, field)
+				res = ec._Query_firmatas(ctx, field)
 				return res
 			})
 		case "pumps":
@@ -4001,7 +4101,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 
 var twoPointCalibrationImplementors = []string{"TwoPointCalibration"}
 
-func (ec *executionContext) _TwoPointCalibration(ctx context.Context, sel ast.SelectionSet, obj *model.TwoPointCalibration) graphql.Marshaler {
+func (ec *executionContext) _TwoPointCalibration(ctx context.Context, sel ast.SelectionSet, obj *models.Calibration) graphql.Marshaler {
 	fields := graphql.CollectFields(ec.OperationContext, sel, twoPointCalibrationImplementors)
 
 	out := graphql.NewFieldSet(fields)
@@ -4392,11 +4492,11 @@ func (ec *executionContext) marshalNDosers2ᚖgithubᚗcomᚋkerininᚋdoserᚋs
 	return ec._Dosers(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNFirmata2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFirmata(ctx context.Context, sel ast.SelectionSet, v model.Firmata) graphql.Marshaler {
+func (ec *executionContext) marshalNFirmata2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx context.Context, sel ast.SelectionSet, v models.Firmata) graphql.Marshaler {
 	return ec._Firmata(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFirmata(ctx context.Context, sel ast.SelectionSet, v *model.Firmata) graphql.Marshaler {
+func (ec *executionContext) marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx context.Context, sel ast.SelectionSet, v *models.Firmata) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -4481,6 +4581,21 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
+func (ec *executionContext) unmarshalNInt2int64(ctx context.Context, v interface{}) (int64, error) {
+	res, err := graphql.UnmarshalInt64(v)
+	return res, graphql.WrapErrorWithInputPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNInt2int64(ctx context.Context, sel ast.SelectionSet, v int64) graphql.Marshaler {
+	res := graphql.MarshalInt64(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+	}
+	return res
+}
+
 func (ec *executionContext) unmarshalNNewAutoTopOff2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewAutoTopOff(ctx context.Context, v interface{}) (model.NewAutoTopOff, error) {
 	res, err := ec.unmarshalInputNewAutoTopOff(ctx, v)
 	return res, graphql.WrapErrorWithInputPath(ctx, err)
@@ -4511,11 +4626,11 @@ func (ec *executionContext) unmarshalNNewPumpInput2githubᚗcomᚋkerininᚋdose
 	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNPump2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx context.Context, sel ast.SelectionSet, v model.Pump) graphql.Marshaler {
+func (ec *executionContext) marshalNPump2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx context.Context, sel ast.SelectionSet, v models.Pump) graphql.Marshaler {
 	return ec._Pump(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx context.Context, sel ast.SelectionSet, v *model.Pump) graphql.Marshaler {
+func (ec *executionContext) marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx context.Context, sel ast.SelectionSet, v *models.Pump) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
@@ -4538,6 +4653,20 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNTwoPointCalibration2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐCalibration(ctx context.Context, sel ast.SelectionSet, v models.Calibration) graphql.Marshaler {
+	return ec._TwoPointCalibration(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNTwoPointCalibration2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐCalibration(ctx context.Context, sel ast.SelectionSet, v *models.Calibration) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._TwoPointCalibration(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNWaterLevelSensor2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐWaterLevelSensor(ctx context.Context, sel ast.SelectionSet, v model.WaterLevelSensor) graphql.Marshaler {
@@ -5004,11 +5133,44 @@ func (ec *executionContext) marshalODosers2ᚕᚖgithubᚗcomᚋkerininᚋdoser�
 	return ret
 }
 
-func (ec *executionContext) marshalOFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFirmata(ctx context.Context, sel ast.SelectionSet, v *model.Firmata) graphql.Marshaler {
+func (ec *executionContext) marshalOFirmata2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmataᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Firmata) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
-	return ec._Firmata(ctx, sel, v)
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v interface{}) (*float64, error) {
@@ -5065,7 +5227,7 @@ func (ec *executionContext) unmarshalONewDoserComponentInput2ᚕᚖgithubᚗcom�
 	return res, nil
 }
 
-func (ec *executionContext) marshalOPump2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPumpᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Pump) graphql.Marshaler {
+func (ec *executionContext) marshalOPump2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPumpᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Pump) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -5092,7 +5254,7 @@ func (ec *executionContext) marshalOPump2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐPump(ctx, sel, v[i])
+			ret[i] = ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -5145,7 +5307,7 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	return graphql.MarshalString(*v)
 }
 
-func (ec *executionContext) marshalOTwoPointCalibration2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐTwoPointCalibration(ctx context.Context, sel ast.SelectionSet, v *model.TwoPointCalibration) graphql.Marshaler {
+func (ec *executionContext) marshalOTwoPointCalibration2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐCalibration(ctx context.Context, sel ast.SelectionSet, v *models.Calibration) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}

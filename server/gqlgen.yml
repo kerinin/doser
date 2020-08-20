@@ -36,3 +36,11 @@ resolver:
 # if they match it will use them, otherwise it will generate them.
 autobind:
   - "github.com/kerinin/doser/service/graph/model"
+
+models:
+  Firmata:
+    model: github.com/kerinin/doser/service/models.Firmata
+  Pump:
+    model: github.com/kerinin/doser/service/models.Pump
+  TwoPointCalibration:
+    model: github.com/kerinin/doser/service/models.Calibration
