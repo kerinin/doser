@@ -9,7 +9,7 @@ type Query {
   water_level_sensors: [WaterLevelSensor!]
   auto_top_off: [AutoTopOff!]
   auto_water_changes: [AutoWaterChange!]
-  dosers: [Dosers!]
+  dosers: [Doser!]
 }
 
 # Firmata microcontroller device configuration
@@ -86,9 +86,9 @@ type AutoWaterChange {
   exchange_rate: Float!
 }
 
-type Dosers {
+type Doser {
   id: ID!
-  component: [DoserComponent!]
+  components: [DoserComponent!]
 }
 type DoserComponent {
   pump: Pump!
@@ -103,7 +103,7 @@ type Mutation {
   createWaterLevelSensor(input: CreateWaterLevelSensor!): WaterLevelSensor!
   createAutoTopOff(input: NewAutoTopOff!): AutoTopOff!
   createAutoWaterChange(input: NewAutoWaterChangeInput!): AutoWaterChange!
-  createDosers(input: NewDosersInput!): Dosers!
+  createDoser(input: NewDoserInput!): Doser!
 }
 
 input NewFirmataInput {
@@ -144,7 +144,7 @@ input NewAutoWaterChangeInput {
   waste_pump_id: ID!
 }
 
-input NewDosersInput {
+input NewDoserInput {
   components: [NewDoserComponentInput!]
 }
 

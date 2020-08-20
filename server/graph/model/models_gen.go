@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-
-	"github.com/kerinin/doser/service/models"
 )
 
 type CalibratePumpInput struct {
@@ -20,11 +18,6 @@ type CreateWaterLevelSensor struct {
 	Firmata string      `json:"firmata"`
 	Pin     int         `json:"pin"`
 	Kind    *SensorKind `json:"kind"`
-}
-
-type Dosers struct {
-	ID        string                   `json:"id"`
-	Component []*models.DoserComponent `json:"component"`
 }
 
 type NewAutoTopOff struct {
@@ -46,7 +39,7 @@ type NewDoserComponentInput struct {
 	DoseRate float64 `json:"dose_rate"`
 }
 
-type NewDosersInput struct {
+type NewDoserInput struct {
 	Components []*NewDoserComponentInput `json:"components"`
 }
 

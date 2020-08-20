@@ -25,7 +25,7 @@ type WaterLevelSensor struct {
 	ID        string `boil:"id" json:"id" toml:"id" yaml:"id"`
 	FirmataID string `boil:"firmata_id" json:"firmata_id" toml:"firmata_id" yaml:"firmata_id"`
 	Pin       int64  `boil:"pin" json:"pin" toml:"pin" yaml:"pin"`
-	Kind      int64  `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
+	Kind      string `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
 
 	R *waterLevelSensorR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L waterLevelSensorL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -49,12 +49,12 @@ var WaterLevelSensorWhere = struct {
 	ID        whereHelperstring
 	FirmataID whereHelperstring
 	Pin       whereHelperint64
-	Kind      whereHelperint64
+	Kind      whereHelperstring
 }{
 	ID:        whereHelperstring{field: "\"water_level_sensors\".\"id\""},
 	FirmataID: whereHelperstring{field: "\"water_level_sensors\".\"firmata_id\""},
 	Pin:       whereHelperint64{field: "\"water_level_sensors\".\"pin\""},
-	Kind:      whereHelperint64{field: "\"water_level_sensors\".\"kind\""},
+	Kind:      whereHelperstring{field: "\"water_level_sensors\".\"kind\""},
 }
 
 // WaterLevelSensorRels is where relationship names are stored.

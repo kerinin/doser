@@ -7,7 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/kerinin/doser/service/graph/generated"
@@ -18,23 +17,57 @@ import (
 )
 
 func (r *autoTopOffResolver) Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error) {
-	panic(fmt.Errorf("not implemented"))
+	m, err := obj.Pump().One(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting ATO: %w", err)
+	}
+
+	return m, nil
 }
 
 func (r *autoTopOffResolver) LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error) {
-	panic(fmt.Errorf("not implemented"))
+	ms, err := obj.WaterLevelSensors().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting level sensors: %w", err)
+	}
+
+	return ms, nil
 }
 
 func (r *autoWaterChangeResolver) FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error) {
-	panic(fmt.Errorf("not implemented"))
+	m, err := obj.FreshPump().One(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting fresh water pump: %w", err)
+	}
+
+	return m, nil
 }
 
 func (r *autoWaterChangeResolver) WastePump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error) {
-	panic(fmt.Errorf("not implemented"))
+	m, err := obj.WastePump().One(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting waste water pump: %w", err)
+	}
+
+	return m, nil
+}
+
+func (r *doserResolver) Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error) {
+	ms, err := obj.DoserComponents().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting doser components: %w", err)
+	}
+
+	return ms, nil
 }
 
 func (r *doserComponentResolver) Pump(ctx context.Context, obj *models.DoserComponent) (*models.Pump, error) {
-	panic(fmt.Errorf("not implemented"))
+	m, err := obj.Pump().One(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting pump: %w", err)
+	}
+
+	return m, nil
 }
 
 func (r *firmataResolver) Pumps(ctx context.Context, obj *models.Firmata) ([]*models.Pump, error) {
@@ -110,7 +143,7 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, input mode
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *mutationResolver) CreateDosers(ctx context.Context, input model.NewDosersInput) (*model.Dosers, error) {
+func (r *mutationResolver) CreateDoser(ctx context.Context, input model.NewDoserInput) (*models.Doser, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
@@ -124,7 +157,7 @@ func (r *pumpResolver) Firmata(ctx context.Context, obj *models.Pump) (*models.F
 }
 
 func (r *pumpResolver) EnPin(ctx context.Context, obj *models.Pump) (*int, error) {
-	panic(fmt.Errorf("not implemented"))
+	return NullInt64ToIntPtr(obj.EnPin), nil
 }
 
 func (r *pumpResolver) Calibration(ctx context.Context, obj *models.Pump) (*models.Calibration, error) {
@@ -164,27 +197,57 @@ func (r *queryResolver) Pumps(ctx context.Context) ([]*models.Pump, error) {
 }
 
 func (r *queryResolver) WaterLevelSensors(ctx context.Context) ([]*models.WaterLevelSensor, error) {
-	panic(fmt.Errorf("not implemented"))
+	ms, err := models.WaterLevelSensors().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting water level sensors: %w", err)
+	}
+
+	return ms, nil
 }
 
 func (r *queryResolver) AutoTopOff(ctx context.Context) ([]*models.AutoTopOff, error) {
-	panic(fmt.Errorf("not implemented"))
+	ms, err := models.AutoTopOffs().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting ATOs: %w", err)
+	}
+
+	return ms, nil
 }
 
 func (r *queryResolver) AutoWaterChanges(ctx context.Context) ([]*models.AutoWaterChange, error) {
-	panic(fmt.Errorf("not implemented"))
+	ms, err := models.AutoWaterChanges().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting AWCs: %w", err)
+	}
+
+	return ms, nil
 }
 
-func (r *queryResolver) Dosers(ctx context.Context) ([]*model.Dosers, error) {
-	panic(fmt.Errorf("not implemented"))
+func (r *queryResolver) Dosers(ctx context.Context) ([]*models.Doser, error) {
+	ms, err := models.Dosers().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting Dosers: %w", err)
+	}
+
+	return ms, nil
 }
 
 func (r *waterLevelSensorResolver) Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error) {
-	panic(fmt.Errorf("not implemented"))
+	m, err := obj.Firmatum().One(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting firmata: %w", err)
+	}
+
+	return m, nil
 }
 
 func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLevelSensor) (*model.SensorKind, error) {
-	panic(fmt.Errorf("not implemented"))
+	for _, kind := range model.AllSensorKind {
+		if string(kind) == obj.Kind {
+			return &kind, nil
+		}
+	}
+	return nil, fmt.Errorf("Unrecognized sensor kind %s", obj.Kind)
 }
 
 // AutoTopOff returns generated.AutoTopOffResolver implementation.
@@ -194,6 +257,9 @@ func (r *Resolver) AutoTopOff() generated.AutoTopOffResolver { return &autoTopOf
 func (r *Resolver) AutoWaterChange() generated.AutoWaterChangeResolver {
 	return &autoWaterChangeResolver{r}
 }
+
+// Doser returns generated.DoserResolver implementation.
+func (r *Resolver) Doser() generated.DoserResolver { return &doserResolver{r} }
 
 // DoserComponent returns generated.DoserComponentResolver implementation.
 func (r *Resolver) DoserComponent() generated.DoserComponentResolver {
@@ -219,6 +285,7 @@ func (r *Resolver) WaterLevelSensor() generated.WaterLevelSensorResolver {
 
 type autoTopOffResolver struct{ *Resolver }
 type autoWaterChangeResolver struct{ *Resolver }
+type doserResolver struct{ *Resolver }
 type doserComponentResolver struct{ *Resolver }
 type firmataResolver struct{ *Resolver }
 type mutationResolver struct{ *Resolver }
@@ -226,36 +293,10 @@ type pumpResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type waterLevelSensorResolver struct{ *Resolver }
 
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *pumpResolver) StepPin(ctx context.Context, obj *models.Pump) (int, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-func (r *twoPointCalibrationResolver) TargetVolume(ctx context.Context, obj *models.Calibration) (float64, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-func (r *twoPointCalibrationResolver) MeasuredVolume(ctx context.Context, obj *models.Calibration) (float64, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-
-type twoPointCalibrationResolver struct{ *Resolver }
-
-func (r *queryResolver) Firmata(ctx context.Context) (*models.Firmata, error) {
-	panic(fmt.Errorf("not implemented"))
-}
-
-const (
-	firmataPrefix = "firmata"
-	pumpPrefix    = "firmata"
-)
-
-func FirmataKey(id string) []byte {
-	return []byte(strings.Join([]string{firmataPrefix, id}, "/"))
-}
-func PumpKey(id string) []byte {
-	return []byte(strings.Join([]string{pumpPrefix, id}, "/"))
+func NullInt64ToIntPtr(v null.Int64) *int {
+	if !v.Valid {
+		return nil
+	}
+	vNew := int(v.Int64)
+	return &vNew
 }

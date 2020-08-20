@@ -41,7 +41,7 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 						id UUID NOT NULL,
 						firmata_id UUID NOT NULL,
 						pin INT NOT NULL,
-						kind INT NOT NULL,
+						kind TEXT NOT NULL,
 
 						PRIMARY KEY (id)
 						FOREIGN KEY(firmata_id) REFERENCES firmatas(id)

@@ -38,6 +38,7 @@ type Config struct {
 type ResolverRoot interface {
 	AutoTopOff() AutoTopOffResolver
 	AutoWaterChange() AutoWaterChangeResolver
+	Doser() DoserResolver
 	DoserComponent() DoserComponentResolver
 	Firmata() FirmataResolver
 	Mutation() MutationResolver
@@ -66,14 +67,14 @@ type ComplexityRoot struct {
 		WastePump    func(childComplexity int) int
 	}
 
+	Doser struct {
+		Components func(childComplexity int) int
+		ID         func(childComplexity int) int
+	}
+
 	DoserComponent struct {
 		DoseRate func(childComplexity int) int
 		Pump     func(childComplexity int) int
-	}
-
-	Dosers struct {
-		Component func(childComplexity int) int
-		ID        func(childComplexity int) int
 	}
 
 	Firmata struct {
@@ -86,7 +87,7 @@ type ComplexityRoot struct {
 		CalibratePump          func(childComplexity int, input model.CalibratePumpInput) int
 		CreateAutoTopOff       func(childComplexity int, input model.NewAutoTopOff) int
 		CreateAutoWaterChange  func(childComplexity int, input model.NewAutoWaterChangeInput) int
-		CreateDosers           func(childComplexity int, input model.NewDosersInput) int
+		CreateDoser            func(childComplexity int, input model.NewDoserInput) int
 		CreateFirmata          func(childComplexity int, input model.NewFirmataInput) int
 		CreatePump             func(childComplexity int, input model.NewPumpInput) int
 		CreateWaterLevelSensor func(childComplexity int, input model.CreateWaterLevelSensor) int
@@ -130,6 +131,9 @@ type AutoWaterChangeResolver interface {
 	FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 	WastePump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 }
+type DoserResolver interface {
+	Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error)
+}
 type DoserComponentResolver interface {
 	Pump(ctx context.Context, obj *models.DoserComponent) (*models.Pump, error)
 }
@@ -143,7 +147,7 @@ type MutationResolver interface {
 	CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*models.WaterLevelSensor, error)
 	CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error)
 	CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*models.AutoWaterChange, error)
-	CreateDosers(ctx context.Context, input model.NewDosersInput) (*model.Dosers, error)
+	CreateDoser(ctx context.Context, input model.NewDoserInput) (*models.Doser, error)
 }
 type PumpResolver interface {
 	Firmata(ctx context.Context, obj *models.Pump) (*models.Firmata, error)
@@ -157,7 +161,7 @@ type QueryResolver interface {
 	WaterLevelSensors(ctx context.Context) ([]*models.WaterLevelSensor, error)
 	AutoTopOff(ctx context.Context) ([]*models.AutoTopOff, error)
 	AutoWaterChanges(ctx context.Context) ([]*models.AutoWaterChange, error)
-	Dosers(ctx context.Context) ([]*model.Dosers, error)
+	Dosers(ctx context.Context) ([]*models.Doser, error)
 }
 type WaterLevelSensorResolver interface {
 	Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error)
@@ -250,6 +254,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AutoWaterChange.WastePump(childComplexity), true
 
+	case "Doser.components":
+		if e.complexity.Doser.Components == nil {
+			break
+		}
+
+		return e.complexity.Doser.Components(childComplexity), true
+
+	case "Doser.id":
+		if e.complexity.Doser.ID == nil {
+			break
+		}
+
+		return e.complexity.Doser.ID(childComplexity), true
+
 	case "DoserComponent.dose_rate":
 		if e.complexity.DoserComponent.DoseRate == nil {
 			break
@@ -263,20 +281,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.DoserComponent.Pump(childComplexity), true
-
-	case "Dosers.component":
-		if e.complexity.Dosers.Component == nil {
-			break
-		}
-
-		return e.complexity.Dosers.Component(childComplexity), true
-
-	case "Dosers.id":
-		if e.complexity.Dosers.ID == nil {
-			break
-		}
-
-		return e.complexity.Dosers.ID(childComplexity), true
 
 	case "Firmata.id":
 		if e.complexity.Firmata.ID == nil {
@@ -335,17 +339,17 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.CreateAutoWaterChange(childComplexity, args["input"].(model.NewAutoWaterChangeInput)), true
 
-	case "Mutation.createDosers":
-		if e.complexity.Mutation.CreateDosers == nil {
+	case "Mutation.createDoser":
+		if e.complexity.Mutation.CreateDoser == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_createDosers_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_createDoser_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateDosers(childComplexity, args["input"].(model.NewDosersInput)), true
+		return e.complexity.Mutation.CreateDoser(childComplexity, args["input"].(model.NewDoserInput)), true
 
 	case "Mutation.createFirmata":
 		if e.complexity.Mutation.CreateFirmata == nil {
@@ -577,7 +581,7 @@ type Query {
   water_level_sensors: [WaterLevelSensor!]
   auto_top_off: [AutoTopOff!]
   auto_water_changes: [AutoWaterChange!]
-  dosers: [Dosers!]
+  dosers: [Doser!]
 }
 
 # Firmata microcontroller device configuration
@@ -654,9 +658,9 @@ type AutoWaterChange {
   exchange_rate: Float!
 }
 
-type Dosers {
+type Doser {
   id: ID!
-  component: [DoserComponent!]
+  components: [DoserComponent!]
 }
 type DoserComponent {
   pump: Pump!
@@ -671,7 +675,7 @@ type Mutation {
   createWaterLevelSensor(input: CreateWaterLevelSensor!): WaterLevelSensor!
   createAutoTopOff(input: NewAutoTopOff!): AutoTopOff!
   createAutoWaterChange(input: NewAutoWaterChangeInput!): AutoWaterChange!
-  createDosers(input: NewDosersInput!): Dosers!
+  createDoser(input: NewDoserInput!): Doser!
 }
 
 input NewFirmataInput {
@@ -712,7 +716,7 @@ input NewAutoWaterChangeInput {
   waste_pump_id: ID!
 }
 
-input NewDosersInput {
+input NewDoserInput {
   components: [NewDoserComponentInput!]
 }
 
@@ -773,13 +777,13 @@ func (ec *executionContext) field_Mutation_createAutoWaterChange_args(ctx contex
 	return args, nil
 }
 
-func (ec *executionContext) field_Mutation_createDosers_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_createDoser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewDosersInput
+	var arg0 model.NewDoserInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("input"))
-		arg0, err = ec.unmarshalNNewDosersInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDosersInput(ctx, tmp)
+		arg0, err = ec.unmarshalNNewDoserInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDoserInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1220,6 +1224,71 @@ func (ec *executionContext) _AutoWaterChange_exchange_rate(ctx context.Context, 
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Doser_id(ctx context.Context, field graphql.CollectedField, obj *models.Doser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Doser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Doser_components(ctx context.Context, field graphql.CollectedField, obj *models.Doser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Doser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Doser().Components(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*models.DoserComponent)
+	fc.Result = res
+	return ec.marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponentᚄ(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _DoserComponent_pump(ctx context.Context, field graphql.CollectedField, obj *models.DoserComponent) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -1286,71 +1355,6 @@ func (ec *executionContext) _DoserComponent_dose_rate(ctx context.Context, field
 	res := resTmp.(float64)
 	fc.Result = res
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Dosers_id(ctx context.Context, field graphql.CollectedField, obj *model.Dosers) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Dosers",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _Dosers_component(ctx context.Context, field graphql.CollectedField, obj *model.Dosers) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "Dosers",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Component, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.([]*models.DoserComponent)
-	fc.Result = res
-	return ec.marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponentᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Firmata_id(ctx context.Context, field graphql.CollectedField, obj *models.Firmata) (ret graphql.Marshaler) {
@@ -1698,7 +1702,7 @@ func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context,
 	return ec.marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Mutation_createDosers(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Mutation_createDoser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1714,7 +1718,7 @@ func (ec *executionContext) _Mutation_createDosers(ctx context.Context, field gr
 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	rawArgs := field.ArgumentMap(ec.Variables)
-	args, err := ec.field_Mutation_createDosers_args(ctx, rawArgs)
+	args, err := ec.field_Mutation_createDoser_args(ctx, rawArgs)
 	if err != nil {
 		ec.Error(ctx, err)
 		return graphql.Null
@@ -1722,7 +1726,7 @@ func (ec *executionContext) _Mutation_createDosers(ctx context.Context, field gr
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateDosers(rctx, args["input"].(model.NewDosersInput))
+		return ec.resolvers.Mutation().CreateDoser(rctx, args["input"].(model.NewDoserInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1734,9 +1738,9 @@ func (ec *executionContext) _Mutation_createDosers(ctx context.Context, field gr
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Dosers)
+	res := resTmp.(*models.Doser)
 	fc.Result = res
-	return ec.marshalNDosers2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDosers(ctx, field.Selections, res)
+	return ec.marshalNDoser2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoser(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Pump_id(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
@@ -2084,9 +2088,9 @@ func (ec *executionContext) _Query_dosers(ctx context.Context, field graphql.Col
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Dosers)
+	res := resTmp.([]*models.Doser)
 	fc.Result = res
-	return ec.marshalODosers2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDosersᚄ(ctx, field.Selections, res)
+	return ec.marshalODoser2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3602,8 +3606,8 @@ func (ec *executionContext) unmarshalInputNewDoserComponentInput(ctx context.Con
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputNewDosersInput(ctx context.Context, obj interface{}) (model.NewDosersInput, error) {
-	var it model.NewDosersInput
+func (ec *executionContext) unmarshalInputNewDoserInput(ctx context.Context, obj interface{}) (model.NewDoserInput, error) {
+	var it model.NewDoserInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -3826,6 +3830,44 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 	return out
 }
 
+var doserImplementors = []string{"Doser"}
+
+func (ec *executionContext) _Doser(ctx context.Context, sel ast.SelectionSet, obj *models.Doser) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, doserImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Doser")
+		case "id":
+			out.Values[i] = ec._Doser_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "components":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Doser_components(ctx, field, obj)
+				return res
+			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var doserComponentImplementors = []string{"DoserComponent"}
 
 func (ec *executionContext) _DoserComponent(ctx context.Context, sel ast.SelectionSet, obj *models.DoserComponent) graphql.Marshaler {
@@ -3856,35 +3898,6 @@ func (ec *executionContext) _DoserComponent(ctx context.Context, sel ast.Selecti
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var dosersImplementors = []string{"Dosers"}
-
-func (ec *executionContext) _Dosers(ctx context.Context, sel ast.SelectionSet, obj *model.Dosers) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, dosersImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("Dosers")
-		case "id":
-			out.Values[i] = ec._Dosers_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "component":
-			out.Values[i] = ec._Dosers_component(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -3984,8 +3997,8 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "createDosers":
-			out.Values[i] = ec._Mutation_createDosers(ctx, field)
+		case "createDoser":
+			out.Values[i] = ec._Mutation_createDoser(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4551,6 +4564,20 @@ func (ec *executionContext) unmarshalNCreateWaterLevelSensor2githubᚗcomᚋkeri
 	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNDoser2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoser(ctx context.Context, sel ast.SelectionSet, v models.Doser) graphql.Marshaler {
+	return ec._Doser(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNDoser2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoser(ctx context.Context, sel ast.SelectionSet, v *models.Doser) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Doser(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponent(ctx context.Context, sel ast.SelectionSet, v *models.DoserComponent) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -4559,20 +4586,6 @@ func (ec *executionContext) marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋd
 		return graphql.Null
 	}
 	return ec._DoserComponent(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNDosers2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDosers(ctx context.Context, sel ast.SelectionSet, v model.Dosers) graphql.Marshaler {
-	return ec._Dosers(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNDosers2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDosers(ctx context.Context, sel ast.SelectionSet, v *model.Dosers) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._Dosers(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNFirmata2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx context.Context, sel ast.SelectionSet, v models.Firmata) graphql.Marshaler {
@@ -4694,8 +4707,8 @@ func (ec *executionContext) unmarshalNNewDoserComponentInput2ᚖgithubᚗcomᚋk
 	return &res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
-func (ec *executionContext) unmarshalNNewDosersInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDosersInput(ctx context.Context, v interface{}) (model.NewDosersInput, error) {
-	res, err := ec.unmarshalInputNewDosersInput(ctx, v)
+func (ec *executionContext) unmarshalNNewDoserInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDoserInput(ctx context.Context, v interface{}) (model.NewDoserInput, error) {
+	res, err := ec.unmarshalInputNewDoserInput(ctx, v)
 	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
@@ -5136,6 +5149,46 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	return graphql.MarshalBoolean(*v)
 }
 
+func (ec *executionContext) marshalODoser2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Doser) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDoser2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoser(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
 func (ec *executionContext) marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponentᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.DoserComponent) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -5164,46 +5217,6 @@ func (ec *executionContext) marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerinin�
 				defer wg.Done()
 			}
 			ret[i] = ec.marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponent(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
-}
-
-func (ec *executionContext) marshalODosers2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDosersᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Dosers) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNDosers2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDosers(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
