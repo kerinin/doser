@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"log"
@@ -10,8 +11,11 @@ import (
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/kerinin/doser/service/controller"
 	"github.com/kerinin/doser/service/graph"
 	"github.com/kerinin/doser/service/graph/generated"
+	"github.com/kerinin/doser/service/models"
+	"github.com/kerinin/gomata"
 )
 
 var (
@@ -20,11 +24,27 @@ var (
 )
 
 func main() {
+	// TODO: Sig hanling
+	ctx := context.Background()
+
 	db, err := sql.Open("sqlite3", *data)
 	if err != nil {
 		log.Fatalf("Failed to create SQLite DB: %s", err)
 	}
 	defer db.Close()
+
+	firmatas, err := models.Firmatas().All(ctx, db)
+	if err != nil {
+		log.Fatalf("Failed to get list of firmatas: %s", err)
+	}
+	gomatas := make(map[string]*gomata.Firmata, len(firmatas))
+	for _, firmata := range firmatas {
+		gomatas[firmata.ID] = gomata.New()
+	}
+
+	// TODO: Handle errors from the controller
+	atoControl := controller.NewATOControl(db, gomatas)
+	go atoControl.Run(ctx)
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: graph.NewResolver(db),

@@ -7,16 +7,18 @@ import (
 	"log"
 
 	"github.com/kerinin/doser/service/models"
+	"github.com/kerinin/gomata"
 	"github.com/robfig/cron/v3"
 )
 
 type ATOControl struct {
-	db    *sql.DB
-	cron  *cron.Cron
-	reset chan struct{}
+	db       *sql.DB
+	firmatas map[string]*gomata.Firmata
+	cron     *cron.Cron
+	reset    chan struct{}
 }
 
-func NewATOControl(db *sql.DB) *ATOControl {
+func NewATOControl(db *sql.DB, firmatas map[string]*gomata.Firmata) *ATOControl {
 	return &ATOControl{db: db, reset: make(chan struct{}, 0)}
 }
 
@@ -64,7 +66,7 @@ func (c *ATOControl) setupCron(ctx context.Context) (*cron.Cron, error) {
 
 	crn := cron.New()
 	for _, ato := range atos {
-		_, err := crn.AddJob(ato.FillFrequency, NewATOJob(ato))
+		_, err := crn.AddJob(ato.FillFrequency, NewATOJob(ctx, c.db, c.firmatas, ato))
 		if err != nil {
 			return nil, fmt.Errorf("adding cron job: %w", err)
 		}
