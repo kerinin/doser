@@ -15,9 +15,8 @@ type CalibratePumpInput struct {
 }
 
 type CreateWaterLevelSensor struct {
-	Firmata string      `json:"firmata"`
-	Pin     int         `json:"pin"`
-	Kind    *SensorKind `json:"kind"`
+	Pin  int         `json:"pin"`
+	Kind *SensorKind `json:"kind"`
 }
 
 type NewAutoTopOff struct {

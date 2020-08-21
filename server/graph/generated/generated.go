@@ -117,7 +117,6 @@ type ComplexityRoot struct {
 	}
 
 	WaterLevelSensor struct {
-		Firmata       func(childComplexity int) int
 		ID            func(childComplexity int) int
 		Kind          func(childComplexity int) int
 		Pin           func(childComplexity int) int
@@ -166,8 +165,6 @@ type QueryResolver interface {
 	Dosers(ctx context.Context) ([]*models.Doser, error)
 }
 type WaterLevelSensorResolver interface {
-	Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error)
-
 	Kind(ctx context.Context, obj *models.WaterLevelSensor) (model.SensorKind, error)
 	WaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error)
 }
@@ -488,13 +485,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TwoPointCalibration.TargetVolume(childComplexity), true
 
-	case "WaterLevelSensor.firmata":
-		if e.complexity.WaterLevelSensor.Firmata == nil {
-			break
-		}
-
-		return e.complexity.WaterLevelSensor.Firmata(childComplexity), true
-
 	case "WaterLevelSensor.id":
 		if e.complexity.WaterLevelSensor.ID == nil {
 			break
@@ -625,9 +615,9 @@ type Pump {
 }
 
 type TwoPointCalibration {
-  # The intended volume pumped for the calibration run
+  # The intended volume pumped for the calibration run in mL
   target_volume: Float!
-  # The actual volume measured after the calibration run
+  # The actual volume measured after the calibration run in mL
   measured_volume: Float!
 }
 
@@ -640,7 +630,6 @@ enum SensorKind {
 
 type WaterLevelSensor {
   id: ID!
-  firmata: Firmata!
   # The pin to use for the sensor. 
   # The pin is assumed to be a digital input. A HIGH value indicates the
   # presence of water.
@@ -715,7 +704,6 @@ input CalibratePumpInput {
 }
 
 input CreateWaterLevelSensor {
-  firmata: ID!
   pin: Int!
   kind: SensorKind
 }
@@ -2316,40 +2304,6 @@ func (ec *executionContext) _WaterLevelSensor_id(ctx context.Context, field grap
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _WaterLevelSensor_firmata(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "WaterLevelSensor",
-		Field:    field,
-		Args:     nil,
-		IsMethod: true,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.WaterLevelSensor().Firmata(rctx, obj)
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*models.Firmata)
-	fc.Result = res
-	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, field.Selections, res)
-}
-
 func (ec *executionContext) _WaterLevelSensor_pin(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3549,14 +3503,6 @@ func (ec *executionContext) unmarshalInputCreateWaterLevelSensor(ctx context.Con
 
 	for k, v := range asMap {
 		switch k {
-		case "firmata":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("firmata"))
-			it.Firmata, err = ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
 		case "pin":
 			var err error
 
@@ -4319,20 +4265,6 @@ func (ec *executionContext) _WaterLevelSensor(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
-		case "firmata":
-			field := field
-			out.Concurrently(i, func() (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._WaterLevelSensor_firmata(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&invalids, 1)
-				}
-				return res
-			})
 		case "pin":
 			out.Values[i] = ec._WaterLevelSensor_pin(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

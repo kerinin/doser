@@ -36,9 +36,9 @@ type Pump {
 }
 
 type TwoPointCalibration {
-  # The intended volume pumped for the calibration run
+  # The intended volume pumped for the calibration run in mL
   target_volume: Float!
-  # The actual volume measured after the calibration run
+  # The actual volume measured after the calibration run in mL
   measured_volume: Float!
 }
 
@@ -51,7 +51,6 @@ enum SensorKind {
 
 type WaterLevelSensor {
   id: ID!
-  firmata: Firmata!
   # The pin to use for the sensor. 
   # The pin is assumed to be a digital input. A HIGH value indicates the
   # presence of water.
@@ -126,7 +125,6 @@ input CalibratePumpInput {
 }
 
 input CreateWaterLevelSensor {
-  firmata: ID!
   pin: Int!
   kind: SensorKind
 }

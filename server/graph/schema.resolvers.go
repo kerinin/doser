@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/kerinin/doser/service/graph/generated"
@@ -134,7 +135,18 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, input model.Calibr
 }
 
 func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*models.WaterLevelSensor, error) {
-	panic(fmt.Errorf("not implemented"))
+	m := &models.WaterLevelSensor{
+		ID:   uuid.New().String(),
+		Pin:  int64(input.Pin),
+		Kind: input.Kind.String(),
+	}
+
+	err := m.Insert(ctx, r.db, boil.Infer())
+	if err != nil {
+		return nil, fmt.Errorf("inserting water level sensor: %w", err)
+	}
+
+	return m, nil
 }
 
 func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error) {
@@ -260,9 +272,10 @@ func (r *waterLevelSensorResolver) WaterDetected(ctx context.Context, obj *model
 		return false, fmt.Errorf("connecting to rpi: %w", err)
 	}
 
-	val, err := rpi.DigitalRead(string(obj.Pin))
+	pinString := strconv.Itoa(int(obj.Pin))
+	val, err := rpi.DigitalRead(pinString)
 	if err != nil {
-		return false, fmt.Errorf("reading sensor pin: %w", err)
+		return false, fmt.Errorf("reading sensor pin %s: %w", pinString, err)
 	}
 
 	return val == sysfs.HIGH, nil
