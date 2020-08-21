@@ -95,6 +95,7 @@ type ComplexityRoot struct {
 
 	Pump struct {
 		Calibration func(childComplexity int) int
+		DeviceID    func(childComplexity int) int
 		EnPin       func(childComplexity int) int
 		Firmata     func(childComplexity int) int
 		ID          func(childComplexity int) int
@@ -116,10 +117,11 @@ type ComplexityRoot struct {
 	}
 
 	WaterLevelSensor struct {
-		Firmata func(childComplexity int) int
-		ID      func(childComplexity int) int
-		Kind    func(childComplexity int) int
-		Pin     func(childComplexity int) int
+		Firmata       func(childComplexity int) int
+		ID            func(childComplexity int) int
+		Kind          func(childComplexity int) int
+		Pin           func(childComplexity int) int
+		WaterDetected func(childComplexity int) int
 	}
 }
 
@@ -166,7 +168,8 @@ type QueryResolver interface {
 type WaterLevelSensorResolver interface {
 	Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error)
 
-	Kind(ctx context.Context, obj *models.WaterLevelSensor) (*model.SensorKind, error)
+	Kind(ctx context.Context, obj *models.WaterLevelSensor) (model.SensorKind, error)
+	WaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error)
 }
 
 type executableSchema struct {
@@ -394,6 +397,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Pump.Calibration(childComplexity), true
 
+	case "Pump.device_id":
+		if e.complexity.Pump.DeviceID == nil {
+			break
+		}
+
+		return e.complexity.Pump.DeviceID(childComplexity), true
+
 	case "Pump.en_pin":
 		if e.complexity.Pump.EnPin == nil {
 			break
@@ -506,6 +516,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.WaterLevelSensor.Pin(childComplexity), true
 
+	case "WaterLevelSensor.water_detected":
+		if e.complexity.WaterLevelSensor.WaterDetected == nil {
+			break
+		}
+
+		return e.complexity.WaterLevelSensor.WaterDetected(childComplexity), true
+
 	}
 	return 0, false
 }
@@ -597,6 +614,8 @@ type Firmata {
 type Pump {
   id: ID!
   firmata: Firmata!
+  # The device ID used for controlling firmata
+  device_id: Int!
   # The pin to use for the step signal
   step_pin: Int!
   # The pin to use for the engage signal, if used
@@ -613,8 +632,6 @@ type TwoPointCalibration {
 }
 
 enum SensorKind {
-  # Low-water level sensor
-  LOW
   # High-water level sensor
   HIGH
   # Alert sensor
@@ -629,7 +646,8 @@ type WaterLevelSensor {
   # presence of water.
   pin: Int!
   # The kind of sensor
-  kind: SensorKind
+  kind: SensorKind!
+  water_detected: Boolean!
 }
 
 type AutoTopOff {
@@ -1811,6 +1829,40 @@ func (ec *executionContext) _Pump_firmata(ctx context.Context, field graphql.Col
 	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Pump_device_id(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Pump",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DeviceID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Pump_step_pin(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2356,11 +2408,48 @@ func (ec *executionContext) _WaterLevelSensor_kind(ctx context.Context, field gr
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.SensorKind)
+	res := resTmp.(model.SensorKind)
 	fc.Result = res
-	return ec.marshalOSensorKind2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐSensorKind(ctx, field.Selections, res)
+	return ec.marshalNSensorKind2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐSensorKind(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _WaterLevelSensor_water_detected(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "WaterLevelSensor",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.WaterLevelSensor().WaterDetected(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -4043,6 +4132,11 @@ func (ec *executionContext) _Pump(ctx context.Context, sel ast.SelectionSet, obj
 				}
 				return res
 			})
+		case "device_id":
+			out.Values[i] = ec._Pump_device_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "step_pin":
 			out.Values[i] = ec._Pump_step_pin(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -4253,6 +4347,23 @@ func (ec *executionContext) _WaterLevelSensor(ctx context.Context, sel ast.Selec
 					}
 				}()
 				res = ec._WaterLevelSensor_kind(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			})
+		case "water_detected":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._WaterLevelSensor_water_detected(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
 				return res
 			})
 		default:
@@ -4734,6 +4845,16 @@ func (ec *executionContext) marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋser
 		return graphql.Null
 	}
 	return ec._Pump(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNSensorKind2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐSensorKind(ctx context.Context, v interface{}) (model.SensorKind, error) {
+	var res model.SensorKind
+	err := res.UnmarshalGQL(v)
+	return res, graphql.WrapErrorWithInputPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNSensorKind2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐSensorKind(ctx context.Context, sel ast.SelectionSet, v model.SensorKind) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {

@@ -58,20 +58,18 @@ type NewPumpInput struct {
 type SensorKind string
 
 const (
-	SensorKindLow   SensorKind = "LOW"
 	SensorKindHigh  SensorKind = "HIGH"
 	SensorKindAlert SensorKind = "ALERT"
 )
 
 var AllSensorKind = []SensorKind{
-	SensorKindLow,
 	SensorKindHigh,
 	SensorKindAlert,
 }
 
 func (e SensorKind) IsValid() bool {
 	switch e {
-	case SensorKindLow, SensorKindHigh, SensorKindAlert:
+	case SensorKindHigh, SensorKindAlert:
 		return true
 	}
 	return false

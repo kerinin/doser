@@ -25,6 +25,8 @@ type Firmata {
 type Pump {
   id: ID!
   firmata: Firmata!
+  # The device ID used for controlling firmata
+  device_id: Int!
   # The pin to use for the step signal
   step_pin: Int!
   # The pin to use for the engage signal, if used
@@ -41,8 +43,6 @@ type TwoPointCalibration {
 }
 
 enum SensorKind {
-  # Low-water level sensor
-  LOW
   # High-water level sensor
   HIGH
   # Alert sensor
@@ -57,7 +57,8 @@ type WaterLevelSensor {
   # presence of water.
   pin: Int!
   # The kind of sensor
-  kind: SensorKind
+  kind: SensorKind!
+  water_detected: Boolean!
 }
 
 type AutoTopOff {

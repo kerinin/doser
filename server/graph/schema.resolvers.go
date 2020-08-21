@@ -14,6 +14,8 @@ import (
 	"github.com/kerinin/doser/service/models"
 	null "github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"gobot.io/x/gobot/platforms/raspi"
+	"gobot.io/x/gobot/sysfs"
 )
 
 func (r *autoTopOffResolver) Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error) {
@@ -136,6 +138,7 @@ func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, input mod
 }
 
 func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error) {
+	// NOTE: Be sure to parse the fill frequency to verify it's a valid cron
 	panic(fmt.Errorf("not implemented"))
 }
 
@@ -241,13 +244,28 @@ func (r *waterLevelSensorResolver) Firmata(ctx context.Context, obj *models.Wate
 	return m, nil
 }
 
-func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLevelSensor) (*model.SensorKind, error) {
+func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLevelSensor) (model.SensorKind, error) {
 	for _, kind := range model.AllSensorKind {
 		if string(kind) == obj.Kind {
-			return &kind, nil
+			return kind, nil
 		}
 	}
-	return nil, fmt.Errorf("Unrecognized sensor kind %s", obj.Kind)
+	return model.SensorKind(""), fmt.Errorf("Unrecognized sensor kind %s", obj.Kind)
+}
+
+func (r *waterLevelSensorResolver) WaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error) {
+	rpi := raspi.NewAdaptor()
+	err := rpi.Connect()
+	if err != nil {
+		return false, fmt.Errorf("connecting to rpi: %w", err)
+	}
+
+	val, err := rpi.DigitalRead(string(obj.Pin))
+	if err != nil {
+		return false, fmt.Errorf("reading sensor pin: %w", err)
+	}
+
+	return val == sysfs.HIGH, nil
 }
 
 // AutoTopOff returns generated.AutoTopOffResolver implementation.
@@ -292,3 +310,13 @@ type mutationResolver struct{ *Resolver }
 type pumpResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type waterLevelSensorResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *pumpResolver) DeviceID(ctx context.Context, obj *models.Pump) (int, error) {
+	panic(fmt.Errorf("not implemented"))
+}

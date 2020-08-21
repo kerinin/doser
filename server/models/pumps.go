@@ -25,6 +25,7 @@ import (
 type Pump struct {
 	ID        string     `boil:"id" json:"id" toml:"id" yaml:"id"`
 	FirmataID string     `boil:"firmata_id" json:"firmata_id" toml:"firmata_id" yaml:"firmata_id"`
+	DeviceID  int64      `boil:"device_id" json:"device_id" toml:"device_id" yaml:"device_id"`
 	StepPin   int64      `boil:"step_pin" json:"step_pin" toml:"step_pin" yaml:"step_pin"`
 	DirPin    null.Int64 `boil:"dir_pin" json:"dir_pin,omitempty" toml:"dir_pin" yaml:"dir_pin,omitempty"`
 	EnPin     null.Int64 `boil:"en_pin" json:"en_pin,omitempty" toml:"en_pin" yaml:"en_pin,omitempty"`
@@ -36,12 +37,14 @@ type Pump struct {
 var PumpColumns = struct {
 	ID        string
 	FirmataID string
+	DeviceID  string
 	StepPin   string
 	DirPin    string
 	EnPin     string
 }{
 	ID:        "id",
 	FirmataID: "firmata_id",
+	DeviceID:  "device_id",
 	StepPin:   "step_pin",
 	DirPin:    "dir_pin",
 	EnPin:     "en_pin",
@@ -98,12 +101,14 @@ func (w whereHelpernull_Int64) GTE(x null.Int64) qm.QueryMod {
 var PumpWhere = struct {
 	ID        whereHelperstring
 	FirmataID whereHelperstring
+	DeviceID  whereHelperint64
 	StepPin   whereHelperint64
 	DirPin    whereHelpernull_Int64
 	EnPin     whereHelpernull_Int64
 }{
 	ID:        whereHelperstring{field: "\"pumps\".\"id\""},
 	FirmataID: whereHelperstring{field: "\"pumps\".\"firmata_id\""},
+	DeviceID:  whereHelperint64{field: "\"pumps\".\"device_id\""},
 	StepPin:   whereHelperint64{field: "\"pumps\".\"step_pin\""},
 	DirPin:    whereHelpernull_Int64{field: "\"pumps\".\"dir_pin\""},
 	EnPin:     whereHelpernull_Int64{field: "\"pumps\".\"en_pin\""},
@@ -145,8 +150,8 @@ func (*pumpR) NewStruct() *pumpR {
 type pumpL struct{}
 
 var (
-	pumpAllColumns            = []string{"id", "firmata_id", "step_pin", "dir_pin", "en_pin"}
-	pumpColumnsWithoutDefault = []string{"id", "firmata_id", "step_pin", "dir_pin", "en_pin"}
+	pumpAllColumns            = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin"}
+	pumpColumnsWithoutDefault = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin"}
 	pumpColumnsWithDefault    = []string{}
 	pumpPrimaryKeyColumns     = []string{"id"}
 )

@@ -21,6 +21,7 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					`CREATE TABLE pumps(
 						id UUID NOT NULL,
 						firmata_id UUID NOT NULL,
+						device_id INT NOT NULL,
 						step_pin INT NOT NULL,
 						dir_pin INT,
 						en_pin INT,
