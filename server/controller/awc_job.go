@@ -36,12 +36,10 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	var (
+		initialTime = time.Now()
+
 		// Exchange rate is in L/day, stepper is in steps/sec
-		mlPerSecond = j.awc.ExchangeRate * 1000 / 24 / 60 / 60
-		freshSpeed  = mlPerSecond * float64(j.freshCalibration.Steps) / j.freshCalibration.Volume
-		wasteSpeed  = mlPerSecond * float64(j.wasteCalibration.Steps) / j.wasteCalibration.Volume
-		// freshSteps           = freshSpeed * targetDurationSec * 2
-		// wasteSteps           = wasteSpeed * targetDurationSec * 2
+		mlPerSecond          = j.awc.ExchangeRate * 1000 / 24 / 60 / 60
 		initialFreshPosition *gomata.StepperPosition
 		initialWastePosition *gomata.StepperPosition
 	)
@@ -65,12 +63,38 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 			if initialFreshPosition == nil || initialWastePosition == nil {
 				initialFreshPosition = currentFreshPosition
 				initialWastePosition = currentWastePosition
-				// } else {
-				// 	var (
-				// 		totalFreshSteps  = currentFreshPosition - initialFreshPosition
-				// 		totalFreshVolume = totalFreshSteps * freshCalibration.MeasuredVolume / freshCalibration.TargetVolume
-				// 	)
+			} else {
+				var (
+					totalFreshSteps  = currentFreshPosition.Position - initialFreshPosition.Position
+					totalFreshVolume = float64(totalFreshSteps) * j.freshCalibration.Volume / float64(j.freshCalibration.Steps)
+					totalWasteSteps  = currentWastePosition.Position - initialWastePosition.Position
+					totalWasteVolume = float64(totalWasteSteps) * j.wasteCalibration.Volume / float64(j.wasteCalibration.Steps)
+				)
+				j.eventCh <- &AWCStatus{j.awc, time.Now().Sub(initialTime), totalFreshVolume, totalWasteVolume}
 			}
+
+			// NOTE: This attempts to minimize accumulated inaccuracy due to
+			// rounding errors or precision losses. At each step, it determines
+			// when the current step will end, then uses the target exchange
+			// rate to determine how much fluid should have been pumped by that
+			// time. The speed is set to pump the required amount in the expected
+			// duration and the pump is instructed to move to the target
+			// volume (in steps).
+			var (
+				nextTime    = time.Now().Add(targetDurationSec * time.Second)
+				nextElapsed = nextTime.Sub(initialTime)
+
+				nextFreshSteps = mlPerSecond * float64(nextElapsed/time.Second) * float64(j.freshCalibration.Steps) / j.freshCalibration.Volume
+				nextWasteSteps = mlPerSecond * float64(nextElapsed/time.Second) * float64(j.wasteCalibration.Steps) / j.wasteCalibration.Volume
+
+				deltaFreshSteps = nextFreshSteps - float64(currentFreshPosition.Position)
+				deltaWasteSteps = nextWasteSteps - float64(currentWastePosition.Position)
+
+				freshSpeed = deltaFreshSteps / targetDurationSec
+				wasteSpeed = deltaWasteSteps / targetDurationSec
+			)
+
+			// TODO: make sure we don't go backwards
 
 			err = j.freshFirmata.StepperSetSpeed(int(j.freshPump.DeviceID), float32(freshSpeed))
 			if err != nil {
@@ -83,18 +107,17 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 				continue
 			}
 
-			// NOTE: Let's adjust the speed every time and re-calculate the target position based on time since intitial
-			// err = j.freshFirmata.StepperTo(int(j.freshPump.DeviceID), currentFreshPosition.Position+freshSteps)
-			// if err != nil {
-			// 	j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("stepping fresh pump (aborting job run): %w", err)}
-			// 	continue
-			// }
-			// err = j.wasteFirmata.StepperTo(int(j.wastePump.DeviceID), currentFreshPosition.Position+wasteSteps)
-			// if err != nil {
-			// 	j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("stepping waste pump (aborting job run): %w", err)}
-			// 	continue
-			// }
-			//
+			err = j.freshFirmata.StepperTo(int(j.freshPump.DeviceID), int32(nextFreshSteps))
+			if err != nil {
+				j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("stepping fresh pump (aborting job run): %w", err)}
+				continue
+			}
+			err = j.wasteFirmata.StepperTo(int(j.wastePump.DeviceID), int32(nextWasteSteps))
+			if err != nil {
+				j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("stepping waste pump (aborting job run): %w", err)}
+				continue
+			}
+
 		case <-ctx.Done():
 			err := j.freshFirmata.StepperStop(int(j.freshPump.DeviceID))
 			if err != nil {

@@ -20,13 +20,15 @@ func (e *ATOJobComplete) Message() string {
 	return fmt.Sprintf("ATO job %s completed in %ds", e.AutoTopOff.ID, e.Duration)
 }
 
-type AWCJobComplete struct {
+type AWCStatus struct {
 	AutoWaterChange *models.AutoWaterChange
 	Duration        time.Duration
+	FreshVolume     float64
+	WasteVolume     float64
 }
 
-func (e *AWCJobComplete) Message() string {
-	return fmt.Sprintf("AWC job %s completed in %ds", e.AutoWaterChange.ID, e.Duration)
+func (e *AWCStatus) Message() string {
+	return fmt.Sprintf("AWC job %s has run for %v and delivered fresh:%fml, waste:%fml", e.AutoWaterChange.ID, e.Duration, e.FreshVolume, e.WasteVolume)
 }
 
 type ATOJobError struct {
