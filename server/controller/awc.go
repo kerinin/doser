@@ -53,9 +53,38 @@ func (c *AWCController) setupJobs(ctx context.Context, wg *sync.WaitGroup) error
 	}
 
 	for _, awc := range awcs {
+		// Fetch resources necessary for the ATO job
+		freshPump, err := awc.FreshPump().One(ctx, c.db)
+		if err != nil {
+			return fmt.Errorf("getting fresh water pump (aborting job run): %w", err)
+		}
+		wastePump, err := awc.WastePump().One(ctx, c.db)
+		if err != nil {
+			return fmt.Errorf("getting waste water pump (aborting job run): %w", err)
+		}
+		freshFirmata, found := c.firmatas[freshPump.FirmataID]
+		if !found {
+			return fmt.Errorf("unrecognized firmata ID %s for fresh pump %s (aborting job run)", freshPump.FirmataID, freshPump.ID)
+		}
+		wasteFirmata, found := c.firmatas[wastePump.FirmataID]
+		if !found {
+			return fmt.Errorf("unrecognized firmata ID %s for waste pump %s (aborting job run)", wastePump.FirmataID, wastePump.ID)
+		}
+		freshCalibration, err := freshPump.Calibrations().One(ctx, c.db)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("refusing to run ATO job with uncalibrated fresh pump")
+		} else if err != nil {
+			return fmt.Errorf("getting pump calibration (aborting job run): %w", err)
+		}
+		wasteCalibration, err := wastePump.Calibrations().One(ctx, c.db)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("refusing to run ATO job with uncalibrated waste pump")
+		} else if err != nil {
+			return fmt.Errorf("getting pump calibration (aborting job run): %w", err)
+		}
 		var (
 			jobCtx, cancel = context.WithCancel(ctx)
-			job            = NewAWCJob(c.db, c.firmatas, awc)
+			job            = NewAWCJob(awc, freshPump, wastePump, freshFirmata, wasteFirmata, freshCalibration, wasteCalibration)
 		)
 		c.jobs[awc.ID] = cancel
 		wg.Add(1)
