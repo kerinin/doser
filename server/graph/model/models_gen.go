@@ -9,9 +9,9 @@ import (
 )
 
 type CalibratePumpInput struct {
-	PumpID         string  `json:"pump_id"`
-	TargetVolume   float64 `json:"target_volume"`
-	MeasuredVolume float64 `json:"measured_volume"`
+	PumpID string  `json:"pump_id"`
+	Steps  int     `json:"steps"`
+	Volume float64 `json:"volume"`
 }
 
 type CreateWaterLevelSensor struct {

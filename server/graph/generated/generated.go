@@ -112,8 +112,8 @@ type ComplexityRoot struct {
 	}
 
 	TwoPointCalibration struct {
-		MeasuredVolume func(childComplexity int) int
-		TargetVolume   func(childComplexity int) int
+		Steps  func(childComplexity int) int
+		Volume func(childComplexity int) int
 	}
 
 	WaterLevelSensor struct {
@@ -471,19 +471,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.WaterLevelSensors(childComplexity), true
 
-	case "TwoPointCalibration.measured_volume":
-		if e.complexity.TwoPointCalibration.MeasuredVolume == nil {
+	case "TwoPointCalibration.steps":
+		if e.complexity.TwoPointCalibration.Steps == nil {
 			break
 		}
 
-		return e.complexity.TwoPointCalibration.MeasuredVolume(childComplexity), true
+		return e.complexity.TwoPointCalibration.Steps(childComplexity), true
 
-	case "TwoPointCalibration.target_volume":
-		if e.complexity.TwoPointCalibration.TargetVolume == nil {
+	case "TwoPointCalibration.volume":
+		if e.complexity.TwoPointCalibration.Volume == nil {
 			break
 		}
 
-		return e.complexity.TwoPointCalibration.TargetVolume(childComplexity), true
+		return e.complexity.TwoPointCalibration.Volume(childComplexity), true
 
 	case "WaterLevelSensor.id":
 		if e.complexity.WaterLevelSensor.ID == nil {
@@ -617,10 +617,10 @@ type Pump {
 }
 
 type TwoPointCalibration {
-  # The intended volume pumped for the calibration run in mL
-  target_volume: Float!
-  # The actual volume measured after the calibration run in mL
-  measured_volume: Float!
+  # The number of steps pumped for the calibration run
+  steps: Int!
+  # The volume measured after the calibration run in mL
+  volume: Float!
 }
 
 enum SensorKind {
@@ -701,8 +701,8 @@ input NewPumpInput {
 
 input CalibratePumpInput {
   pump_id: ID!
-  target_volume: Float!
-  measured_volume: Float!
+  steps: Int!
+  volume: Float!
 }
 
 input CreateWaterLevelSensor {
@@ -2204,7 +2204,7 @@ func (ec *executionContext) _Query___schema(ctx context.Context, field graphql.C
 	return ec.marshalO__Schema2ᚖgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐSchema(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _TwoPointCalibration_target_volume(ctx context.Context, field graphql.CollectedField, obj *models.Calibration) (ret graphql.Marshaler) {
+func (ec *executionContext) _TwoPointCalibration_steps(ctx context.Context, field graphql.CollectedField, obj *models.Calibration) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2221,7 +2221,7 @@ func (ec *executionContext) _TwoPointCalibration_target_volume(ctx context.Conte
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.TargetVolume, nil
+		return obj.Steps, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2233,12 +2233,12 @@ func (ec *executionContext) _TwoPointCalibration_target_volume(ctx context.Conte
 		}
 		return graphql.Null
 	}
-	res := resTmp.(float64)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _TwoPointCalibration_measured_volume(ctx context.Context, field graphql.CollectedField, obj *models.Calibration) (ret graphql.Marshaler) {
+func (ec *executionContext) _TwoPointCalibration_volume(ctx context.Context, field graphql.CollectedField, obj *models.Calibration) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -2255,7 +2255,7 @@ func (ec *executionContext) _TwoPointCalibration_measured_volume(ctx context.Con
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.MeasuredVolume, nil
+		return obj.Volume, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3477,19 +3477,19 @@ func (ec *executionContext) unmarshalInputCalibratePumpInput(ctx context.Context
 			if err != nil {
 				return it, err
 			}
-		case "target_volume":
+		case "steps":
 			var err error
 
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("target_volume"))
-			it.TargetVolume, err = ec.unmarshalNFloat2float64(ctx, v)
+			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("steps"))
+			it.Steps, err = ec.unmarshalNInt2int(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "measured_volume":
+		case "volume":
 			var err error
 
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("measured_volume"))
-			it.MeasuredVolume, err = ec.unmarshalNFloat2float64(ctx, v)
+			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("volume"))
+			it.Volume, err = ec.unmarshalNFloat2float64(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -4230,13 +4230,13 @@ func (ec *executionContext) _TwoPointCalibration(ctx context.Context, sel ast.Se
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("TwoPointCalibration")
-		case "target_volume":
-			out.Values[i] = ec._TwoPointCalibration_target_volume(ctx, field, obj)
+		case "steps":
+			out.Values[i] = ec._TwoPointCalibration_steps(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "measured_volume":
-			out.Values[i] = ec._TwoPointCalibration_measured_volume(ctx, field, obj)
+		case "volume":
+			out.Values[i] = ec._TwoPointCalibration_volume(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

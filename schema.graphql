@@ -38,10 +38,10 @@ type Pump {
 }
 
 type TwoPointCalibration {
-  # The intended volume pumped for the calibration run in mL
-  target_volume: Float!
-  # The actual volume measured after the calibration run in mL
-  measured_volume: Float!
+  # The number of steps pumped for the calibration run
+  steps: Int!
+  # The volume measured after the calibration run in mL
+  volume: Float!
 }
 
 enum SensorKind {
@@ -122,8 +122,8 @@ input NewPumpInput {
 
 input CalibratePumpInput {
   pump_id: ID!
-  target_volume: Float!
-  measured_volume: Float!
+  steps: Int!
+  volume: Float!
 }
 
 input CreateWaterLevelSensor {

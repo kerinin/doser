@@ -38,8 +38,8 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	var (
 		// Exchange rate is in L/day, stepper is in steps/sec
 		mlPerSecond = j.awc.ExchangeRate * 1000 / 24 / 60 / 60
-		freshSpeed  = mlPerSecond * j.freshCalibration.TargetVolume / j.freshCalibration.MeasuredVolume
-		wasteSpeed  = mlPerSecond * j.wasteCalibration.TargetVolume / j.wasteCalibration.MeasuredVolume
+		freshSpeed  = mlPerSecond * float64(j.freshCalibration.Steps) / j.freshCalibration.Volume
+		wasteSpeed  = mlPerSecond * float64(j.wasteCalibration.Steps) / j.wasteCalibration.Volume
 		// freshSteps           = freshSpeed * targetDurationSec * 2
 		// wasteSteps           = wasteSpeed * targetDurationSec * 2
 		initialFreshPosition *gomata.StepperPosition

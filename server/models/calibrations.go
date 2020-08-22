@@ -22,39 +22,62 @@ import (
 
 // Calibration is an object representing the database table.
 type Calibration struct {
-	ID             string  `boil:"id" json:"id" toml:"id" yaml:"id"`
-	PumpID         string  `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
-	TargetVolume   float64 `boil:"target_volume" json:"target_volume" toml:"target_volume" yaml:"target_volume"`
-	MeasuredVolume float64 `boil:"measured_volume" json:"measured_volume" toml:"measured_volume" yaml:"measured_volume"`
+	ID     string  `boil:"id" json:"id" toml:"id" yaml:"id"`
+	PumpID string  `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
+	Steps  int64   `boil:"steps" json:"steps" toml:"steps" yaml:"steps"`
+	Volume float64 `boil:"volume" json:"volume" toml:"volume" yaml:"volume"`
 
 	R *calibrationR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L calibrationL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var CalibrationColumns = struct {
-	ID             string
-	PumpID         string
-	TargetVolume   string
-	MeasuredVolume string
+	ID     string
+	PumpID string
+	Steps  string
+	Volume string
 }{
-	ID:             "id",
-	PumpID:         "pump_id",
-	TargetVolume:   "target_volume",
-	MeasuredVolume: "measured_volume",
+	ID:     "id",
+	PumpID: "pump_id",
+	Steps:  "steps",
+	Volume: "volume",
 }
 
 // Generated where
 
+type whereHelperint64 struct{ field string }
+
+func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint64) IN(slice []int64) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
 var CalibrationWhere = struct {
-	ID             whereHelperstring
-	PumpID         whereHelperstring
-	TargetVolume   whereHelperfloat64
-	MeasuredVolume whereHelperfloat64
+	ID     whereHelperstring
+	PumpID whereHelperstring
+	Steps  whereHelperint64
+	Volume whereHelperfloat64
 }{
-	ID:             whereHelperstring{field: "\"calibrations\".\"id\""},
-	PumpID:         whereHelperstring{field: "\"calibrations\".\"pump_id\""},
-	TargetVolume:   whereHelperfloat64{field: "\"calibrations\".\"target_volume\""},
-	MeasuredVolume: whereHelperfloat64{field: "\"calibrations\".\"measured_volume\""},
+	ID:     whereHelperstring{field: "\"calibrations\".\"id\""},
+	PumpID: whereHelperstring{field: "\"calibrations\".\"pump_id\""},
+	Steps:  whereHelperint64{field: "\"calibrations\".\"steps\""},
+	Volume: whereHelperfloat64{field: "\"calibrations\".\"volume\""},
 }
 
 // CalibrationRels is where relationship names are stored.
@@ -78,8 +101,8 @@ func (*calibrationR) NewStruct() *calibrationR {
 type calibrationL struct{}
 
 var (
-	calibrationAllColumns            = []string{"id", "pump_id", "target_volume", "measured_volume"}
-	calibrationColumnsWithoutDefault = []string{"id", "pump_id", "target_volume", "measured_volume"}
+	calibrationAllColumns            = []string{"id", "pump_id", "steps", "volume"}
+	calibrationColumnsWithoutDefault = []string{"id", "pump_id", "steps", "volume"}
 	calibrationColumnsWithDefault    = []string{}
 	calibrationPrimaryKeyColumns     = []string{"id"}
 )

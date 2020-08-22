@@ -121,10 +121,10 @@ func (r *mutationResolver) CreatePump(ctx context.Context, input model.NewPumpIn
 
 func (r *mutationResolver) CalibratePump(ctx context.Context, input model.CalibratePumpInput) (*models.Calibration, error) {
 	m := &models.Calibration{
-		ID:             uuid.New().String(),
-		PumpID:         input.PumpID,
-		TargetVolume:   input.TargetVolume,
-		MeasuredVolume: input.MeasuredVolume,
+		ID:     uuid.New().String(),
+		PumpID: input.PumpID,
+		Steps:  int64(input.Steps),
+		Volume: input.Volume,
 	}
 	err := m.Insert(ctx, r.db, boil.Infer())
 	if err != nil {
@@ -326,21 +326,3 @@ type mutationResolver struct{ *Resolver }
 type pumpResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type waterLevelSensorResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *waterLevelSensorResolver) Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error) {
-	m, err := obj.Firmatum().One(ctx, r.db)
-	if err != nil {
-		return nil, fmt.Errorf("getting firmata: %w", err)
-	}
-
-	return m, nil
-}
-func (r *pumpResolver) DeviceID(ctx context.Context, obj *models.Pump) (int, error) {
-	panic(fmt.Errorf("not implemented"))
-}

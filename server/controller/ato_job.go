@@ -89,8 +89,8 @@ func (j *ATOJob) Run() {
 
 	// Configure the stepper
 	var (
-		maxSteps = j.ato.MaxFillVolume * calibration.TargetVolume / calibration.MeasuredVolume
-		speed    = j.ato.FillRate * calibration.TargetVolume / calibration.MeasuredVolume
+		maxSteps = j.ato.MaxFillVolume * float64(calibration.Steps) / calibration.Volume
+		speed    = j.ato.FillRate * float64(calibration.Steps) / calibration.Volume
 	)
 	err = firmata.StepperSetSpeed(int(pump.DeviceID), float32(speed))
 	if err != nil {

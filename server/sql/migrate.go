@@ -32,8 +32,8 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					`CREATE TABLE calibrations(
 						id UUID NOT NULL,
 						pump_id UUID NOT NULL,
-						target_volume REAL NOT NULL,
-						measured_volume REAL NOT NULL,
+						steps INT NOT NULL,
+						volume REAL NOT NULL,
 
 						PRIMARY KEY (id)
 						FOREIGN KEY(pump_id) REFERENCES pumps(id)
