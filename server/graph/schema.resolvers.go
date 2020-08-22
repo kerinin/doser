@@ -155,7 +155,19 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, input model.New
 }
 
 func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*models.AutoWaterChange, error) {
-	panic(fmt.Errorf("not implemented"))
+	m := &models.AutoWaterChange{
+		ID:           uuid.New().String(),
+		FreshPumpID:  input.FreshPumpID,
+		WastePumpID:  input.WastePumpID,
+		ExchangeRate: input.ExchangeRate,
+	}
+
+	err := m.Insert(ctx, r.db, boil.Infer())
+	if err != nil {
+		return nil, fmt.Errorf("inserting auto water change: %w", err)
+	}
+
+	return m, nil
 }
 
 func (r *mutationResolver) CreateDoser(ctx context.Context, input model.NewDoserInput) (*models.Doser, error) {
@@ -247,15 +259,6 @@ func (r *queryResolver) Dosers(ctx context.Context) ([]*models.Doser, error) {
 	return ms, nil
 }
 
-func (r *waterLevelSensorResolver) Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error) {
-	m, err := obj.Firmatum().One(ctx, r.db)
-	if err != nil {
-		return nil, fmt.Errorf("getting firmata: %w", err)
-	}
-
-	return m, nil
-}
-
 func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLevelSensor) (model.SensorKind, error) {
 	for _, kind := range model.AllSensorKind {
 		if string(kind) == obj.Kind {
@@ -330,6 +333,14 @@ type waterLevelSensorResolver struct{ *Resolver }
 //  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
 //    it when you're done.
 //  - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *waterLevelSensorResolver) Firmata(ctx context.Context, obj *models.WaterLevelSensor) (*models.Firmata, error) {
+	m, err := obj.Firmatum().One(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting firmata: %w", err)
+	}
+
+	return m, nil
+}
 func (r *pumpResolver) DeviceID(ctx context.Context, obj *models.Pump) (int, error) {
 	panic(fmt.Errorf("not implemented"))
 }

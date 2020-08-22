@@ -1,3 +1,5 @@
+# TODO: Human-readable names for resources
+
 schema {
   query: Query
   mutation: Mutation
@@ -138,7 +140,7 @@ input NewAutoTopOff {
 }
 
 input NewAutoWaterChangeInput {
-  exchange_rate: Int!
+  exchange_rate: Float!
   fresh_pump_id: ID!
   waste_pump_id: ID!
 }

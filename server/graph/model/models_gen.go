@@ -28,9 +28,9 @@ type NewAutoTopOff struct {
 }
 
 type NewAutoWaterChangeInput struct {
-	ExchangeRate int    `json:"exchange_rate"`
-	FreshPumpID  string `json:"fresh_pump_id"`
-	WastePumpID  string `json:"waste_pump_id"`
+	ExchangeRate float64 `json:"exchange_rate"`
+	FreshPumpID  string  `json:"fresh_pump_id"`
+	WastePumpID  string  `json:"waste_pump_id"`
 }
 
 type NewDoserComponentInput struct {

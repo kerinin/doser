@@ -20,6 +20,15 @@ func (e *ATOJobComplete) Message() string {
 	return fmt.Sprintf("ATO job %s completed in %ds", e.AutoTopOff.ID, e.Duration)
 }
 
+type AWCJobComplete struct {
+	AutoWaterChange *models.AutoWaterChange
+	Duration        time.Duration
+}
+
+func (e *AWCJobComplete) Message() string {
+	return fmt.Sprintf("AWC job %s completed in %ds", e.AutoWaterChange.ID, e.Duration)
+}
+
 type ATOJobError struct {
 	AutoTopOff *models.AutoTopOff
 	Err        error
@@ -27,6 +36,15 @@ type ATOJobError struct {
 
 func (e *ATOJobError) Message() string {
 	return fmt.Sprintf("Failure duing ATO job %s: %s", e.AutoTopOff.ID, e.Err)
+}
+
+type AWCJobError struct {
+	AutoWaterChange *models.AutoWaterChange
+	Err             error
+}
+
+func (e *AWCJobError) Message() string {
+	return fmt.Sprintf("Failure duing AWC job %s: %s", e.AutoWaterChange.ID, e.Err)
 }
 
 type MaxFillVolumeError struct {

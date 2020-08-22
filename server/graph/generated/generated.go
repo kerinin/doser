@@ -577,7 +577,9 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphql", Input: `schema {
+	{Name: "../schema.graphql", Input: `# TODO: Human-readable names for resources
+
+schema {
   query: Query
   mutation: Mutation
 }
@@ -717,7 +719,7 @@ input NewAutoTopOff {
 }
 
 input NewAutoWaterChangeInput {
-  exchange_rate: Int!
+  exchange_rate: Float!
   fresh_pump_id: ID!
   waste_pump_id: ID!
 }
@@ -3587,7 +3589,7 @@ func (ec *executionContext) unmarshalInputNewAutoWaterChangeInput(ctx context.Co
 			var err error
 
 			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("exchange_rate"))
-			it.ExchangeRate, err = ec.unmarshalNInt2int(ctx, v)
+			it.ExchangeRate, err = ec.unmarshalNFloat2float64(ctx, v)
 			if err != nil {
 				return it, err
 			}
