@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
@@ -12,13 +13,14 @@ import (
 )
 
 type ATOControl struct {
+	eventCh  chan<- Event
 	db       *sql.DB
 	firmatas map[string]*gomata.Firmata
 	cron     *cron.Cron
 	reset    chan struct{}
 }
 
-func NewATOControl(db *sql.DB, firmatas map[string]*gomata.Firmata) *ATOControl {
+func NewATOControl(eventCh chan<- Event, db *sql.DB, firmatas map[string]*gomata.Firmata) *ATOControl {
 	return &ATOControl{db: db, reset: make(chan struct{}, 0)}
 }
 
@@ -26,8 +28,10 @@ func (c *ATOControl) Reset() {
 	c.reset <- struct{}{}
 }
 
-func (c *ATOControl) Run(ctx context.Context) {
-	crn, err := c.setupCron(ctx)
+func (c *ATOControl) Run(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	crn, err := c.setupCron(ctx, wg)
 	if err != nil {
 		log.Printf("Failed to create initial ATO jobs: %s", err)
 	}
@@ -38,7 +42,7 @@ func (c *ATOControl) Run(ctx context.Context) {
 	for {
 		select {
 		case <-c.reset:
-			nextCrn, err := c.setupCron(ctx)
+			nextCrn, err := c.setupCron(ctx, wg)
 			if err != nil {
 				log.Printf("Failed to refresh ATO jobs: %s", err)
 				continue
@@ -55,7 +59,7 @@ func (c *ATOControl) Run(ctx context.Context) {
 	}
 }
 
-func (c *ATOControl) setupCron(ctx context.Context) (*cron.Cron, error) {
+func (c *ATOControl) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, error) {
 	atos, err := models.AutoTopOffs().All(ctx, c.db)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -66,7 +70,7 @@ func (c *ATOControl) setupCron(ctx context.Context) (*cron.Cron, error) {
 
 	crn := cron.New()
 	for _, ato := range atos {
-		_, err := crn.AddJob(ato.FillFrequency, NewATOJob(ctx, c.db, c.firmatas, ato))
+		_, err := crn.AddJob(ato.FillFrequency, NewATOJob(ctx, wg, c.eventCh, c.db, c.firmatas, ato))
 		if err != nil {
 			return nil, fmt.Errorf("adding cron job: %w", err)
 		}

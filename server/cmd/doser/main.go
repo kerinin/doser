@@ -6,6 +6,9 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -24,8 +27,15 @@ var (
 )
 
 func main() {
-	// TODO: Sig hanling
 	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
+	go func() {
+		<-sigs
+		cancel()
+	}()
+	wg := &sync.WaitGroup{}
 
 	db, err := sql.Open("sqlite3", *data)
 	if err != nil {
@@ -42,9 +52,8 @@ func main() {
 		gomatas[firmata.ID] = gomata.New()
 	}
 
-	// TODO: Handle errors from the controller
-	atoControl := controller.NewATOControl(db, gomatas)
-	go atoControl.Run(ctx)
+	events := make(chan controller.Event, 1)
+	atoControl := controller.NewATOControl(events, db, gomatas)
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: graph.NewResolver(db),
@@ -52,6 +61,20 @@ func main() {
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
 
+	wg.Add(1)
+	go atoControl.Run(ctx, wg)
+	go log.Fatal(http.ListenAndServe(":"+*port, nil))
+
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", *port)
-	log.Fatal(http.ListenAndServe(":"+*port, nil))
+	for {
+		select {
+		case event := <-events:
+			// TODO: Handle these more robustly
+			log.Printf("Event: %s", event.Message())
+		case <-ctx.Done():
+			log.Printf("Shutting down...")
+			wg.Wait()
+			return
+		}
+	}
 }
