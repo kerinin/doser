@@ -26,6 +26,8 @@ func NewAWCJob(db *sql.DB, firmatas map[string]*gomata.Firmata, awc *models.Auto
 func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	// TODO: Actually run job...
+
 	for {
 		select {
 		case <-ctx.Done():
