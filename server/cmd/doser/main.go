@@ -27,6 +27,10 @@ var (
 )
 
 func main() {
+	log.Printf("Starting...")
+
+	flag.Parse()
+
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	sigs := make(chan os.Signal, 1)
@@ -37,12 +41,14 @@ func main() {
 	}()
 	wg := &sync.WaitGroup{}
 
+	log.Printf("Opening DB...")
 	db, err := sql.Open("sqlite3", *data)
 	if err != nil {
 		log.Fatalf("Failed to create SQLite DB: %s", err)
 	}
 	defer db.Close()
 
+	log.Printf("Initializing Firmata...")
 	firmatas, err := models.Firmatas().All(ctx, db)
 	if err != nil {
 		log.Fatalf("Failed to get list of firmatas: %s", err)
@@ -52,20 +58,33 @@ func main() {
 		gomatas[firmata.ID] = gomata.New()
 	}
 
+	log.Printf("Creating controllers...")
 	events := make(chan controller.Event, 1)
 	atoControl := controller.NewATOControl(events, db, gomatas)
 
-	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
+	log.Printf("Creating API handlers...")
+	graphqlSrv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: graph.NewResolver(db),
 	}))
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	http.Handle("/query", graphqlSrv)
+	srv := &http.Server{
+		Addr:    ":" + *port,
+		Handler: http.DefaultServeMux,
+	}
 
 	wg.Add(1)
 	go atoControl.Run(ctx, wg)
-	go log.Fatal(http.ListenAndServe(":"+*port, nil))
+	go func() {
+		log.Fatal(srv.ListenAndServe())
+	}()
+	go func() {
+		<-ctx.Done()
+		srv.Shutdown(ctx)
+	}()
 
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", *port)
+	log.Printf("Ready")
+	log.Printf("Connect to http://localhost:%s/ for GraphQL playground", *port)
 	for {
 		select {
 		case event := <-events:

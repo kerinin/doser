@@ -23,6 +23,7 @@ func NewAWCController() *AWCController {
 }
 
 func (c *AWCController) Run(ctx context.Context, wg *sync.WaitGroup) {
+	// TODO: subsequent runs...
 	err := c.setupJobs(ctx, wg)
 	if err != nil {
 		log.Printf("Failed to create initial AWC jobs: %s", err)
