@@ -16,7 +16,6 @@ type ATOControl struct {
 	eventCh  chan<- Event
 	db       *sql.DB
 	firmatas map[string]*gomata.Firmata
-	cron     *cron.Cron
 	reset    chan struct{}
 }
 
@@ -37,7 +36,7 @@ func (c *ATOControl) Run(ctx context.Context, wg *sync.WaitGroup) {
 	}
 
 	crn.Start()
-	defer c.cron.Stop()
+	defer crn.Stop()
 
 	for {
 		select {
