@@ -51,10 +51,18 @@ func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 				log.Printf("Failed to refresh ATO jobs: %s", err)
 				continue
 			}
-			stopCtx := crn.Stop()
-			// NOTE: Do we want to wait for running jobs to terminate?
-			<-stopCtx.Done()
-			nextCrn.Start()
+
+			// Don't stop the running cron unless the new cron was created successfully
+			if crn != nil {
+				stopCtx := crn.Stop()
+				// NOTE: Do we want to wait for running jobs to terminate?
+				<-stopCtx.Done()
+			}
+
+			// Start processing the next cron
+			if nextCrn != nil {
+				nextCrn.Start()
+			}
 			crn = nextCrn
 
 		case <-ctx.Done():
