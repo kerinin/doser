@@ -60,11 +60,12 @@ func main() {
 
 	log.Printf("Creating controllers...")
 	events := make(chan controller.Event, 1)
-	atoControl := controller.NewATOControl(events, db, gomatas)
+	atoController := controller.NewATO(events, db, gomatas)
+	awcController := controller.NewAWC(events, db, gomatas)
 
 	log.Printf("Creating API handlers...")
 	graphqlSrv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
-		Resolvers: graph.NewResolver(db),
+		Resolvers: graph.NewResolver(db, atoController, awcController),
 	}))
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", graphqlSrv)
@@ -73,8 +74,9 @@ func main() {
 		Handler: http.DefaultServeMux,
 	}
 
-	wg.Add(1)
-	go atoControl.Run(ctx, wg)
+	wg.Add(2)
+	go atoController.Run(ctx, wg)
+	go awcController.Run(ctx, wg)
 	go func() {
 		log.Fatal(srv.ListenAndServe())
 	}()

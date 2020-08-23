@@ -12,22 +12,27 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-type ATOControl struct {
+type ATO struct {
 	eventCh  chan<- Event
 	db       *sql.DB
 	firmatas map[string]*gomata.Firmata
 	reset    chan struct{}
 }
 
-func NewATOControl(eventCh chan<- Event, db *sql.DB, firmatas map[string]*gomata.Firmata) *ATOControl {
-	return &ATOControl{db: db, reset: make(chan struct{}, 0)}
+func NewATO(eventCh chan<- Event, db *sql.DB, firmatas map[string]*gomata.Firmata) *ATO {
+	return &ATO{
+		eventCh:  eventCh,
+		db:       db,
+		firmatas: firmatas,
+		reset:    make(chan struct{}, 1),
+	}
 }
 
-func (c *ATOControl) Reset() {
+func (c *ATO) Reset() {
 	c.reset <- struct{}{}
 }
 
-func (c *ATOControl) Run(ctx context.Context, wg *sync.WaitGroup) {
+func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	crn, err := c.setupCron(ctx, wg)
@@ -58,7 +63,7 @@ func (c *ATOControl) Run(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (c *ATOControl) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, error) {
+func (c *ATO) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, error) {
 	atos, err := models.AutoTopOffs().All(ctx, c.db)
 	if err == sql.ErrNoRows {
 		return nil, nil

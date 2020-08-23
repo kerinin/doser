@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -24,16 +25,28 @@ type AWCJob struct {
 }
 
 func NewAWCJob(
+	eventCh chan<- Event,
 	awc *models.AutoWaterChange,
 	freshPump, wastePump *models.Pump,
 	freshFirmata, wasteFirmata *gomata.Firmata,
 	freshCalibration, wasteCalibration *models.Calibration,
 ) *AWCJob {
-	return &AWCJob{}
+	return &AWCJob{
+		eventCh:          eventCh,
+		awc:              awc,
+		freshPump:        freshPump,
+		wastePump:        wastePump,
+		freshFirmata:     freshFirmata,
+		wasteFirmata:     wasteFirmata,
+		freshCalibration: freshCalibration,
+		wasteCalibration: wasteCalibration,
+	}
 }
 
 func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	log.Printf("Starting AWC job %s", j.awc.ID)
 
 	var (
 		initialTime = time.Now()

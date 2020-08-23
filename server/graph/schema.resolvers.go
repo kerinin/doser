@@ -131,6 +131,9 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, input model.Calibr
 		return nil, fmt.Errorf("inserting calibration: %w", err)
 	}
 
+	r.atoController.Reset()
+	r.awcController.Reset()
+
 	return m, nil
 }
 
@@ -151,6 +154,8 @@ func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, input mod
 
 func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error) {
 	// NOTE: Be sure to parse the fill frequency to verify it's a valid cron
+	r.awcController.Reset()
+
 	panic(fmt.Errorf("not implemented"))
 }
 
@@ -166,6 +171,8 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, input mode
 	if err != nil {
 		return nil, fmt.Errorf("inserting auto water change: %w", err)
 	}
+
+	r.awcController.Reset()
 
 	return m, nil
 }
