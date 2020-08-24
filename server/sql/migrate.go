@@ -15,6 +15,7 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					`CREATE TABLE firmatas(
 						id UUID NOT NULL,
 						serial_port TEXT NOT NULL,
+						baud INT NOT NULL,
 
 						PRIMARY KEY (id)
 					)`,

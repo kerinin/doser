@@ -148,6 +148,8 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 func (j *AWCJob) getPosition(ctx context.Context, firmata *gomata.Firmata, pump *models.Pump) (*gomata.StepperPosition, error) {
 	reportCh := firmata.AwaitStepperReport(int32(pump.DeviceID))
+
+	// TODO: The firmata hasn't been connected when we get here and it causes a panic
 	err := firmata.StepperReport(int(pump.DeviceID))
 	if err != nil {
 		return nil, fmt.Errorf("requesting pump position report: %w", err)

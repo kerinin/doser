@@ -78,6 +78,7 @@ type ComplexityRoot struct {
 	}
 
 	Firmata struct {
+		Baud       func(childComplexity int) int
 		ID         func(childComplexity int) int
 		Pumps      func(childComplexity int) int
 		SerialPort func(childComplexity int) int
@@ -281,6 +282,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.DoserComponent.Pump(childComplexity), true
+
+	case "Firmata.baud":
+		if e.complexity.Firmata.Baud == nil {
+			break
+		}
+
+		return e.complexity.Firmata.Baud(childComplexity), true
 
 	case "Firmata.id":
 		if e.complexity.Firmata.ID == nil {
@@ -600,6 +608,8 @@ type Firmata {
 
   # The serial port on the host system, ie /dev/tty...
   serial_port: String!
+  # The serial connection baud rate to use
+  baud: Int!
 }
 
 # A pump driven via the AccelStepperFirmata protocol
@@ -689,6 +699,7 @@ type Mutation {
 
 input NewFirmataInput {
   serial_port: String!
+  baud: Int!
 }
 
 input NewPumpInput {
@@ -1462,6 +1473,40 @@ func (ec *executionContext) _Firmata_serial_port(ctx context.Context, field grap
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Firmata_baud(ctx context.Context, field graphql.CollectedField, obj *models.Firmata) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Firmata",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Baud, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createFirmata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3677,6 +3722,14 @@ func (ec *executionContext) unmarshalInputNewFirmataInput(ctx context.Context, o
 			if err != nil {
 				return it, err
 			}
+		case "baud":
+			var err error
+
+			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("baud"))
+			it.Baud, err = ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		}
 	}
 
@@ -3975,6 +4028,11 @@ func (ec *executionContext) _Firmata(ctx context.Context, sel ast.SelectionSet, 
 			})
 		case "serial_port":
 			out.Values[i] = ec._Firmata_serial_port(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "baud":
+			out.Values[i] = ec._Firmata_baud(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}

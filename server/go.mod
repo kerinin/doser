@@ -7,6 +7,7 @@ require (
 	github.com/dgraph-io/badger/v2 v2.2007.1
 	github.com/friendsofgo/errors v0.9.2
 	github.com/google/uuid v1.1.1
+	github.com/huin/goserial v0.0.0-20121012073615-7b90efdb22b1
 	github.com/kerinin/gomata v0.0.0-20200822122319-d1e4752daae0
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1

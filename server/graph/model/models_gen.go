@@ -44,6 +44,7 @@ type NewDoserInput struct {
 
 type NewFirmataInput struct {
 	SerialPort string `json:"serial_port"`
+	Baud       int    `json:"baud"`
 }
 
 type NewPumpInput struct {

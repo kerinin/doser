@@ -89,6 +89,7 @@ func (r *mutationResolver) CreateFirmata(ctx context.Context, input model.NewFir
 	m := &models.Firmata{
 		ID:         uuid.New().String(),
 		SerialPort: input.SerialPort,
+		Baud:       int64(input.Baud),
 	}
 	err := m.Insert(ctx, r.db, boil.Infer())
 	if err != nil {
@@ -186,6 +187,13 @@ func (r *pumpResolver) Firmata(ctx context.Context, obj *models.Pump) (*models.F
 	if err != nil {
 		return nil, fmt.Errorf("getting firmata: %w", err)
 	}
+
+	err = r.firmatasController.Reset()
+	if err != nil {
+		return nil, fmt.Errorf("resetting firmatas: %w", err)
+	}
+	r.awcController.Reset()
+	r.atoController.Reset()
 
 	return firmata, nil
 }

@@ -8,18 +8,17 @@ import (
 	"sync"
 
 	"github.com/kerinin/doser/service/models"
-	"github.com/kerinin/gomata"
 	"github.com/robfig/cron/v3"
 )
 
 type ATO struct {
 	eventCh  chan<- Event
 	db       *sql.DB
-	firmatas map[string]*gomata.Firmata
+	firmatas *Firmatas
 	reset    chan struct{}
 }
 
-func NewATO(eventCh chan<- Event, db *sql.DB, firmatas map[string]*gomata.Firmata) *ATO {
+func NewATO(eventCh chan<- Event, db *sql.DB, firmatas *Firmatas) *ATO {
 	return &ATO{
 		eventCh:  eventCh,
 		db:       db,
@@ -82,10 +81,31 @@ func (c *ATO) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, er
 
 	crn := cron.New()
 	for _, ato := range atos {
-		_, err := crn.AddJob(ato.FillFrequency, NewATOJob(ctx, wg, c.eventCh, c.db, c.firmatas, ato))
+		// Fetch resources necessary for the ATO job
+		pump, err := ato.Pump().One(ctx, c.db)
+		if err != nil {
+			return nil, fmt.Errorf("getting pump (aborting job run): %w", err)
+		}
+		firmata, err := c.firmatas.Get(ctx, pump.FirmataID)
+		if err != nil {
+			return nil, fmt.Errorf("getting pump firmata: %w", err)
+		}
+		sensors, err := ato.WaterLevelSensors().All(ctx, c.db)
+		if err != nil {
+			return nil, fmt.Errorf("getting sensors (aborting job run): %w", err)
+		}
+		calibration, err := pump.Calibrations().One(ctx, c.db)
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("refusing to run ATO job with uncalibrated pump")
+		} else if err != nil {
+			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
+		}
+
+		_, err = crn.AddJob(ato.FillFrequency, NewATOJob(ctx, wg, c.eventCh, ato, pump, firmata, sensors, calibration))
 		if err != nil {
 			return nil, fmt.Errorf("adding cron job: %w", err)
 		}
+		log.Printf("Scheduled ATO job %s", ato.ID)
 	}
 
 	return crn, nil

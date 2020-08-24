@@ -17,8 +17,6 @@ import (
 	"github.com/kerinin/doser/service/controller"
 	"github.com/kerinin/doser/service/graph"
 	"github.com/kerinin/doser/service/graph/generated"
-	"github.com/kerinin/doser/service/models"
-	"github.com/kerinin/gomata"
 )
 
 var (
@@ -48,24 +46,15 @@ func main() {
 	}
 	defer db.Close()
 
-	log.Printf("Initializing Firmata...")
-	firmatas, err := models.Firmatas().All(ctx, db)
-	if err != nil {
-		log.Fatalf("Failed to get list of firmatas: %s", err)
-	}
-	gomatas := make(map[string]*gomata.Firmata, len(firmatas))
-	for _, firmata := range firmatas {
-		gomatas[firmata.ID] = gomata.New()
-	}
-
 	log.Printf("Creating controllers...")
 	events := make(chan controller.Event, 1)
-	atoController := controller.NewATO(events, db, gomatas)
-	awcController := controller.NewAWC(events, db, gomatas)
+	firmatasController := controller.NewFirmatas(events, db)
+	atoController := controller.NewATO(events, db, firmatasController)
+	awcController := controller.NewAWC(events, db, firmatasController)
 
 	log.Printf("Creating API handlers...")
 	graphqlSrv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
-		Resolvers: graph.NewResolver(db, atoController, awcController),
+		Resolvers: graph.NewResolver(db, firmatasController, atoController, awcController),
 	}))
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", graphqlSrv)

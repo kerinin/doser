@@ -21,6 +21,8 @@ type Firmata {
 
   # The serial port on the host system, ie /dev/tty...
   serial_port: String!
+  # The serial connection baud rate to use
+  baud: Int!
 }
 
 # A pump driven via the AccelStepperFirmata protocol
@@ -110,6 +112,7 @@ type Mutation {
 
 input NewFirmataInput {
   serial_port: String!
+  baud: Int!
 }
 
 input NewPumpInput {

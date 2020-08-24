@@ -24,6 +24,7 @@ import (
 type Firmata struct {
 	ID         string `boil:"id" json:"id" toml:"id" yaml:"id"`
 	SerialPort string `boil:"serial_port" json:"serial_port" toml:"serial_port" yaml:"serial_port"`
+	Baud       int64  `boil:"baud" json:"baud" toml:"baud" yaml:"baud"`
 
 	R *firmataR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L firmataL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -32,9 +33,11 @@ type Firmata struct {
 var FirmataColumns = struct {
 	ID         string
 	SerialPort string
+	Baud       string
 }{
 	ID:         "id",
 	SerialPort: "serial_port",
+	Baud:       "baud",
 }
 
 // Generated where
@@ -42,9 +45,11 @@ var FirmataColumns = struct {
 var FirmataWhere = struct {
 	ID         whereHelperstring
 	SerialPort whereHelperstring
+	Baud       whereHelperint64
 }{
 	ID:         whereHelperstring{field: "\"firmatas\".\"id\""},
 	SerialPort: whereHelperstring{field: "\"firmatas\".\"serial_port\""},
+	Baud:       whereHelperint64{field: "\"firmatas\".\"baud\""},
 }
 
 // FirmataRels is where relationship names are stored.
@@ -71,8 +76,8 @@ func (*firmataR) NewStruct() *firmataR {
 type firmataL struct{}
 
 var (
-	firmataAllColumns            = []string{"id", "serial_port"}
-	firmataColumnsWithoutDefault = []string{"id", "serial_port"}
+	firmataAllColumns            = []string{"id", "serial_port", "baud"}
+	firmataColumnsWithoutDefault = []string{"id", "serial_port", "baud"}
 	firmataColumnsWithDefault    = []string{}
 	firmataPrimaryKeyColumns     = []string{"id"}
 )

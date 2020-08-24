@@ -11,15 +11,17 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 type Resolver struct {
-	db            *sql.DB
-	atoController *controller.ATO
-	awcController *controller.AWC
+	db                 *sql.DB
+	firmatasController *controller.Firmatas
+	atoController      *controller.ATO
+	awcController      *controller.AWC
 }
 
 func NewResolver(
 	db *sql.DB,
+	firmatasController *controller.Firmatas,
 	atoController *controller.ATO,
 	awcController *controller.AWC,
 ) *Resolver {
-	return &Resolver{db, atoController, awcController}
+	return &Resolver{db, firmatasController, atoController, awcController}
 }

@@ -205,6 +205,7 @@ github.com/hashicorp/memberlist v0.1.3/go.mod h1:ajVTdAv/9Im8oMAAj5G31PhhMCZJV2p
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
 github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpOxQnU=
 github.com/hudl/fargo v1.3.0/go.mod h1:y3CKSmjA+wD2gak7sUSXTAoopbhU08POFhmITJgmKTg=
+github.com/huin/goserial v0.0.0-20121012073615-7b90efdb22b1 h1:v6symRpmVeKVUqq1grXnDDtus+lmQufUhgZ/lgMr4nU=
 github.com/huin/goserial v0.0.0-20121012073615-7b90efdb22b1/go.mod h1:x4wgpgRJT44loaDTf8/wWCkvTlhrKlVlaHATk7Leqlw=
 github.com/hybridgroup/go-ardrone v0.0.0-20140402002621-b9750d8d7b78/go.mod h1:YllNbhGM1UEcySxCv1BWK5lre7QLmJJ+O0ADUOo2nbc=
 github.com/hybridgroup/mjpeg v0.0.0-20140228234708-4680f319790e/go.mod h1:eagM805MRKrioHYuU7iKLUyFPVKqVV6um5DAvCkUtXs=

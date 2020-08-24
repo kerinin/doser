@@ -2,8 +2,8 @@ package controller
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -15,23 +15,36 @@ import (
 )
 
 type ATOJob struct {
-	ctx      context.Context
-	wg       *sync.WaitGroup
-	eventCh  chan<- Event
-	db       *sql.DB
-	firmatas map[string]*gomata.Firmata
-	ato      *models.AutoTopOff
-	mx       sync.Mutex
+	ctx         context.Context
+	wg          *sync.WaitGroup
+	eventCh     chan<- Event
+	ato         *models.AutoTopOff
+	pump        *models.Pump
+	firmata     *gomata.Firmata
+	sensors     []*models.WaterLevelSensor
+	calibration *models.Calibration
+	mx          sync.Mutex
 }
 
-func NewATOJob(ctx context.Context, wg *sync.WaitGroup, eventCh chan<- Event, db *sql.DB, firmatas map[string]*gomata.Firmata, ato *models.AutoTopOff) *ATOJob {
+func NewATOJob(
+	ctx context.Context,
+	wg *sync.WaitGroup,
+	eventCh chan<- Event,
+	ato *models.AutoTopOff,
+	pump *models.Pump,
+	firmata *gomata.Firmata,
+	sensors []*models.WaterLevelSensor,
+	calibration *models.Calibration,
+) *ATOJob {
 	return &ATOJob{
-		ctx:      ctx,
-		wg:       wg,
-		eventCh:  eventCh,
-		db:       db,
-		firmatas: firmatas,
-		ato:      ato,
+		ctx:         ctx,
+		wg:          wg,
+		eventCh:     eventCh,
+		ato:         ato,
+		pump:        pump,
+		firmata:     firmata,
+		sensors:     sensors,
+		calibration: calibration,
 	}
 }
 
@@ -39,6 +52,8 @@ func (j *ATOJob) Run() {
 	// Prevent multiple jobs from running concurrently
 	j.mx.Lock()
 	defer j.mx.Unlock()
+
+	log.Printf("Running ATO job %s", j.ato.ID)
 
 	// Connect to the RPi
 	rpi := raspi.NewAdaptor()
@@ -48,33 +63,8 @@ func (j *ATOJob) Run() {
 		return
 	}
 
-	// Fetch resources necessary for the ATO job
-	pump, err := j.ato.Pump().One(j.ctx, j.db)
-	if err != nil {
-		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("getting pump (aborting job run): %w", err)}
-		return
-	}
-	firmata, found := j.firmatas[pump.FirmataID]
-	if !found {
-		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("unrecognized firmata ID %s for pump %s (aborting job run)", pump.FirmataID, pump.ID)}
-		return
-	}
-	sensors, err := j.ato.WaterLevelSensors().All(j.ctx, j.db)
-	if err != nil {
-		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("getting sensors (aborting job run): %w", err)}
-		return
-	}
-	calibration, err := pump.Calibrations().One(j.ctx, j.db)
-	if err == sql.ErrNoRows {
-		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("refusing to run ATO job with uncalibrated pump")}
-		return
-	} else if err != nil {
-		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("getting pump calibration (aborting job run): %w", err)}
-		return
-	}
-
 	// Ensure the water level sensors are functioning and water isn't currently detected
-	for _, sensor := range sensors {
+	for _, sensor := range j.sensors {
 		// Read the sensor's current value
 		val, err := rpi.DigitalRead(string(sensor.Pin))
 		if err != nil {
@@ -89,10 +79,10 @@ func (j *ATOJob) Run() {
 
 	// Configure the stepper
 	var (
-		maxSteps = j.ato.MaxFillVolume * float64(calibration.Steps) / calibration.Volume
-		speed    = j.ato.FillRate * float64(calibration.Steps) / calibration.Volume
+		maxSteps = j.ato.MaxFillVolume * float64(j.calibration.Steps) / j.calibration.Volume
+		speed    = j.ato.FillRate * float64(j.calibration.Steps) / j.calibration.Volume
 	)
-	err = firmata.StepperSetSpeed(int(pump.DeviceID), float32(speed))
+	err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(speed))
 	if err != nil {
 		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("setting pump speed (aborting job run): %w", err)}
 		return
@@ -103,7 +93,7 @@ func (j *ATOJob) Run() {
 	defer j.wg.Done()
 
 	// Command the stepper to pump the maximum fill volume (we'll interrupt it when a sensor is triggered)
-	err = firmata.StepperStep(int(pump.DeviceID), int32(maxSteps))
+	err = j.firmata.StepperStep(int(j.pump.DeviceID), int32(maxSteps))
 	if err != nil {
 		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("stepping pump (aborting job run): %w", err)}
 		return
@@ -111,7 +101,7 @@ func (j *ATOJob) Run() {
 
 	var (
 		startTime = time.Now()
-		complete  = firmata.AwaitStepperMoveCompletion(int32(pump.DeviceID))
+		complete  = j.firmata.AwaitStepperMoveCompletion(int32(j.pump.DeviceID))
 		ticker    = time.NewTicker(10 * time.Millisecond)
 	)
 	defer ticker.Stop()
@@ -120,13 +110,13 @@ func (j *ATOJob) Run() {
 	for {
 		select {
 		case <-ticker.C:
-			for _, sensor := range sensors {
+			for _, sensor := range j.sensors {
 				// Read the sensor's current value
 				val, err := rpi.DigitalRead(string(sensor.Pin))
 				if err != nil {
 					j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("connecting to RPi: %w", err)}
-					if err := firmata.StepperStop(int(pump.DeviceID)); err != nil {
-						j.eventCh <- &UncontrolledPumpError{pump.ID, fmt.Errorf("stopping pump after failing to read sensor: %w", err)}
+					if err := j.firmata.StepperStop(int(j.pump.DeviceID)); err != nil {
+						j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump after failing to read sensor: %w", err)}
 					}
 					return
 				}
@@ -137,9 +127,9 @@ func (j *ATOJob) Run() {
 				}
 
 				// water detected, stop stepper
-				err = firmata.StepperStop(int(pump.DeviceID))
+				err = j.firmata.StepperStop(int(j.pump.DeviceID))
 				if err != nil {
-					j.eventCh <- &UncontrolledPumpError{pump.ID, fmt.Errorf("stopping pump after sensor detected water: %w", err)}
+					j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump after sensor detected water: %w", err)}
 					return
 				}
 
@@ -160,9 +150,9 @@ func (j *ATOJob) Run() {
 			return
 
 		case <-j.ctx.Done():
-			err = firmata.StepperStop(int(pump.DeviceID))
+			err = j.firmata.StepperStop(int(j.pump.DeviceID))
 			if err != nil {
-				j.eventCh <- &UncontrolledPumpError{pump.ID, fmt.Errorf("stopping pump during shutdown of ATO job: %w", err)}
+				j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump during shutdown of ATO job: %w", err)}
 			}
 			return
 		}

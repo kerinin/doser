@@ -8,18 +8,17 @@ import (
 	"sync"
 
 	"github.com/kerinin/doser/service/models"
-	"github.com/kerinin/gomata"
 )
 
 type AWC struct {
 	eventCh  chan<- Event
 	db       *sql.DB
-	firmatas map[string]*gomata.Firmata
+	firmatas *Firmatas
 	reset    chan struct{}
 	jobs     map[string]context.CancelFunc
 }
 
-func NewAWC(eventCh chan<- Event, db *sql.DB, firmatas map[string]*gomata.Firmata) *AWC {
+func NewAWC(eventCh chan<- Event, db *sql.DB, firmatas *Firmatas) *AWC {
 	return &AWC{
 		eventCh:  eventCh,
 		db:       db,
@@ -64,6 +63,8 @@ func (c *AWC) Run(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[string]context.CancelFunc, err error) {
+	jobs = make(map[string]context.CancelFunc)
+
 	// If setup fails partway through, make sure we tear down any jobs that
 	// were created before the failure
 	defer func() {
@@ -92,13 +93,13 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		if err != nil {
 			return nil, fmt.Errorf("getting waste water pump (aborting job run): %w", err)
 		}
-		freshFirmata, found := c.firmatas[freshPump.FirmataID]
-		if !found {
-			return nil, fmt.Errorf("unrecognized firmata ID %s for fresh pump %s (aborting job run)", freshPump.FirmataID, freshPump.ID)
+		freshFirmata, err := c.firmatas.Get(ctx, freshPump.FirmataID)
+		if err != nil {
+			return nil, fmt.Errorf("getting fresh pump firmata: %w", err)
 		}
-		wasteFirmata, found := c.firmatas[wastePump.FirmataID]
-		if !found {
-			return nil, fmt.Errorf("unrecognized firmata ID %s for waste pump %s (aborting job run)", wastePump.FirmataID, wastePump.ID)
+		wasteFirmata, err := c.firmatas.Get(ctx, wastePump.FirmataID)
+		if err != nil {
+			return nil, fmt.Errorf("getting fresh pump firmata: %w", err)
 		}
 		freshCalibration, err := freshPump.Calibrations().One(ctx, c.db)
 		if err == sql.ErrNoRows {
