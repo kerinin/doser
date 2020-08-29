@@ -101,59 +101,34 @@ type DoserComponent {
 }
 
 type Mutation {
-  createFirmata(input: NewFirmataInput!): Firmata!
-  createPump(input: NewPumpInput!): Pump!
-  calibratePump(input: CalibratePumpInput!): TwoPointCalibration!
-  createWaterLevelSensor(input: CreateWaterLevelSensor!): WaterLevelSensor!
-  createAutoTopOff(input: NewAutoTopOff!): AutoTopOff!
-  createAutoWaterChange(input: NewAutoWaterChangeInput!): AutoWaterChange!
-  createDoser(input: NewDoserInput!): Doser!
+  createFirmata(serial_port: String!, baud: Int!): Firmata!
+  deleteFirmata(id: ID!): Boolean!
+
+  createPump(firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  deletePump(id: ID!): Boolean!
+
+  calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
+
+  createWaterLevelSensor(pin: Int!, kind: SensorKind!): WaterLevelSensor!
+  deleteWaterLevelSensor(id: ID!): Boolean!
+
+  createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_frequency: String!, max_fill_volume: Float!): AutoTopOff!
+  deleteAutoTopOff(id: ID!): Boolean!
+
+  createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!): AutoWaterChange!
+  deleteAutoWaterChange(id: ID!): Boolean!
+
+  createDoser(input: DoserInput!): Doser!
+  deleteDoser(id: ID!): Boolean!
+
   pump(pump_id: ID!, steps: Int!, speed: Float!): Boolean!
 }
 
-input NewFirmataInput {
-  serial_port: String!
-  baud: Int!
+input DoserInput {
+  components: [DoserComponentInput!]!
 }
 
-input NewPumpInput {
-  firmata_id: ID!
-  device_id: Int!
-  step_pin: Int!
-  dir_pin: Int
-  en_pin: Int
-}
-
-input CalibratePumpInput {
+input DoserComponentInput {
   pump_id: ID!
-  steps: Int!
-  volume: Float!
-}
-
-input CreateWaterLevelSensor {
-  pin: Int!
-  kind: SensorKind
-}
-
-input NewAutoTopOff {
-  level_sensors: [ID!]!
-  pump: ID!
-  fill_rate: Float!
-  fill_frequency: String
-  max_fill_folume: Float
-}
-
-input NewAutoWaterChangeInput {
-  exchange_rate: Float!
-  fresh_pump_id: ID!
-  waste_pump_id: ID!
-}
-
-input NewDoserInput {
-  components: [NewDoserComponentInput!]
-}
-
-input NewDoserComponentInput {
-  pump: ID!
   dose_rate: Float!
 }

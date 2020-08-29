@@ -86,11 +86,11 @@ func (r *firmataResolver) Pumps(ctx context.Context, obj *models.Firmata) ([]*mo
 	return pumps, nil
 }
 
-func (r *mutationResolver) CreateFirmata(ctx context.Context, input model.NewFirmataInput) (*models.Firmata, error) {
+func (r *mutationResolver) CreateFirmata(ctx context.Context, serialPort string, baud int) (*models.Firmata, error) {
 	m := &models.Firmata{
 		ID:         uuid.New().String(),
-		SerialPort: input.SerialPort,
-		Baud:       int64(input.Baud),
+		SerialPort: serialPort,
+		Baud:       int64(baud),
 	}
 	err := m.Insert(ctx, r.db, boil.Infer())
 	if err != nil {
@@ -100,17 +100,27 @@ func (r *mutationResolver) CreateFirmata(ctx context.Context, input model.NewFir
 	return m, nil
 }
 
-func (r *mutationResolver) CreatePump(ctx context.Context, input model.NewPumpInput) (*models.Pump, error) {
+func (r *mutationResolver) DeleteFirmata(ctx context.Context, id string) (bool, error) {
+	f := &models.Firmata{ID: id}
+	rows, err := f.Delete(ctx, r.db)
+	if err != nil {
+		return false, fmt.Errorf("deleting firmata: %w", err)
+	}
+
+	return rows > 0, nil
+}
+
+func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error) {
 	m := &models.Pump{
 		ID:        uuid.New().String(),
-		FirmataID: input.FirmataID,
-		StepPin:   int64(input.StepPin),
+		FirmataID: firmataID,
+		StepPin:   int64(stepPin),
 	}
-	if input.DirPin != nil {
-		m.EnPin = null.Int64From(int64(*input.EnPin))
+	if dirPin != nil {
+		m.DirPin = null.Int64From(int64(*dirPin))
 	}
-	if input.EnPin != nil {
-		m.EnPin = null.Int64From(int64(*input.EnPin))
+	if enPin != nil {
+		m.EnPin = null.Int64From(int64(*enPin))
 	}
 
 	err := m.Insert(ctx, r.db, boil.Infer())
@@ -121,12 +131,22 @@ func (r *mutationResolver) CreatePump(ctx context.Context, input model.NewPumpIn
 	return m, nil
 }
 
-func (r *mutationResolver) CalibratePump(ctx context.Context, input model.CalibratePumpInput) (*models.Calibration, error) {
+func (r *mutationResolver) DeletePump(ctx context.Context, id string) (bool, error) {
+	f := &models.Pump{ID: id}
+	rows, err := f.Delete(ctx, r.db)
+	if err != nil {
+		return false, fmt.Errorf("deleting pump: %w", err)
+	}
+
+	return rows > 0, nil
+}
+
+func (r *mutationResolver) CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error) {
 	m := &models.Calibration{
 		ID:     uuid.New().String(),
-		PumpID: input.PumpID,
-		Steps:  int64(input.Steps),
-		Volume: input.Volume,
+		PumpID: pumpID,
+		Steps:  int64(steps),
+		Volume: volume,
 	}
 	err := m.Insert(ctx, r.db, boil.Infer())
 	if err != nil {
@@ -139,11 +159,11 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, input model.Calibr
 	return m, nil
 }
 
-func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*models.WaterLevelSensor, error) {
+func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind) (*models.WaterLevelSensor, error) {
 	m := &models.WaterLevelSensor{
 		ID:   uuid.New().String(),
-		Pin:  int64(input.Pin),
-		Kind: input.Kind.String(),
+		Pin:  int64(pin),
+		Kind: kind.String(),
 	}
 
 	err := m.Insert(ctx, r.db, boil.Infer())
@@ -154,19 +174,39 @@ func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, input mod
 	return m, nil
 }
 
-func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error) {
+func (r *mutationResolver) DeleteWaterLevelSensor(ctx context.Context, id string) (bool, error) {
+	f := &models.WaterLevelSensor{ID: id}
+	rows, err := f.Delete(ctx, r.db)
+	if err != nil {
+		return false, fmt.Errorf("deleting water level sensor: %w", err)
+	}
+
+	return rows > 0, nil
+}
+
+func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error) {
 	// NOTE: Be sure to parse the fill frequency to verify it's a valid cron
 	r.awcController.Reset()
 
 	panic(fmt.Errorf("not implemented"))
 }
 
-func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*models.AutoWaterChange, error) {
+func (r *mutationResolver) DeleteAutoTopOff(ctx context.Context, id string) (bool, error) {
+	f := &models.AutoTopOff{ID: id}
+	rows, err := f.Delete(ctx, r.db)
+	if err != nil {
+		return false, fmt.Errorf("deleting auto top off: %w", err)
+	}
+
+	return rows > 0, nil
+}
+
+func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64) (*models.AutoWaterChange, error) {
 	m := &models.AutoWaterChange{
 		ID:           uuid.New().String(),
-		FreshPumpID:  input.FreshPumpID,
-		WastePumpID:  input.WastePumpID,
-		ExchangeRate: input.ExchangeRate,
+		FreshPumpID:  freshPumpID,
+		WastePumpID:  wastePumpID,
+		ExchangeRate: exchangeRate,
 	}
 
 	err := m.Insert(ctx, r.db, boil.Infer())
@@ -179,8 +219,28 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, input mode
 	return m, nil
 }
 
-func (r *mutationResolver) CreateDoser(ctx context.Context, input model.NewDoserInput) (*models.Doser, error) {
+func (r *mutationResolver) DeleteAutoWaterChange(ctx context.Context, id string) (bool, error) {
+	f := &models.AutoWaterChange{ID: id}
+	rows, err := f.Delete(ctx, r.db)
+	if err != nil {
+		return false, fmt.Errorf("deleting auto water change: %w", err)
+	}
+
+	return rows > 0, nil
+}
+
+func (r *mutationResolver) CreateDoser(ctx context.Context, input model.DoserInput) (*models.Doser, error) {
 	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *mutationResolver) DeleteDoser(ctx context.Context, id string) (bool, error) {
+	f := &models.Doser{ID: id}
+	rows, err := f.Delete(ctx, r.db)
+	if err != nil {
+		return false, fmt.Errorf("deleting doser: %w", err)
+	}
+
+	return rows > 0, nil
 }
 
 func (r *mutationResolver) Pump(ctx context.Context, pumpID string, steps int, speed float64) (bool, error) {

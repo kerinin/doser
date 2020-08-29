@@ -85,13 +85,19 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CalibratePump          func(childComplexity int, input model.CalibratePumpInput) int
-		CreateAutoTopOff       func(childComplexity int, input model.NewAutoTopOff) int
-		CreateAutoWaterChange  func(childComplexity int, input model.NewAutoWaterChangeInput) int
-		CreateDoser            func(childComplexity int, input model.NewDoserInput) int
-		CreateFirmata          func(childComplexity int, input model.NewFirmataInput) int
-		CreatePump             func(childComplexity int, input model.NewPumpInput) int
-		CreateWaterLevelSensor func(childComplexity int, input model.CreateWaterLevelSensor) int
+		CalibratePump          func(childComplexity int, pumpID string, steps int, volume float64) int
+		CreateAutoTopOff       func(childComplexity int, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) int
+		CreateAutoWaterChange  func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64) int
+		CreateDoser            func(childComplexity int, input model.DoserInput) int
+		CreateFirmata          func(childComplexity int, serialPort string, baud int) int
+		CreatePump             func(childComplexity int, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) int
+		CreateWaterLevelSensor func(childComplexity int, pin int, kind model.SensorKind) int
+		DeleteAutoTopOff       func(childComplexity int, id string) int
+		DeleteAutoWaterChange  func(childComplexity int, id string) int
+		DeleteDoser            func(childComplexity int, id string) int
+		DeleteFirmata          func(childComplexity int, id string) int
+		DeletePump             func(childComplexity int, id string) int
+		DeleteWaterLevelSensor func(childComplexity int, id string) int
 		Pump                   func(childComplexity int, pumpID string, steps int, speed float64) int
 	}
 
@@ -144,13 +150,19 @@ type FirmataResolver interface {
 	Pumps(ctx context.Context, obj *models.Firmata) ([]*models.Pump, error)
 }
 type MutationResolver interface {
-	CreateFirmata(ctx context.Context, input model.NewFirmataInput) (*models.Firmata, error)
-	CreatePump(ctx context.Context, input model.NewPumpInput) (*models.Pump, error)
-	CalibratePump(ctx context.Context, input model.CalibratePumpInput) (*models.Calibration, error)
-	CreateWaterLevelSensor(ctx context.Context, input model.CreateWaterLevelSensor) (*models.WaterLevelSensor, error)
-	CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error)
-	CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*models.AutoWaterChange, error)
-	CreateDoser(ctx context.Context, input model.NewDoserInput) (*models.Doser, error)
+	CreateFirmata(ctx context.Context, serialPort string, baud int) (*models.Firmata, error)
+	DeleteFirmata(ctx context.Context, id string) (bool, error)
+	CreatePump(ctx context.Context, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
+	DeletePump(ctx context.Context, id string) (bool, error)
+	CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error)
+	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind) (*models.WaterLevelSensor, error)
+	DeleteWaterLevelSensor(ctx context.Context, id string) (bool, error)
+	CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error)
+	DeleteAutoTopOff(ctx context.Context, id string) (bool, error)
+	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64) (*models.AutoWaterChange, error)
+	DeleteAutoWaterChange(ctx context.Context, id string) (bool, error)
+	CreateDoser(ctx context.Context, input model.DoserInput) (*models.Doser, error)
+	DeleteDoser(ctx context.Context, id string) (bool, error)
 	Pump(ctx context.Context, pumpID string, steps int, speed float64) (bool, error)
 }
 type PumpResolver interface {
@@ -323,7 +335,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CalibratePump(childComplexity, args["input"].(model.CalibratePumpInput)), true
+		return e.complexity.Mutation.CalibratePump(childComplexity, args["pump_id"].(string), args["steps"].(int), args["volume"].(float64)), true
 
 	case "Mutation.createAutoTopOff":
 		if e.complexity.Mutation.CreateAutoTopOff == nil {
@@ -335,7 +347,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateAutoTopOff(childComplexity, args["input"].(model.NewAutoTopOff)), true
+		return e.complexity.Mutation.CreateAutoTopOff(childComplexity, args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_frequency"].(string), args["max_fill_volume"].(float64)), true
 
 	case "Mutation.createAutoWaterChange":
 		if e.complexity.Mutation.CreateAutoWaterChange == nil {
@@ -347,7 +359,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateAutoWaterChange(childComplexity, args["input"].(model.NewAutoWaterChangeInput)), true
+		return e.complexity.Mutation.CreateAutoWaterChange(childComplexity, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64)), true
 
 	case "Mutation.createDoser":
 		if e.complexity.Mutation.CreateDoser == nil {
@@ -359,7 +371,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateDoser(childComplexity, args["input"].(model.NewDoserInput)), true
+		return e.complexity.Mutation.CreateDoser(childComplexity, args["input"].(model.DoserInput)), true
 
 	case "Mutation.createFirmata":
 		if e.complexity.Mutation.CreateFirmata == nil {
@@ -371,7 +383,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateFirmata(childComplexity, args["input"].(model.NewFirmataInput)), true
+		return e.complexity.Mutation.CreateFirmata(childComplexity, args["serial_port"].(string), args["baud"].(int)), true
 
 	case "Mutation.createPump":
 		if e.complexity.Mutation.CreatePump == nil {
@@ -383,7 +395,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreatePump(childComplexity, args["input"].(model.NewPumpInput)), true
+		return e.complexity.Mutation.CreatePump(childComplexity, args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int)), true
 
 	case "Mutation.createWaterLevelSensor":
 		if e.complexity.Mutation.CreateWaterLevelSensor == nil {
@@ -395,7 +407,79 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["input"].(model.CreateWaterLevelSensor)), true
+		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["pin"].(int), args["kind"].(model.SensorKind)), true
+
+	case "Mutation.deleteAutoTopOff":
+		if e.complexity.Mutation.DeleteAutoTopOff == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteAutoTopOff_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteAutoTopOff(childComplexity, args["id"].(string)), true
+
+	case "Mutation.deleteAutoWaterChange":
+		if e.complexity.Mutation.DeleteAutoWaterChange == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteAutoWaterChange_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteAutoWaterChange(childComplexity, args["id"].(string)), true
+
+	case "Mutation.deleteDoser":
+		if e.complexity.Mutation.DeleteDoser == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteDoser_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteDoser(childComplexity, args["id"].(string)), true
+
+	case "Mutation.deleteFirmata":
+		if e.complexity.Mutation.DeleteFirmata == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteFirmata_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteFirmata(childComplexity, args["id"].(string)), true
+
+	case "Mutation.deletePump":
+		if e.complexity.Mutation.DeletePump == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deletePump_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeletePump(childComplexity, args["id"].(string)), true
+
+	case "Mutation.deleteWaterLevelSensor":
+		if e.complexity.Mutation.DeleteWaterLevelSensor == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_deleteWaterLevelSensor_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.DeleteWaterLevelSensor(childComplexity, args["id"].(string)), true
 
 	case "Mutation.pump":
 		if e.complexity.Mutation.Pump == nil {
@@ -702,60 +786,35 @@ type DoserComponent {
 }
 
 type Mutation {
-  createFirmata(input: NewFirmataInput!): Firmata!
-  createPump(input: NewPumpInput!): Pump!
-  calibratePump(input: CalibratePumpInput!): TwoPointCalibration!
-  createWaterLevelSensor(input: CreateWaterLevelSensor!): WaterLevelSensor!
-  createAutoTopOff(input: NewAutoTopOff!): AutoTopOff!
-  createAutoWaterChange(input: NewAutoWaterChangeInput!): AutoWaterChange!
-  createDoser(input: NewDoserInput!): Doser!
+  createFirmata(serial_port: String!, baud: Int!): Firmata!
+  deleteFirmata(id: ID!): Boolean!
+
+  createPump(firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  deletePump(id: ID!): Boolean!
+
+  calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
+
+  createWaterLevelSensor(pin: Int!, kind: SensorKind!): WaterLevelSensor!
+  deleteWaterLevelSensor(id: ID!): Boolean!
+
+  createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_frequency: String!, max_fill_volume: Float!): AutoTopOff!
+  deleteAutoTopOff(id: ID!): Boolean!
+
+  createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!): AutoWaterChange!
+  deleteAutoWaterChange(id: ID!): Boolean!
+
+  createDoser(input: DoserInput!): Doser!
+  deleteDoser(id: ID!): Boolean!
+
   pump(pump_id: ID!, steps: Int!, speed: Float!): Boolean!
 }
 
-input NewFirmataInput {
-  serial_port: String!
-  baud: Int!
+input DoserInput {
+  components: [DoserComponentInput!]!
 }
 
-input NewPumpInput {
-  firmata_id: ID!
-  device_id: Int!
-  step_pin: Int!
-  dir_pin: Int
-  en_pin: Int
-}
-
-input CalibratePumpInput {
+input DoserComponentInput {
   pump_id: ID!
-  steps: Int!
-  volume: Float!
-}
-
-input CreateWaterLevelSensor {
-  pin: Int!
-  kind: SensorKind
-}
-
-input NewAutoTopOff {
-  level_sensors: [ID!]!
-  pump: ID!
-  fill_rate: Float!
-  fill_frequency: String
-  max_fill_folume: Float
-}
-
-input NewAutoWaterChangeInput {
-  exchange_rate: Float!
-  fresh_pump_id: ID!
-  waste_pump_id: ID!
-}
-
-input NewDoserInput {
-  components: [NewDoserComponentInput!]
-}
-
-input NewDoserComponentInput {
-  pump: ID!
   dose_rate: Float!
 }
 `, BuiltIn: false},
@@ -769,55 +828,127 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_Mutation_calibratePump_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.CalibratePumpInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("input"))
-		arg0, err = ec.unmarshalNCalibratePumpInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐCalibratePumpInput(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["pump_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pump_id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["pump_id"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["steps"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("steps"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["steps"] = arg1
+	var arg2 float64
+	if tmp, ok := rawArgs["volume"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("volume"))
+		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["volume"] = arg2
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_createAutoTopOff_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewAutoTopOff
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("input"))
-		arg0, err = ec.unmarshalNNewAutoTopOff2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewAutoTopOff(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["pump_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pump_id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["pump_id"] = arg0
+	var arg1 []string
+	if tmp, ok := rawArgs["level_sensors"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("level_sensors"))
+		arg1, err = ec.unmarshalNID2ᚕstringᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["level_sensors"] = arg1
+	var arg2 float64
+	if tmp, ok := rawArgs["fill_rate"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fill_rate"))
+		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["fill_rate"] = arg2
+	var arg3 string
+	if tmp, ok := rawArgs["fill_frequency"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fill_frequency"))
+		arg3, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["fill_frequency"] = arg3
+	var arg4 float64
+	if tmp, ok := rawArgs["max_fill_volume"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("max_fill_volume"))
+		arg4, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["max_fill_volume"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_createAutoWaterChange_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewAutoWaterChangeInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("input"))
-		arg0, err = ec.unmarshalNNewAutoWaterChangeInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewAutoWaterChangeInput(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["fresh_pump_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fresh_pump_id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["fresh_pump_id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["waste_pump_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("waste_pump_id"))
+		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["waste_pump_id"] = arg1
+	var arg2 float64
+	if tmp, ok := rawArgs["exchange_rate"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("exchange_rate"))
+		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["exchange_rate"] = arg2
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_createDoser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewDoserInput
+	var arg0 model.DoserInput
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("input"))
-		arg0, err = ec.unmarshalNNewDoserInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDoserInput(ctx, tmp)
+		arg0, err = ec.unmarshalNDoserInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserInput(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -829,45 +960,189 @@ func (ec *executionContext) field_Mutation_createDoser_args(ctx context.Context,
 func (ec *executionContext) field_Mutation_createFirmata_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewFirmataInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("input"))
-		arg0, err = ec.unmarshalNNewFirmataInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewFirmataInput(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["serial_port"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("serial_port"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["serial_port"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["baud"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("baud"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["baud"] = arg1
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_createPump_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewPumpInput
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("input"))
-		arg0, err = ec.unmarshalNNewPumpInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewPumpInput(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["firmata_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("firmata_id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["firmata_id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["device_ID"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("device_ID"))
+		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["device_ID"] = arg1
+	var arg2 int
+	if tmp, ok := rawArgs["step_pin"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("step_pin"))
+		arg2, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["step_pin"] = arg2
+	var arg3 *int
+	if tmp, ok := rawArgs["dir_pin"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("dir_pin"))
+		arg3, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["dir_pin"] = arg3
+	var arg4 *int
+	if tmp, ok := rawArgs["en_pin"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("en_pin"))
+		arg4, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["en_pin"] = arg4
 	return args, nil
 }
 
 func (ec *executionContext) field_Mutation_createWaterLevelSensor_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.CreateWaterLevelSensor
-	if tmp, ok := rawArgs["input"]; ok {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("input"))
-		arg0, err = ec.unmarshalNCreateWaterLevelSensor2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐCreateWaterLevelSensor(ctx, tmp)
+	var arg0 int
+	if tmp, ok := rawArgs["pin"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pin"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["input"] = arg0
+	args["pin"] = arg0
+	var arg1 model.SensorKind
+	if tmp, ok := rawArgs["kind"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("kind"))
+		arg1, err = ec.unmarshalNSensorKind2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐSensorKind(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["kind"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteAutoTopOff_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteAutoWaterChange_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteDoser_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteFirmata_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deletePump_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_deleteWaterLevelSensor_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -1581,7 +1856,7 @@ func (ec *executionContext) _Mutation_createFirmata(ctx context.Context, field g
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateFirmata(rctx, args["input"].(model.NewFirmataInput))
+		return ec.resolvers.Mutation().CreateFirmata(rctx, args["serial_port"].(string), args["baud"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1596,6 +1871,47 @@ func (ec *executionContext) _Mutation_createFirmata(ctx context.Context, field g
 	res := resTmp.(*models.Firmata)
 	fc.Result = res
 	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteFirmata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteFirmata_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteFirmata(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createPump(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1622,7 +1938,7 @@ func (ec *executionContext) _Mutation_createPump(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreatePump(rctx, args["input"].(model.NewPumpInput))
+		return ec.resolvers.Mutation().CreatePump(rctx, args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1637,6 +1953,47 @@ func (ec *executionContext) _Mutation_createPump(ctx context.Context, field grap
 	res := resTmp.(*models.Pump)
 	fc.Result = res
 	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deletePump(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deletePump_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeletePump(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_calibratePump(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1663,7 +2020,7 @@ func (ec *executionContext) _Mutation_calibratePump(ctx context.Context, field g
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CalibratePump(rctx, args["input"].(model.CalibratePumpInput))
+		return ec.resolvers.Mutation().CalibratePump(rctx, args["pump_id"].(string), args["steps"].(int), args["volume"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1704,7 +2061,7 @@ func (ec *executionContext) _Mutation_createWaterLevelSensor(ctx context.Context
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateWaterLevelSensor(rctx, args["input"].(model.CreateWaterLevelSensor))
+		return ec.resolvers.Mutation().CreateWaterLevelSensor(rctx, args["pin"].(int), args["kind"].(model.SensorKind))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1719,6 +2076,47 @@ func (ec *executionContext) _Mutation_createWaterLevelSensor(ctx context.Context
 	res := resTmp.(*models.WaterLevelSensor)
 	fc.Result = res
 	return ec.marshalNWaterLevelSensor2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensor(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteWaterLevelSensor(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteWaterLevelSensor_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteWaterLevelSensor(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createAutoTopOff(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1745,7 +2143,7 @@ func (ec *executionContext) _Mutation_createAutoTopOff(ctx context.Context, fiel
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateAutoTopOff(rctx, args["input"].(model.NewAutoTopOff))
+		return ec.resolvers.Mutation().CreateAutoTopOff(rctx, args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_frequency"].(string), args["max_fill_volume"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1760,6 +2158,47 @@ func (ec *executionContext) _Mutation_createAutoTopOff(ctx context.Context, fiel
 	res := resTmp.(*models.AutoTopOff)
 	fc.Result = res
 	return ec.marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteAutoTopOff(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteAutoTopOff_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteAutoTopOff(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1786,7 +2225,7 @@ func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context,
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateAutoWaterChange(rctx, args["input"].(model.NewAutoWaterChangeInput))
+		return ec.resolvers.Mutation().CreateAutoWaterChange(rctx, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1801,6 +2240,47 @@ func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context,
 	res := resTmp.(*models.AutoWaterChange)
 	fc.Result = res
 	return ec.marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteAutoWaterChange(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteAutoWaterChange_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteAutoWaterChange(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createDoser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -1827,7 +2307,7 @@ func (ec *executionContext) _Mutation_createDoser(ctx context.Context, field gra
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateDoser(rctx, args["input"].(model.NewDoserInput))
+		return ec.resolvers.Mutation().CreateDoser(rctx, args["input"].(model.DoserInput))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1842,6 +2322,47 @@ func (ec *executionContext) _Mutation_createDoser(ctx context.Context, field gra
 	res := resTmp.(*models.Doser)
 	fc.Result = res
 	return ec.marshalNDoser2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_deleteDoser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_deleteDoser_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().DeleteDoser(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_pump(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -3597,8 +4118,8 @@ func (ec *executionContext) ___Type_ofType(ctx context.Context, field graphql.Co
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputCalibratePumpInput(ctx context.Context, obj interface{}) (model.CalibratePumpInput, error) {
-	var it model.CalibratePumpInput
+func (ec *executionContext) unmarshalInputDoserComponentInput(ctx context.Context, obj interface{}) (model.DoserComponentInput, error) {
+	var it model.DoserComponentInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -3608,158 +4129,6 @@ func (ec *executionContext) unmarshalInputCalibratePumpInput(ctx context.Context
 
 			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pump_id"))
 			it.PumpID, err = ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "steps":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("steps"))
-			it.Steps, err = ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "volume":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("volume"))
-			it.Volume, err = ec.unmarshalNFloat2float64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputCreateWaterLevelSensor(ctx context.Context, obj interface{}) (model.CreateWaterLevelSensor, error) {
-	var it model.CreateWaterLevelSensor
-	var asMap = obj.(map[string]interface{})
-
-	for k, v := range asMap {
-		switch k {
-		case "pin":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pin"))
-			it.Pin, err = ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "kind":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("kind"))
-			it.Kind, err = ec.unmarshalOSensorKind2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐSensorKind(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputNewAutoTopOff(ctx context.Context, obj interface{}) (model.NewAutoTopOff, error) {
-	var it model.NewAutoTopOff
-	var asMap = obj.(map[string]interface{})
-
-	for k, v := range asMap {
-		switch k {
-		case "level_sensors":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("level_sensors"))
-			it.LevelSensors, err = ec.unmarshalNID2ᚕstringᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "pump":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pump"))
-			it.Pump, err = ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fill_rate":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fill_rate"))
-			it.FillRate, err = ec.unmarshalNFloat2float64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fill_frequency":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fill_frequency"))
-			it.FillFrequency, err = ec.unmarshalOString2ᚖstring(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "max_fill_folume":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("max_fill_folume"))
-			it.MaxFillFolume, err = ec.unmarshalOFloat2ᚖfloat64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputNewAutoWaterChangeInput(ctx context.Context, obj interface{}) (model.NewAutoWaterChangeInput, error) {
-	var it model.NewAutoWaterChangeInput
-	var asMap = obj.(map[string]interface{})
-
-	for k, v := range asMap {
-		switch k {
-		case "exchange_rate":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("exchange_rate"))
-			it.ExchangeRate, err = ec.unmarshalNFloat2float64(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "fresh_pump_id":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fresh_pump_id"))
-			it.FreshPumpID, err = ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "waste_pump_id":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("waste_pump_id"))
-			it.WastePumpID, err = ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputNewDoserComponentInput(ctx context.Context, obj interface{}) (model.NewDoserComponentInput, error) {
-	var it model.NewDoserComponentInput
-	var asMap = obj.(map[string]interface{})
-
-	for k, v := range asMap {
-		switch k {
-		case "pump":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pump"))
-			it.Pump, err = ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3777,8 +4146,8 @@ func (ec *executionContext) unmarshalInputNewDoserComponentInput(ctx context.Con
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputNewDoserInput(ctx context.Context, obj interface{}) (model.NewDoserInput, error) {
-	var it model.NewDoserInput
+func (ec *executionContext) unmarshalInputDoserInput(ctx context.Context, obj interface{}) (model.DoserInput, error) {
+	var it model.DoserInput
 	var asMap = obj.(map[string]interface{})
 
 	for k, v := range asMap {
@@ -3787,87 +4156,7 @@ func (ec *executionContext) unmarshalInputNewDoserInput(ctx context.Context, obj
 			var err error
 
 			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("components"))
-			it.Components, err = ec.unmarshalONewDoserComponentInput2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDoserComponentInputᚄ(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputNewFirmataInput(ctx context.Context, obj interface{}) (model.NewFirmataInput, error) {
-	var it model.NewFirmataInput
-	var asMap = obj.(map[string]interface{})
-
-	for k, v := range asMap {
-		switch k {
-		case "serial_port":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("serial_port"))
-			it.SerialPort, err = ec.unmarshalNString2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "baud":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("baud"))
-			it.Baud, err = ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		}
-	}
-
-	return it, nil
-}
-
-func (ec *executionContext) unmarshalInputNewPumpInput(ctx context.Context, obj interface{}) (model.NewPumpInput, error) {
-	var it model.NewPumpInput
-	var asMap = obj.(map[string]interface{})
-
-	for k, v := range asMap {
-		switch k {
-		case "firmata_id":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("firmata_id"))
-			it.FirmataID, err = ec.unmarshalNID2string(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "device_id":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("device_id"))
-			it.DeviceID, err = ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "step_pin":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("step_pin"))
-			it.StepPin, err = ec.unmarshalNInt2int(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "dir_pin":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("dir_pin"))
-			it.DirPin, err = ec.unmarshalOInt2ᚖint(ctx, v)
-			if err != nil {
-				return it, err
-			}
-		case "en_pin":
-			var err error
-
-			ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("en_pin"))
-			it.EnPin, err = ec.unmarshalOInt2ᚖint(ctx, v)
+			it.Components, err = ec.unmarshalNDoserComponentInput2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponentInputᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -4156,8 +4445,18 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "deleteFirmata":
+			out.Values[i] = ec._Mutation_deleteFirmata(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createPump":
 			out.Values[i] = ec._Mutation_createPump(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deletePump":
+			out.Values[i] = ec._Mutation_deletePump(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4171,8 +4470,18 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "deleteWaterLevelSensor":
+			out.Values[i] = ec._Mutation_deleteWaterLevelSensor(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createAutoTopOff":
 			out.Values[i] = ec._Mutation_createAutoTopOff(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteAutoTopOff":
+			out.Values[i] = ec._Mutation_deleteAutoTopOff(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4181,8 +4490,18 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "deleteAutoWaterChange":
+			out.Values[i] = ec._Mutation_deleteAutoWaterChange(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createDoser":
 			out.Values[i] = ec._Mutation_createDoser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "deleteDoser":
+			out.Values[i] = ec._Mutation_deleteDoser(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -4751,16 +5070,6 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 	return res
 }
 
-func (ec *executionContext) unmarshalNCalibratePumpInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐCalibratePumpInput(ctx context.Context, v interface{}) (model.CalibratePumpInput, error) {
-	res, err := ec.unmarshalInputCalibratePumpInput(ctx, v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNCreateWaterLevelSensor2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐCreateWaterLevelSensor(ctx context.Context, v interface{}) (model.CreateWaterLevelSensor, error) {
-	res, err := ec.unmarshalInputCreateWaterLevelSensor(ctx, v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
 func (ec *executionContext) marshalNDoser2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoser(ctx context.Context, sel ast.SelectionSet, v models.Doser) graphql.Marshaler {
 	return ec._Doser(ctx, sel, &v)
 }
@@ -4783,6 +5092,37 @@ func (ec *executionContext) marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋd
 		return graphql.Null
 	}
 	return ec._DoserComponent(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNDoserComponentInput2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponentInputᚄ(ctx context.Context, v interface{}) ([]*model.DoserComponentInput, error) {
+	var vSlice []interface{}
+	if v != nil {
+		if tmp1, ok := v.([]interface{}); ok {
+			vSlice = tmp1
+		} else {
+			vSlice = []interface{}{v}
+		}
+	}
+	var err error
+	res := make([]*model.DoserComponentInput, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithIndex(i))
+		res[i], err = ec.unmarshalNDoserComponentInput2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponentInput(ctx, vSlice[i])
+		if err != nil {
+			return nil, graphql.WrapErrorWithInputPath(ctx, err)
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNDoserComponentInput2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserComponentInput(ctx context.Context, v interface{}) (*model.DoserComponentInput, error) {
+	res, err := ec.unmarshalInputDoserComponentInput(ctx, v)
+	return &res, graphql.WrapErrorWithInputPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNDoserInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐDoserInput(ctx context.Context, v interface{}) (model.DoserInput, error) {
+	res, err := ec.unmarshalInputDoserInput(ctx, v)
+	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNFirmata2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx context.Context, sel ast.SelectionSet, v models.Firmata) graphql.Marshaler {
@@ -4887,36 +5227,6 @@ func (ec *executionContext) marshalNInt2int64(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNNewAutoTopOff2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewAutoTopOff(ctx context.Context, v interface{}) (model.NewAutoTopOff, error) {
-	res, err := ec.unmarshalInputNewAutoTopOff(ctx, v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNNewAutoWaterChangeInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewAutoWaterChangeInput(ctx context.Context, v interface{}) (model.NewAutoWaterChangeInput, error) {
-	res, err := ec.unmarshalInputNewAutoWaterChangeInput(ctx, v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNNewDoserComponentInput2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDoserComponentInput(ctx context.Context, v interface{}) (*model.NewDoserComponentInput, error) {
-	res, err := ec.unmarshalInputNewDoserComponentInput(ctx, v)
-	return &res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNNewDoserInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDoserInput(ctx context.Context, v interface{}) (model.NewDoserInput, error) {
-	res, err := ec.unmarshalInputNewDoserInput(ctx, v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNNewFirmataInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewFirmataInput(ctx context.Context, v interface{}) (model.NewFirmataInput, error) {
-	res, err := ec.unmarshalInputNewFirmataInput(ctx, v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNNewPumpInput2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewPumpInput(ctx context.Context, v interface{}) (model.NewPumpInput, error) {
-	res, err := ec.unmarshalInputNewPumpInput(ctx, v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNPump2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx context.Context, sel ast.SelectionSet, v models.Pump) graphql.Marshaler {
@@ -5485,21 +5795,6 @@ func (ec *executionContext) marshalOFloat2float64(ctx context.Context, sel ast.S
 	return graphql.MarshalFloat(v)
 }
 
-func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v interface{}) (*float64, error) {
-	if v == nil {
-		return nil, nil
-	}
-	res, err := graphql.UnmarshalFloat(v)
-	return &res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel ast.SelectionSet, v *float64) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return graphql.MarshalFloat(*v)
-}
-
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
 	if v == nil {
 		return nil, nil
@@ -5513,30 +5808,6 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 		return graphql.Null
 	}
 	return graphql.MarshalInt(*v)
-}
-
-func (ec *executionContext) unmarshalONewDoserComponentInput2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDoserComponentInputᚄ(ctx context.Context, v interface{}) ([]*model.NewDoserComponentInput, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var vSlice []interface{}
-	if v != nil {
-		if tmp1, ok := v.([]interface{}); ok {
-			vSlice = tmp1
-		} else {
-			vSlice = []interface{}{v}
-		}
-	}
-	var err error
-	res := make([]*model.NewDoserComponentInput, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithIndex(i))
-		res[i], err = ec.unmarshalNNewDoserComponentInput2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐNewDoserComponentInput(ctx, vSlice[i])
-		if err != nil {
-			return nil, graphql.WrapErrorWithInputPath(ctx, err)
-		}
-	}
-	return res, nil
 }
 
 func (ec *executionContext) marshalOPump2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPumpᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Pump) graphql.Marshaler {
@@ -5577,22 +5848,6 @@ func (ec *executionContext) marshalOPump2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋ
 	}
 	wg.Wait()
 	return ret
-}
-
-func (ec *executionContext) unmarshalOSensorKind2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐSensorKind(ctx context.Context, v interface{}) (*model.SensorKind, error) {
-	if v == nil {
-		return nil, nil
-	}
-	var res = new(model.SensorKind)
-	err := res.UnmarshalGQL(v)
-	return res, graphql.WrapErrorWithInputPath(ctx, err)
-}
-
-func (ec *executionContext) marshalOSensorKind2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐSensorKind(ctx context.Context, sel ast.SelectionSet, v *model.SensorKind) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return v
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

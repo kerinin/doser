@@ -8,51 +8,13 @@ import (
 	"strconv"
 )
 
-type CalibratePumpInput struct {
-	PumpID string  `json:"pump_id"`
-	Steps  int     `json:"steps"`
-	Volume float64 `json:"volume"`
-}
-
-type CreateWaterLevelSensor struct {
-	Pin  int         `json:"pin"`
-	Kind *SensorKind `json:"kind"`
-}
-
-type NewAutoTopOff struct {
-	LevelSensors  []string `json:"level_sensors"`
-	Pump          string   `json:"pump"`
-	FillRate      float64  `json:"fill_rate"`
-	FillFrequency *string  `json:"fill_frequency"`
-	MaxFillFolume *float64 `json:"max_fill_folume"`
-}
-
-type NewAutoWaterChangeInput struct {
-	ExchangeRate float64 `json:"exchange_rate"`
-	FreshPumpID  string  `json:"fresh_pump_id"`
-	WastePumpID  string  `json:"waste_pump_id"`
-}
-
-type NewDoserComponentInput struct {
-	Pump     string  `json:"pump"`
+type DoserComponentInput struct {
+	PumpID   string  `json:"pump_id"`
 	DoseRate float64 `json:"dose_rate"`
 }
 
-type NewDoserInput struct {
-	Components []*NewDoserComponentInput `json:"components"`
-}
-
-type NewFirmataInput struct {
-	SerialPort string `json:"serial_port"`
-	Baud       int    `json:"baud"`
-}
-
-type NewPumpInput struct {
-	FirmataID string `json:"firmata_id"`
-	DeviceID  int    `json:"device_id"`
-	StepPin   int    `json:"step_pin"`
-	DirPin    *int   `json:"dir_pin"`
-	EnPin     *int   `json:"en_pin"`
+type DoserInput struct {
+	Components []*DoserComponentInput `json:"components"`
 }
 
 type SensorKind string
