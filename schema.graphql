@@ -58,6 +58,11 @@ type WaterLevelSensor {
   # The pin to use for the sensor. 
   # The pin is assumed to be a digital input. A HIGH value indicates the
   # presence of water.
+  # 
+  # The pin number refers to the pinout number, and is in the range 1-40
+  # Unfortunately, the Arduino shield labels these pins using the GPIO*
+  # values. Executing `pinout` on the rPi will provide a mapping between
+  # pins and labels.
   pin: Int!
   # The kind of sensor
   kind: SensorKind!
