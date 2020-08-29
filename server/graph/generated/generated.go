@@ -92,6 +92,7 @@ type ComplexityRoot struct {
 		CreateFirmata          func(childComplexity int, input model.NewFirmataInput) int
 		CreatePump             func(childComplexity int, input model.NewPumpInput) int
 		CreateWaterLevelSensor func(childComplexity int, input model.CreateWaterLevelSensor) int
+		Pump                   func(childComplexity int, pumpID string, steps int, speed float64) int
 	}
 
 	Pump struct {
@@ -150,6 +151,7 @@ type MutationResolver interface {
 	CreateAutoTopOff(ctx context.Context, input model.NewAutoTopOff) (*models.AutoTopOff, error)
 	CreateAutoWaterChange(ctx context.Context, input model.NewAutoWaterChangeInput) (*models.AutoWaterChange, error)
 	CreateDoser(ctx context.Context, input model.NewDoserInput) (*models.Doser, error)
+	Pump(ctx context.Context, pumpID string, steps int, speed float64) (bool, error)
 }
 type PumpResolver interface {
 	Firmata(ctx context.Context, obj *models.Pump) (*models.Firmata, error)
@@ -394,6 +396,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["input"].(model.CreateWaterLevelSensor)), true
+
+	case "Mutation.pump":
+		if e.complexity.Mutation.Pump == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_pump_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.Pump(childComplexity, args["pump_id"].(string), args["steps"].(int), args["speed"].(float64)), true
 
 	case "Pump.calibration":
 		if e.complexity.Pump.Calibration == nil {
@@ -695,6 +709,7 @@ type Mutation {
   createAutoTopOff(input: NewAutoTopOff!): AutoTopOff!
   createAutoWaterChange(input: NewAutoWaterChangeInput!): AutoWaterChange!
   createDoser(input: NewDoserInput!): Doser!
+  pump(pump_id: ID!, steps: Int!, speed: Float!): Boolean!
 }
 
 input NewFirmataInput {
@@ -853,6 +868,39 @@ func (ec *executionContext) field_Mutation_createWaterLevelSensor_args(ctx conte
 		}
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_pump_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["pump_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pump_id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["pump_id"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["steps"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("steps"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["steps"] = arg1
+	var arg2 float64
+	if tmp, ok := rawArgs["speed"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("speed"))
+		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["speed"] = arg2
 	return args, nil
 }
 
@@ -1794,6 +1842,47 @@ func (ec *executionContext) _Mutation_createDoser(ctx context.Context, field gra
 	res := resTmp.(*models.Doser)
 	fc.Result = res
 	return ec.marshalNDoser2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_pump(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_pump_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().Pump(rctx, args["pump_id"].(string), args["steps"].(int), args["speed"].(float64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Pump_id(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
@@ -4094,6 +4183,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "createDoser":
 			out.Values[i] = ec._Mutation_createDoser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "pump":
+			out.Values[i] = ec._Mutation_pump(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

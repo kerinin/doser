@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/kerinin/doser/service/controller"
 	"github.com/kerinin/doser/service/graph/generated"
 	"github.com/kerinin/doser/service/graph/model"
 	"github.com/kerinin/doser/service/models"
@@ -180,6 +181,42 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, input mode
 
 func (r *mutationResolver) CreateDoser(ctx context.Context, input model.NewDoserInput) (*models.Doser, error) {
 	panic(fmt.Errorf("not implemented"))
+}
+
+func (r *mutationResolver) Pump(ctx context.Context, pumpID string, steps int, speed float64) (bool, error) {
+	pump, err := models.FindPump(ctx, r.db, pumpID)
+	if err != nil {
+		return false, fmt.Errorf("finding pump: %w", err)
+	}
+
+	firmata, err := r.firmatasController.Get(ctx, pump.FirmataID)
+	if err != nil {
+		return false, fmt.Errorf("getting pump's firmata: %w", err)
+	}
+
+	err = controller.ConfigurePump(pump, firmata)
+	if err != nil {
+		return false, fmt.Errorf("configuring pump: %w", err)
+	}
+
+	err = firmata.StepperSetSpeed(int(pump.DeviceID), float32(speed))
+	if err != nil {
+		return false, fmt.Errorf("setting stepper speed: %w", err)
+	}
+
+	err = firmata.StepperStep(int(pump.DeviceID), int32(steps))
+	if err != nil {
+		return false, fmt.Errorf("starting stepper: %w", err)
+	}
+
+	complete := firmata.AwaitStepperMoveCompletion(int32(pump.DeviceID))
+
+	select {
+	case <-ctx.Done():
+		return false, ctx.Err()
+	case <-complete:
+		return true, nil
+	}
 }
 
 func (r *pumpResolver) Firmata(ctx context.Context, obj *models.Pump) (*models.Firmata, error) {

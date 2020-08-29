@@ -108,6 +108,7 @@ type Mutation {
   createAutoTopOff(input: NewAutoTopOff!): AutoTopOff!
   createAutoWaterChange(input: NewAutoWaterChangeInput!): AutoWaterChange!
   createDoser(input: NewDoserInput!): Doser!
+  pump(pump_id: ID!, steps: Int!, speed: Float!): Boolean!
 }
 
 input NewFirmataInput {

@@ -97,9 +97,17 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		if err != nil {
 			return nil, fmt.Errorf("getting fresh pump firmata: %w", err)
 		}
+		err = ConfigurePump(freshPump, freshFirmata)
+		if err != nil {
+			return nil, fmt.Errorf("configuring fresh pump: %w", err)
+		}
 		wasteFirmata, err := c.firmatas.Get(ctx, wastePump.FirmataID)
 		if err != nil {
 			return nil, fmt.Errorf("getting fresh pump firmata: %w", err)
+		}
+		err = ConfigurePump(wastePump, wasteFirmata)
+		if err != nil {
+			return nil, fmt.Errorf("configuring waste pump: %w", err)
 		}
 		freshCalibration, err := freshPump.Calibrations().One(ctx, c.db)
 		if err == sql.ErrNoRows {

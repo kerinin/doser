@@ -90,6 +90,10 @@ func (c *ATO) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, er
 		if err != nil {
 			return nil, fmt.Errorf("getting pump firmata: %w", err)
 		}
+		err = ConfigurePump(pump, firmata)
+		if err != nil {
+			return nil, fmt.Errorf("configuring pump: %w", err)
+		}
 		sensors, err := ato.WaterLevelSensors().All(ctx, c.db)
 		if err != nil {
 			return nil, fmt.Errorf("getting sensors (aborting job run): %w", err)
