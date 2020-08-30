@@ -187,6 +187,27 @@ func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, 
 	return m, nil
 }
 
+func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error) {
+	m := &models.WaterLevelSensor{
+		ID:        id,
+		Pin:       int64(pin),
+		Kind:      kind.String(),
+		FirmataID: null.StringFromPtr(firmataID),
+	}
+	if detectionThreshold != nil {
+		m.DetectionThreshold = null.Int64From(int64(*detectionThreshold))
+	}
+
+	_, err := m.Update(ctx, r.db, boil.Infer())
+	if err != nil {
+		return nil, fmt.Errorf("inserting water level sensor: %w", err)
+	}
+
+	r.firmatasController.Reset()
+
+	return m, nil
+}
+
 func (r *mutationResolver) DeleteWaterLevelSensor(ctx context.Context, id string) (bool, error) {
 	f := &models.WaterLevelSensor{ID: id}
 	rows, err := f.Delete(ctx, r.db)
