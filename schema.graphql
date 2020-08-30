@@ -55,6 +55,8 @@ enum SensorKind {
 
 type WaterLevelSensor {
   id: ID!
+  # If present, the sensor is assumed to be attached to a firmata device
+  firmata_id: ID
   # The pin to use for the sensor. 
   # The pin is assumed to be a digital input. A HIGH value indicates the
   # presence of water.
@@ -114,7 +116,7 @@ type Mutation {
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
 
-  createWaterLevelSensor(pin: Int!, kind: SensorKind!): WaterLevelSensor!
+  createWaterLevelSensor(pin: Int!, kind: SensorKind!, firmata_id: ID): WaterLevelSensor!
   deleteWaterLevelSensor(id: ID!): Boolean!
 
   createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_frequency: String!, max_fill_volume: Float!): AutoTopOff!

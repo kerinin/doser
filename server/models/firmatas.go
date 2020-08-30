@@ -523,7 +523,7 @@ func (firmataL) LoadFirmatumWaterLevelSensors(ctx context.Context, e boil.Contex
 			}
 
 			for _, a := range args {
-				if a == obj.ID {
+				if queries.Equal(a, obj.ID) {
 					continue Outer
 				}
 			}
@@ -581,7 +581,7 @@ func (firmataL) LoadFirmatumWaterLevelSensors(ctx context.Context, e boil.Contex
 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if local.ID == foreign.FirmataID {
+			if queries.Equal(local.ID, foreign.FirmataID) {
 				local.R.FirmatumWaterLevelSensors = append(local.R.FirmatumWaterLevelSensors, foreign)
 				if foreign.R == nil {
 					foreign.R = &waterLevelSensorR{}
@@ -656,7 +656,7 @@ func (o *Firmata) AddFirmatumWaterLevelSensors(ctx context.Context, exec boil.Co
 	var err error
 	for _, rel := range related {
 		if insert {
-			rel.FirmataID = o.ID
+			queries.Assign(&rel.FirmataID, o.ID)
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
@@ -677,7 +677,7 @@ func (o *Firmata) AddFirmatumWaterLevelSensors(ctx context.Context, exec boil.Co
 				return errors.Wrap(err, "failed to update foreign table")
 			}
 
-			rel.FirmataID = o.ID
+			queries.Assign(&rel.FirmataID, o.ID)
 		}
 	}
 
@@ -698,6 +698,76 @@ func (o *Firmata) AddFirmatumWaterLevelSensors(ctx context.Context, exec boil.Co
 			rel.R.Firmatum = o
 		}
 	}
+	return nil
+}
+
+// SetFirmatumWaterLevelSensors removes all previously related items of the
+// firmatas replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.Firmatum's FirmatumWaterLevelSensors accordingly.
+// Replaces o.R.FirmatumWaterLevelSensors with related.
+// Sets related.R.Firmatum's FirmatumWaterLevelSensors accordingly.
+func (o *Firmata) SetFirmatumWaterLevelSensors(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*WaterLevelSensor) error {
+	query := "update \"water_level_sensors\" set \"firmata_id\" = null where \"firmata_id\" = ?"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.FirmatumWaterLevelSensors {
+			queries.SetScanner(&rel.FirmataID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.Firmatum = nil
+		}
+
+		o.R.FirmatumWaterLevelSensors = nil
+	}
+	return o.AddFirmatumWaterLevelSensors(ctx, exec, insert, related...)
+}
+
+// RemoveFirmatumWaterLevelSensors relationships from objects passed in.
+// Removes related items from R.FirmatumWaterLevelSensors (uses pointer comparison, removal does not keep order)
+// Sets related.R.Firmatum.
+func (o *Firmata) RemoveFirmatumWaterLevelSensors(ctx context.Context, exec boil.ContextExecutor, related ...*WaterLevelSensor) error {
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.FirmataID, nil)
+		if rel.R != nil {
+			rel.R.Firmatum = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("firmata_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.FirmatumWaterLevelSensors {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.FirmatumWaterLevelSensors)
+			if ln > 1 && i < ln-1 {
+				o.R.FirmatumWaterLevelSensors[i] = o.R.FirmatumWaterLevelSensors[ln-1]
+			}
+			o.R.FirmatumWaterLevelSensors = o.R.FirmatumWaterLevelSensors[:ln-1]
+			break
+		}
+	}
+
 	return nil
 }
 

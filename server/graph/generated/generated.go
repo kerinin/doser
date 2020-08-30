@@ -91,7 +91,7 @@ type ComplexityRoot struct {
 		CreateDoser            func(childComplexity int, input model.DoserInput) int
 		CreateFirmata          func(childComplexity int, serialPort string, baud int) int
 		CreatePump             func(childComplexity int, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) int
-		CreateWaterLevelSensor func(childComplexity int, pin int, kind model.SensorKind) int
+		CreateWaterLevelSensor func(childComplexity int, pin int, kind model.SensorKind, firmataID *string) int
 		DeleteAutoTopOff       func(childComplexity int, id string) int
 		DeleteAutoWaterChange  func(childComplexity int, id string) int
 		DeleteDoser            func(childComplexity int, id string) int
@@ -125,6 +125,7 @@ type ComplexityRoot struct {
 	}
 
 	WaterLevelSensor struct {
+		FirmataID     func(childComplexity int) int
 		ID            func(childComplexity int) int
 		Kind          func(childComplexity int) int
 		Pin           func(childComplexity int) int
@@ -155,7 +156,7 @@ type MutationResolver interface {
 	CreatePump(ctx context.Context, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
 	DeletePump(ctx context.Context, id string) (bool, error)
 	CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error)
-	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind) (*models.WaterLevelSensor, error)
+	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string) (*models.WaterLevelSensor, error)
 	DeleteWaterLevelSensor(ctx context.Context, id string) (bool, error)
 	CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error)
 	DeleteAutoTopOff(ctx context.Context, id string) (bool, error)
@@ -180,6 +181,8 @@ type QueryResolver interface {
 	Dosers(ctx context.Context) ([]*models.Doser, error)
 }
 type WaterLevelSensorResolver interface {
+	FirmataID(ctx context.Context, obj *models.WaterLevelSensor) (*string, error)
+
 	Kind(ctx context.Context, obj *models.WaterLevelSensor) (model.SensorKind, error)
 	WaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error)
 }
@@ -407,7 +410,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["pin"].(int), args["kind"].(model.SensorKind)), true
+		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string)), true
 
 	case "Mutation.deleteAutoTopOff":
 		if e.complexity.Mutation.DeleteAutoTopOff == nil {
@@ -591,6 +594,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TwoPointCalibration.Volume(childComplexity), true
 
+	case "WaterLevelSensor.firmata_id":
+		if e.complexity.WaterLevelSensor.FirmataID == nil {
+			break
+		}
+
+		return e.complexity.WaterLevelSensor.FirmataID(childComplexity), true
+
 	case "WaterLevelSensor.id":
 		if e.complexity.WaterLevelSensor.ID == nil {
 			break
@@ -740,9 +750,16 @@ enum SensorKind {
 
 type WaterLevelSensor {
   id: ID!
+  # If present, the sensor is assumed to be attached to a firmata device
+  firmata_id: ID
   # The pin to use for the sensor. 
   # The pin is assumed to be a digital input. A HIGH value indicates the
   # presence of water.
+  # 
+  # The pin number refers to the pinout number, and is in the range 1-40
+  # Unfortunately, the Arduino shield labels these pins using the GPIO*
+  # values. Executing ` + "`" + `pinout` + "`" + ` on the rPi will provide a mapping between
+  # pins and labels.
   pin: Int!
   # The kind of sensor
   kind: SensorKind!
@@ -794,7 +811,7 @@ type Mutation {
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
 
-  createWaterLevelSensor(pin: Int!, kind: SensorKind!): WaterLevelSensor!
+  createWaterLevelSensor(pin: Int!, kind: SensorKind!, firmata_id: ID): WaterLevelSensor!
   deleteWaterLevelSensor(id: ID!): Boolean!
 
   createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_frequency: String!, max_fill_volume: Float!): AutoTopOff!
@@ -1053,6 +1070,15 @@ func (ec *executionContext) field_Mutation_createWaterLevelSensor_args(ctx conte
 		}
 	}
 	args["kind"] = arg1
+	var arg2 *string
+	if tmp, ok := rawArgs["firmata_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("firmata_id"))
+		arg2, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["firmata_id"] = arg2
 	return args, nil
 }
 
@@ -2061,7 +2087,7 @@ func (ec *executionContext) _Mutation_createWaterLevelSensor(ctx context.Context
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateWaterLevelSensor(rctx, args["pin"].(int), args["kind"].(model.SensorKind))
+		return ec.resolvers.Mutation().CreateWaterLevelSensor(rctx, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2959,6 +2985,37 @@ func (ec *executionContext) _WaterLevelSensor_id(ctx context.Context, field grap
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _WaterLevelSensor_firmata_id(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "WaterLevelSensor",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.WaterLevelSensor().FirmataID(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _WaterLevelSensor_pin(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
@@ -4738,6 +4795,17 @@ func (ec *executionContext) _WaterLevelSensor(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "firmata_id":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._WaterLevelSensor_firmata_id(ctx, field, obj)
+				return res
+			})
 		case "pin":
 			out.Values[i] = ec._WaterLevelSensor_pin(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -5793,6 +5861,21 @@ func (ec *executionContext) unmarshalOFloat2float64(ctx context.Context, v inter
 
 func (ec *executionContext) marshalOFloat2float64(ctx context.Context, sel ast.SelectionSet, v float64) graphql.Marshaler {
 	return graphql.MarshalFloat(v)
+}
+
+func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalID(v)
+	return &res, graphql.WrapErrorWithInputPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOID2ᚖstring(ctx context.Context, sel ast.SelectionSet, v *string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return graphql.MarshalID(*v)
 }
 
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {

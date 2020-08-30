@@ -815,7 +815,7 @@ func testWaterLevelSensorToOneFirmataUsingFirmatum(t *testing.T) {
 	var foreign Firmata
 
 	seed := randomize.NewSeed()
-	if err := randomize.Struct(seed, &local, waterLevelSensorDBTypes, false, waterLevelSensorColumnsWithDefault...); err != nil {
+	if err := randomize.Struct(seed, &local, waterLevelSensorDBTypes, true, waterLevelSensorColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize WaterLevelSensor struct: %s", err)
 	}
 	if err := randomize.Struct(seed, &foreign, firmataDBTypes, false, firmataColumnsWithDefault...); err != nil {
@@ -826,7 +826,7 @@ func testWaterLevelSensorToOneFirmataUsingFirmatum(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	local.FirmataID = foreign.ID
+	queries.Assign(&local.FirmataID, foreign.ID)
 	if err := local.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
 	}
@@ -836,7 +836,7 @@ func testWaterLevelSensorToOneFirmataUsingFirmatum(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if check.ID != foreign.ID {
+	if !queries.Equal(check.ID, foreign.ID) {
 		t.Errorf("want: %v, got %v", foreign.ID, check.ID)
 	}
 
@@ -898,7 +898,7 @@ func testWaterLevelSensorToOneSetOpFirmataUsingFirmatum(t *testing.T) {
 		if x.R.FirmatumWaterLevelSensors[0] != &a {
 			t.Error("failed to append to foreign relationship struct")
 		}
-		if a.FirmataID != x.ID {
+		if !queries.Equal(a.FirmataID, x.ID) {
 			t.Error("foreign key was wrong value", a.FirmataID)
 		}
 
@@ -909,9 +909,60 @@ func testWaterLevelSensorToOneSetOpFirmataUsingFirmatum(t *testing.T) {
 			t.Fatal("failed to reload", err)
 		}
 
-		if a.FirmataID != x.ID {
+		if !queries.Equal(a.FirmataID, x.ID) {
 			t.Error("foreign key was wrong value", a.FirmataID, x.ID)
 		}
+	}
+}
+
+func testWaterLevelSensorToOneRemoveOpFirmataUsingFirmatum(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a WaterLevelSensor
+	var b Firmata
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, waterLevelSensorDBTypes, false, strmangle.SetComplement(waterLevelSensorPrimaryKeyColumns, waterLevelSensorColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &b, firmataDBTypes, false, strmangle.SetComplement(firmataPrimaryKeyColumns, firmataColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = a.SetFirmatum(ctx, tx, true, &b); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = a.RemoveFirmatum(ctx, tx, &b); err != nil {
+		t.Error("failed to remove relationship")
+	}
+
+	count, err := a.Firmatum().Count(ctx, tx)
+	if err != nil {
+		t.Error(err)
+	}
+	if count != 0 {
+		t.Error("want no relationships remaining")
+	}
+
+	if a.R.Firmatum != nil {
+		t.Error("R struct entry should be nil")
+	}
+
+	if !queries.IsValuerNil(a.FirmataID) {
+		t.Error("foreign key value should be nil")
+	}
+
+	if len(b.R.FirmatumWaterLevelSensors) != 0 {
+		t.Error("failed to remove a from b's relationships")
 	}
 }
 

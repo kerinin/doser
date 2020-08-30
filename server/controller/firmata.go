@@ -43,6 +43,11 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		return nil, fmt.Errorf("getting firmata from DB: %w", err)
 	}
 
+	sensors, err := firmata.FirmatumWaterLevelSensors().All(ctx, c.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting sensors from DB: %w", err)
+	}
+
 	config := &goserial.Config{Name: firmata.SerialPort, Baud: int(firmata.Baud)}
 	port, err := goserial.OpenPort(config)
 	if err != nil {
@@ -51,6 +56,12 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 
 	f := gomata.New()
 	f.Connect(port)
+	for _, sensor := range sensors {
+		err = f.ReportDigital(int(sensor.Pin), 1)
+		if err != nil {
+			return nil, fmt.Errorf("requesting digital reports for pin %d: %w", sensor.Pin, err)
+		}
+	}
 	c.firmatas[firmataID] = f
 
 	return f, nil

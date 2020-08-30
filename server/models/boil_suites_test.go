@@ -211,7 +211,9 @@ func TestToOneSet(t *testing.T) {
 
 // TestToOneRemove tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToOneRemove(t *testing.T) {}
+func TestToOneRemove(t *testing.T) {
+	t.Run("WaterLevelSensorToFirmataUsingFirmatumWaterLevelSensors", testWaterLevelSensorToOneRemoveOpFirmataUsingFirmatum)
+}
 
 // TestOneToOneSet tests cannot be run in parallel
 // or deadlocks can occur.
@@ -240,6 +242,7 @@ func TestToManyAdd(t *testing.T) {
 // or deadlocks can occur.
 func TestToManySet(t *testing.T) {
 	t.Run("AutoTopOffToWaterLevelSensors", testAutoTopOffToManySetOpWaterLevelSensors)
+	t.Run("FirmataToFirmatumWaterLevelSensors", testFirmataToManySetOpFirmatumWaterLevelSensors)
 	t.Run("WaterLevelSensorToAutoTopOffs", testWaterLevelSensorToManySetOpAutoTopOffs)
 }
 
@@ -247,6 +250,7 @@ func TestToManySet(t *testing.T) {
 // or deadlocks can occur.
 func TestToManyRemove(t *testing.T) {
 	t.Run("AutoTopOffToWaterLevelSensors", testAutoTopOffToManyRemoveOpWaterLevelSensors)
+	t.Run("FirmataToFirmatumWaterLevelSensors", testFirmataToManyRemoveOpFirmatumWaterLevelSensors)
 	t.Run("WaterLevelSensorToAutoTopOffs", testWaterLevelSensorToManyRemoveOpAutoTopOffs)
 }
 

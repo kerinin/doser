@@ -597,9 +597,8 @@ func testFirmataToManyFirmatumWaterLevelSensors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b.FirmataID = a.ID
-	c.FirmataID = a.ID
-
+	queries.Assign(&b.FirmataID, a.ID)
+	queries.Assign(&c.FirmataID, a.ID)
 	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
 	}
@@ -614,10 +613,10 @@ func testFirmataToManyFirmatumWaterLevelSensors(t *testing.T) {
 
 	bFound, cFound := false, false
 	for _, v := range check {
-		if v.FirmataID == b.FirmataID {
+		if queries.Equal(v.FirmataID, b.FirmataID) {
 			bFound = true
 		}
-		if v.FirmataID == c.FirmataID {
+		if queries.Equal(v.FirmataID, c.FirmataID) {
 			cFound = true
 		}
 	}
@@ -770,10 +769,10 @@ func testFirmataToManyAddOpFirmatumWaterLevelSensors(t *testing.T) {
 		first := x[0]
 		second := x[1]
 
-		if a.ID != first.FirmataID {
+		if !queries.Equal(a.ID, first.FirmataID) {
 			t.Error("foreign key was wrong value", a.ID, first.FirmataID)
 		}
-		if a.ID != second.FirmataID {
+		if !queries.Equal(a.ID, second.FirmataID) {
 			t.Error("foreign key was wrong value", a.ID, second.FirmataID)
 		}
 
@@ -798,6 +797,181 @@ func testFirmataToManyAddOpFirmatumWaterLevelSensors(t *testing.T) {
 		if want := int64((i + 1) * 2); count != want {
 			t.Error("want", want, "got", count)
 		}
+	}
+}
+
+func testFirmataToManySetOpFirmatumWaterLevelSensors(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Firmata
+	var b, c, d, e WaterLevelSensor
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, firmataDBTypes, false, strmangle.SetComplement(firmataPrimaryKeyColumns, firmataColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*WaterLevelSensor{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, waterLevelSensorDBTypes, false, strmangle.SetComplement(waterLevelSensorPrimaryKeyColumns, waterLevelSensorColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	err = a.SetFirmatumWaterLevelSensors(ctx, tx, false, &b, &c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := a.FirmatumWaterLevelSensors().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	err = a.SetFirmatumWaterLevelSensors(ctx, tx, true, &d, &e)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err = a.FirmatumWaterLevelSensors().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	if !queries.IsValuerNil(b.FirmataID) {
+		t.Error("want b's foreign key value to be nil")
+	}
+	if !queries.IsValuerNil(c.FirmataID) {
+		t.Error("want c's foreign key value to be nil")
+	}
+	if !queries.Equal(a.ID, d.FirmataID) {
+		t.Error("foreign key was wrong value", a.ID, d.FirmataID)
+	}
+	if !queries.Equal(a.ID, e.FirmataID) {
+		t.Error("foreign key was wrong value", a.ID, e.FirmataID)
+	}
+
+	if b.R.Firmatum != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if c.R.Firmatum != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if d.R.Firmatum != &a {
+		t.Error("relationship was not added properly to the foreign struct")
+	}
+	if e.R.Firmatum != &a {
+		t.Error("relationship was not added properly to the foreign struct")
+	}
+
+	if a.R.FirmatumWaterLevelSensors[0] != &d {
+		t.Error("relationship struct slice not set to correct value")
+	}
+	if a.R.FirmatumWaterLevelSensors[1] != &e {
+		t.Error("relationship struct slice not set to correct value")
+	}
+}
+
+func testFirmataToManyRemoveOpFirmatumWaterLevelSensors(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Firmata
+	var b, c, d, e WaterLevelSensor
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, firmataDBTypes, false, strmangle.SetComplement(firmataPrimaryKeyColumns, firmataColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*WaterLevelSensor{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, waterLevelSensorDBTypes, false, strmangle.SetComplement(waterLevelSensorPrimaryKeyColumns, waterLevelSensorColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	err = a.AddFirmatumWaterLevelSensors(ctx, tx, true, foreigners...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := a.FirmatumWaterLevelSensors().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 4 {
+		t.Error("count was wrong:", count)
+	}
+
+	err = a.RemoveFirmatumWaterLevelSensors(ctx, tx, foreigners[:2]...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err = a.FirmatumWaterLevelSensors().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	if !queries.IsValuerNil(b.FirmataID) {
+		t.Error("want b's foreign key value to be nil")
+	}
+	if !queries.IsValuerNil(c.FirmataID) {
+		t.Error("want c's foreign key value to be nil")
+	}
+
+	if b.R.Firmatum != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if c.R.Firmatum != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if d.R.Firmatum != &a {
+		t.Error("relationship to a should have been preserved")
+	}
+	if e.R.Firmatum != &a {
+		t.Error("relationship to a should have been preserved")
+	}
+
+	if len(a.R.FirmatumWaterLevelSensors) != 2 {
+		t.Error("should have preserved two relationships")
+	}
+
+	// Removal doesn't do a stable deletion for performance so we have to flip the order
+	if a.R.FirmatumWaterLevelSensors[1] != &d {
+		t.Error("relationship to d should have been preserved")
+	}
+	if a.R.FirmatumWaterLevelSensors[0] != &e {
+		t.Error("relationship to e should have been preserved")
 	}
 }
 

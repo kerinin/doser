@@ -41,7 +41,7 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					)`,
 					`CREATE TABLE water_level_sensors(
 						id UUID NOT NULL,
-						firmata_id UUID NOT NULL,
+						firmata_id UUID,
 						pin INT NOT NULL,
 						kind TEXT NOT NULL,
 

@@ -14,6 +14,7 @@ import (
 	"github.com/kerinin/doser/service/graph/generated"
 	"github.com/kerinin/doser/service/graph/model"
 	"github.com/kerinin/doser/service/models"
+	"github.com/robfig/cron/v3"
 	null "github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"gobot.io/x/gobot/platforms/raspi"
@@ -159,11 +160,12 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, pumpID string, ste
 	return m, nil
 }
 
-func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind) (*models.WaterLevelSensor, error) {
+func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string) (*models.WaterLevelSensor, error) {
 	m := &models.WaterLevelSensor{
-		ID:   uuid.New().String(),
-		Pin:  int64(pin),
-		Kind: kind.String(),
+		ID:        uuid.New().String(),
+		Pin:       int64(pin),
+		Kind:      kind.String(),
+		FirmataID: null.StringFromPtr(firmataID),
 	}
 
 	err := m.Insert(ctx, r.db, boil.Infer())
@@ -185,10 +187,27 @@ func (r *mutationResolver) DeleteWaterLevelSensor(ctx context.Context, id string
 }
 
 func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error) {
-	// NOTE: Be sure to parse the fill frequency to verify it's a valid cron
-	r.awcController.Reset()
+	_, err := cron.ParseStandard(fillFrequency)
+	if err != nil {
+		return nil, fmt.Errorf("parsing fill frequency as cron: %w", err)
+	}
 
-	panic(fmt.Errorf("not implemented"))
+	m := &models.AutoTopOff{
+		ID:            uuid.New().String(),
+		PumpID:        pumpID,
+		FillRate:      fillRate,
+		FillFrequency: fillFrequency,
+		MaxFillVolume: maxFillVolume,
+	}
+
+	err = m.Insert(ctx, r.db, boil.Infer())
+	if err != nil {
+		return nil, fmt.Errorf("inserting auto top off: %w", err)
+	}
+
+	r.atoController.Reset()
+
+	return m, nil
 }
 
 func (r *mutationResolver) DeleteAutoTopOff(ctx context.Context, id string) (bool, error) {
@@ -371,6 +390,13 @@ func (r *queryResolver) Dosers(ctx context.Context) ([]*models.Doser, error) {
 	return ms, nil
 }
 
+func (r *waterLevelSensorResolver) FirmataID(ctx context.Context, obj *models.WaterLevelSensor) (*string, error) {
+	if obj.FirmataID.Valid {
+		return &obj.FirmataID.String, nil
+	}
+	return nil, nil
+}
+
 func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLevelSensor) (model.SensorKind, error) {
 	for _, kind := range model.AllSensorKind {
 		if string(kind) == obj.Kind {
@@ -381,6 +407,13 @@ func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLe
 }
 
 func (r *waterLevelSensorResolver) WaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error) {
+	if obj.FirmataID.Valid {
+		return r.firmataWaterDetected(ctx, obj.FirmataID.String, obj)
+	}
+	return r.gpioWaterDetected(ctx, obj)
+}
+
+func (r *waterLevelSensorResolver) gpioWaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error) {
 	rpi := raspi.NewAdaptor()
 	err := rpi.Connect()
 	if err != nil {
@@ -394,6 +427,15 @@ func (r *waterLevelSensorResolver) WaterDetected(ctx context.Context, obj *model
 	}
 
 	return val == sysfs.HIGH, nil
+}
+
+func (r *waterLevelSensorResolver) firmataWaterDetected(ctx context.Context, firmataID string, obj *models.WaterLevelSensor) (bool, error) {
+	firmata, err := r.firmatasController.Get(ctx, firmataID)
+	if err != nil {
+		return false, fmt.Errorf("getting firmata: %w", err)
+	}
+
+	return firmata.Pins()[obj.Pin].Value > 0, nil
 }
 
 // AutoTopOff returns generated.AutoTopOffResolver implementation.

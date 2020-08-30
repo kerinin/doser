@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -22,10 +23,10 @@ import (
 
 // WaterLevelSensor is an object representing the database table.
 type WaterLevelSensor struct {
-	ID        string `boil:"id" json:"id" toml:"id" yaml:"id"`
-	FirmataID string `boil:"firmata_id" json:"firmata_id" toml:"firmata_id" yaml:"firmata_id"`
-	Pin       int64  `boil:"pin" json:"pin" toml:"pin" yaml:"pin"`
-	Kind      string `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
+	ID        string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	FirmataID null.String `boil:"firmata_id" json:"firmata_id,omitempty" toml:"firmata_id" yaml:"firmata_id,omitempty"`
+	Pin       int64       `boil:"pin" json:"pin" toml:"pin" yaml:"pin"`
+	Kind      string      `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
 
 	R *waterLevelSensorR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L waterLevelSensorL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -45,14 +46,37 @@ var WaterLevelSensorColumns = struct {
 
 // Generated where
 
+type whereHelpernull_String struct{ field string }
+
+func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
 var WaterLevelSensorWhere = struct {
 	ID        whereHelperstring
-	FirmataID whereHelperstring
+	FirmataID whereHelpernull_String
 	Pin       whereHelperint64
 	Kind      whereHelperstring
 }{
 	ID:        whereHelperstring{field: "\"water_level_sensors\".\"id\""},
-	FirmataID: whereHelperstring{field: "\"water_level_sensors\".\"firmata_id\""},
+	FirmataID: whereHelpernull_String{field: "\"water_level_sensors\".\"firmata_id\""},
 	Pin:       whereHelperint64{field: "\"water_level_sensors\".\"pin\""},
 	Kind:      whereHelperstring{field: "\"water_level_sensors\".\"kind\""},
 }
@@ -415,7 +439,9 @@ func (waterLevelSensorL) LoadFirmatum(ctx context.Context, e boil.ContextExecuto
 		if object.R == nil {
 			object.R = &waterLevelSensorR{}
 		}
-		args = append(args, object.FirmataID)
+		if !queries.IsNil(object.FirmataID) {
+			args = append(args, object.FirmataID)
+		}
 
 	} else {
 	Outer:
@@ -425,12 +451,14 @@ func (waterLevelSensorL) LoadFirmatum(ctx context.Context, e boil.ContextExecuto
 			}
 
 			for _, a := range args {
-				if a == obj.FirmataID {
+				if queries.Equal(a, obj.FirmataID) {
 					continue Outer
 				}
 			}
 
-			args = append(args, obj.FirmataID)
+			if !queries.IsNil(obj.FirmataID) {
+				args = append(args, obj.FirmataID)
+			}
 
 		}
 	}
@@ -488,7 +516,7 @@ func (waterLevelSensorL) LoadFirmatum(ctx context.Context, e boil.ContextExecuto
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if local.FirmataID == foreign.ID {
+			if queries.Equal(local.FirmataID, foreign.ID) {
 				local.R.Firmatum = foreign
 				if foreign.R == nil {
 					foreign.R = &firmataR{}
@@ -644,7 +672,7 @@ func (o *WaterLevelSensor) SetFirmatum(ctx context.Context, exec boil.ContextExe
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	o.FirmataID = related.ID
+	queries.Assign(&o.FirmataID, related.ID)
 	if o.R == nil {
 		o.R = &waterLevelSensorR{
 			Firmatum: related,
@@ -661,6 +689,39 @@ func (o *WaterLevelSensor) SetFirmatum(ctx context.Context, exec boil.ContextExe
 		related.R.FirmatumWaterLevelSensors = append(related.R.FirmatumWaterLevelSensors, o)
 	}
 
+	return nil
+}
+
+// RemoveFirmatum relationship.
+// Sets o.R.Firmatum to nil.
+// Removes o from all passed in related items' relationships struct (Optional).
+func (o *WaterLevelSensor) RemoveFirmatum(ctx context.Context, exec boil.ContextExecutor, related *Firmata) error {
+	var err error
+
+	queries.SetScanner(&o.FirmataID, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("firmata_id")); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	if o.R != nil {
+		o.R.Firmatum = nil
+	}
+	if related == nil || related.R == nil {
+		return nil
+	}
+
+	for i, ri := range related.R.FirmatumWaterLevelSensors {
+		if queries.Equal(o.FirmataID, ri.FirmataID) {
+			continue
+		}
+
+		ln := len(related.R.FirmatumWaterLevelSensors)
+		if ln > 1 && i < ln-1 {
+			related.R.FirmatumWaterLevelSensors[i] = related.R.FirmatumWaterLevelSensors[ln-1]
+		}
+		related.R.FirmatumWaterLevelSensors = related.R.FirmatumWaterLevelSensors[:ln-1]
+		break
+	}
 	return nil
 }
 
