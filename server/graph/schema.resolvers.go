@@ -199,10 +199,30 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 		FillFrequency: fillFrequency,
 		MaxFillVolume: maxFillVolume,
 	}
+	waterLevelSensors := make([]*models.WaterLevelSensor, 0, len(levelSensors))
+	for _, sensor := range levelSensors {
+		waterLevelSensors = append(waterLevelSensors, &models.WaterLevelSensor{ID: sensor})
+	}
 
-	err = m.Insert(ctx, r.db, boil.Infer())
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+		err = tx.Commit()
+	}()
+
+	err = m.Insert(ctx, tx, boil.Infer())
 	if err != nil {
 		return nil, fmt.Errorf("inserting auto top off: %w", err)
+	}
+
+	err = m.AddWaterLevelSensors(ctx, tx, false, waterLevelSensors...)
+	if err != nil {
+		return nil, fmt.Errorf("associating water level sensor: %w")
 	}
 
 	r.atoController.Reset()
