@@ -620,7 +620,7 @@ func (autoTopOffL) LoadWaterLevelSensors(ctx context.Context, e boil.ContextExec
 		one := new(WaterLevelSensor)
 		var localJoinCol string
 
-		err = results.Scan(&one.ID, &one.FirmataID, &one.Pin, &one.Kind, &localJoinCol)
+		err = results.Scan(&one.ID, &one.FirmataID, &one.Pin, &one.Kind, &one.DetectionThreshold, &localJoinCol)
 		if err != nil {
 			return errors.Wrap(err, "failed to scan eager loaded results for water_level_sensors")
 		}

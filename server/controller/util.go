@@ -1,10 +1,14 @@
 package controller
 
 import (
+	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
+	"gobot.io/x/gobot/platforms/raspi"
+	"gobot.io/x/gobot/sysfs"
 )
 
 func ConfigurePump(pump *models.Pump, firmata *gomata.Firmata) error {
@@ -29,4 +33,36 @@ func ConfigurePump(pump *models.Pump, firmata *gomata.Firmata) error {
 		return fmt.Errorf("configuring stepper: %w", err)
 	}
 	return nil
+}
+
+func WaterDetected(ctx context.Context, firmatasController *Firmatas, obj *models.WaterLevelSensor) (bool, error) {
+	if !obj.FirmataID.Valid {
+		gpioWaterDetected(ctx, obj)
+	}
+
+	firmata, err := firmatasController.Get(ctx, obj.FirmataID.String)
+	if err != nil {
+		return false, fmt.Errorf("getting firmata: %w", err)
+	}
+
+	// Defaults to zero if not set
+	threshold := int(obj.DetectionThreshold.Int64)
+
+	return firmata.Pins()[obj.Pin].Value > threshold, nil
+}
+
+func gpioWaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error) {
+	rpi := raspi.NewAdaptor()
+	err := rpi.Connect()
+	if err != nil {
+		return false, fmt.Errorf("connecting to rpi: %w", err)
+	}
+
+	pinString := strconv.Itoa(int(obj.Pin))
+	val, err := rpi.DigitalRead(pinString)
+	if err != nil {
+		return false, fmt.Errorf("reading sensor pin %s: %w", pinString, err)
+	}
+
+	return val == sysfs.HIGH, nil
 }

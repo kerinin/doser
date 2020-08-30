@@ -91,6 +91,12 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					)`,
 				},
 			},
+			&migrate.Migration{
+				Id: "001 allow-analog",
+				Up: []string{
+					`ALTER TABLE water_level_sensors ADD COLUMN detection_threshold INT`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

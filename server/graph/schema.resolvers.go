@@ -7,18 +7,15 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/kerinin/doser/service/controller"
 	"github.com/kerinin/doser/service/graph/generated"
 	"github.com/kerinin/doser/service/graph/model"
 	"github.com/kerinin/doser/service/models"
-	"github.com/robfig/cron/v3"
+	cron "github.com/robfig/cron/v3"
 	null "github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"gobot.io/x/gobot/platforms/raspi"
-	"gobot.io/x/gobot/sysfs"
 )
 
 func (r *autoTopOffResolver) Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error) {
@@ -169,12 +166,15 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, pumpID string, ste
 	return m, nil
 }
 
-func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string) (*models.WaterLevelSensor, error) {
+func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error) {
 	m := &models.WaterLevelSensor{
 		ID:        uuid.New().String(),
 		Pin:       int64(pin),
 		Kind:      kind.String(),
 		FirmataID: null.StringFromPtr(firmataID),
+	}
+	if detectionThreshold != nil {
+		m.DetectionThreshold = null.Int64From(int64(*detectionThreshold))
 	}
 
 	err := m.Insert(ctx, r.db, boil.Infer())
@@ -493,35 +493,15 @@ func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLe
 }
 
 func (r *waterLevelSensorResolver) WaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error) {
-	if obj.FirmataID.Valid {
-		return r.firmataWaterDetected(ctx, obj.FirmataID.String, obj)
-	}
-	return r.gpioWaterDetected(ctx, obj)
+	return controller.WaterDetected(ctx, r.firmatasController, obj)
 }
 
-func (r *waterLevelSensorResolver) gpioWaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error) {
-	rpi := raspi.NewAdaptor()
-	err := rpi.Connect()
-	if err != nil {
-		return false, fmt.Errorf("connecting to rpi: %w", err)
+func (r *waterLevelSensorResolver) DetectionThreshold(ctx context.Context, obj *models.WaterLevelSensor) (*int, error) {
+	if obj.DetectionThreshold.Valid {
+		v := int(obj.DetectionThreshold.Int64)
+		return &v, nil
 	}
-
-	pinString := strconv.Itoa(int(obj.Pin))
-	val, err := rpi.DigitalRead(pinString)
-	if err != nil {
-		return false, fmt.Errorf("reading sensor pin %s: %w", pinString, err)
-	}
-
-	return val == sysfs.HIGH, nil
-}
-
-func (r *waterLevelSensorResolver) firmataWaterDetected(ctx context.Context, firmataID string, obj *models.WaterLevelSensor) (bool, error) {
-	firmata, err := r.firmatasController.Get(ctx, firmataID)
-	if err != nil {
-		return false, fmt.Errorf("getting firmata: %w", err)
-	}
-
-	return firmata.Pins()[obj.Pin].Value > 0, nil
+	return nil, nil
 }
 
 // AutoTopOff returns generated.AutoTopOffResolver implementation.

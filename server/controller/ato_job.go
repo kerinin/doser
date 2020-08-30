@@ -68,7 +68,7 @@ func (j *ATOJob) Run() {
 		// Read the sensor's current value
 		val, err := rpi.DigitalRead(string(sensor.Pin))
 		if err != nil {
-			j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("connecting to RPi: %w", err)}
+			j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("reading RPi pin %d: %w", sensor.Pin, err)}
 			return
 		}
 		if val == sysfs.HIGH {

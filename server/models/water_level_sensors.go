@@ -23,25 +23,28 @@ import (
 
 // WaterLevelSensor is an object representing the database table.
 type WaterLevelSensor struct {
-	ID        string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	FirmataID null.String `boil:"firmata_id" json:"firmata_id,omitempty" toml:"firmata_id" yaml:"firmata_id,omitempty"`
-	Pin       int64       `boil:"pin" json:"pin" toml:"pin" yaml:"pin"`
-	Kind      string      `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
+	ID                 string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	FirmataID          null.String `boil:"firmata_id" json:"firmata_id,omitempty" toml:"firmata_id" yaml:"firmata_id,omitempty"`
+	Pin                int64       `boil:"pin" json:"pin" toml:"pin" yaml:"pin"`
+	Kind               string      `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
+	DetectionThreshold null.Int64  `boil:"detection_threshold" json:"detection_threshold,omitempty" toml:"detection_threshold" yaml:"detection_threshold,omitempty"`
 
 	R *waterLevelSensorR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L waterLevelSensorL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var WaterLevelSensorColumns = struct {
-	ID        string
-	FirmataID string
-	Pin       string
-	Kind      string
+	ID                 string
+	FirmataID          string
+	Pin                string
+	Kind               string
+	DetectionThreshold string
 }{
-	ID:        "id",
-	FirmataID: "firmata_id",
-	Pin:       "pin",
-	Kind:      "kind",
+	ID:                 "id",
+	FirmataID:          "firmata_id",
+	Pin:                "pin",
+	Kind:               "kind",
+	DetectionThreshold: "detection_threshold",
 }
 
 // Generated where
@@ -70,15 +73,17 @@ func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
 }
 
 var WaterLevelSensorWhere = struct {
-	ID        whereHelperstring
-	FirmataID whereHelpernull_String
-	Pin       whereHelperint64
-	Kind      whereHelperstring
+	ID                 whereHelperstring
+	FirmataID          whereHelpernull_String
+	Pin                whereHelperint64
+	Kind               whereHelperstring
+	DetectionThreshold whereHelpernull_Int64
 }{
-	ID:        whereHelperstring{field: "\"water_level_sensors\".\"id\""},
-	FirmataID: whereHelpernull_String{field: "\"water_level_sensors\".\"firmata_id\""},
-	Pin:       whereHelperint64{field: "\"water_level_sensors\".\"pin\""},
-	Kind:      whereHelperstring{field: "\"water_level_sensors\".\"kind\""},
+	ID:                 whereHelperstring{field: "\"water_level_sensors\".\"id\""},
+	FirmataID:          whereHelpernull_String{field: "\"water_level_sensors\".\"firmata_id\""},
+	Pin:                whereHelperint64{field: "\"water_level_sensors\".\"pin\""},
+	Kind:               whereHelperstring{field: "\"water_level_sensors\".\"kind\""},
+	DetectionThreshold: whereHelpernull_Int64{field: "\"water_level_sensors\".\"detection_threshold\""},
 }
 
 // WaterLevelSensorRels is where relationship names are stored.
@@ -105,8 +110,8 @@ func (*waterLevelSensorR) NewStruct() *waterLevelSensorR {
 type waterLevelSensorL struct{}
 
 var (
-	waterLevelSensorAllColumns            = []string{"id", "firmata_id", "pin", "kind"}
-	waterLevelSensorColumnsWithoutDefault = []string{"id", "firmata_id", "pin", "kind"}
+	waterLevelSensorAllColumns            = []string{"id", "firmata_id", "pin", "kind", "detection_threshold"}
+	waterLevelSensorColumnsWithoutDefault = []string{"id", "firmata_id", "pin", "kind", "detection_threshold"}
 	waterLevelSensorColumnsWithDefault    = []string{}
 	waterLevelSensorPrimaryKeyColumns     = []string{"id"}
 )
