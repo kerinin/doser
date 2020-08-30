@@ -17,6 +17,7 @@ import (
 	"github.com/kerinin/doser/service/controller"
 	"github.com/kerinin/doser/service/graph"
 	"github.com/kerinin/doser/service/graph/generated"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 
 func main() {
 	log.Printf("Starting...")
+	logrus.SetLevel(logrus.DebugLevel)
 
 	flag.Parse()
 
