@@ -98,6 +98,8 @@ func (r *mutationResolver) CreateFirmata(ctx context.Context, serialPort string,
 		return nil, fmt.Errorf("inserting firmata: %w", err)
 	}
 
+	r.firmatasController.Reset()
+
 	return m, nil
 }
 
@@ -107,6 +109,8 @@ func (r *mutationResolver) DeleteFirmata(ctx context.Context, id string) (bool, 
 	if err != nil {
 		return false, fmt.Errorf("deleting firmata: %w", err)
 	}
+
+	r.firmatasController.Reset()
 
 	return rows > 0, nil
 }
@@ -129,6 +133,8 @@ func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, dev
 		return nil, fmt.Errorf("inserting pump: %w", err)
 	}
 
+	r.firmatasController.Reset()
+
 	return m, nil
 }
 
@@ -138,6 +144,8 @@ func (r *mutationResolver) DeletePump(ctx context.Context, id string) (bool, err
 	if err != nil {
 		return false, fmt.Errorf("deleting pump: %w", err)
 	}
+
+	r.firmatasController.Reset()
 
 	return rows > 0, nil
 }
@@ -156,6 +164,7 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, pumpID string, ste
 
 	r.atoController.Reset()
 	r.awcController.Reset()
+	r.firmatasController.Reset()
 
 	return m, nil
 }
@@ -173,6 +182,8 @@ func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, 
 		return nil, fmt.Errorf("inserting water level sensor: %w", err)
 	}
 
+	r.firmatasController.Reset()
+
 	return m, nil
 }
 
@@ -182,6 +193,8 @@ func (r *mutationResolver) DeleteWaterLevelSensor(ctx context.Context, id string
 	if err != nil {
 		return false, fmt.Errorf("deleting water level sensor: %w", err)
 	}
+
+	r.firmatasController.Reset()
 
 	return rows > 0, nil
 }
@@ -226,6 +239,7 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 	}
 
 	r.atoController.Reset()
+	r.firmatasController.Reset()
 
 	return m, nil
 }
@@ -236,6 +250,9 @@ func (r *mutationResolver) DeleteAutoTopOff(ctx context.Context, id string) (boo
 	if err != nil {
 		return false, fmt.Errorf("deleting auto top off: %w", err)
 	}
+
+	r.atoController.Reset()
+	r.firmatasController.Reset()
 
 	return rows > 0, nil
 }
@@ -264,6 +281,8 @@ func (r *mutationResolver) DeleteAutoWaterChange(ctx context.Context, id string)
 	if err != nil {
 		return false, fmt.Errorf("deleting auto water change: %w", err)
 	}
+
+	r.awcController.Reset()
 
 	return rows > 0, nil
 }
