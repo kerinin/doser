@@ -220,7 +220,7 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 		return nil, fmt.Errorf("inserting auto top off: %w", err)
 	}
 
-	err = m.AddWaterLevelSensors(ctx, tx, false, waterLevelSensors...)
+	err = m.SetWaterLevelSensors(ctx, tx, false, waterLevelSensors...)
 	if err != nil {
 		return nil, fmt.Errorf("associating water level sensor: %w")
 	}
