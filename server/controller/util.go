@@ -37,7 +37,7 @@ func ConfigurePump(pump *models.Pump, firmata *gomata.Firmata) error {
 
 func WaterDetected(ctx context.Context, firmatasController *Firmatas, obj *models.WaterLevelSensor) (bool, error) {
 	if !obj.FirmataID.Valid {
-		gpioWaterDetected(ctx, obj)
+		return gpioWaterDetected(ctx, obj)
 	}
 
 	firmata, err := firmatasController.Get(ctx, obj.FirmataID.String)
