@@ -205,6 +205,29 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 		return nil, fmt.Errorf("parsing fill frequency as cron: %w", err)
 	}
 
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+		err = tx.Commit()
+	}()
+
+	pump, err := models.FindPump(ctx, tx, pumpID)
+	if err != nil {
+		return nil, fmt.Errorf("finding ATO pump: %w", err)
+	}
+
+	_, err = pump.Calibrations().One(ctx, tx)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("refusing to create ATO with uncalibrated pump")
+	} else if err != nil {
+		return nil, fmt.Errorf("getting pump calibration: %w", err)
+	}
+
 	m := &models.AutoTopOff{
 		ID:            uuid.New().String(),
 		PumpID:        pumpID,
@@ -216,17 +239,6 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 	for _, sensor := range levelSensors {
 		waterLevelSensors = append(waterLevelSensors, &models.WaterLevelSensor{ID: sensor})
 	}
-
-	tx, err := r.db.Begin()
-	if err != nil {
-		return nil, fmt.Errorf("starting transaction: %w", err)
-	}
-	defer func() {
-		if err != nil {
-			_ = tx.Rollback()
-		}
-		err = tx.Commit()
-	}()
 
 	err = m.Insert(ctx, tx, boil.Infer())
 	if err != nil {
@@ -258,6 +270,41 @@ func (r *mutationResolver) DeleteAutoTopOff(ctx context.Context, id string) (boo
 }
 
 func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64) (*models.AutoWaterChange, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+		err = tx.Commit()
+	}()
+
+	freshPump, err := models.FindPump(ctx, tx, freshPumpID)
+	if err != nil {
+		return nil, fmt.Errorf("finding fresh pump: %w", err)
+	}
+
+	_, err = freshPump.Calibrations().One(ctx, tx)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("refusing to create ATO with uncalibrated fresh pump")
+	} else if err != nil {
+		return nil, fmt.Errorf("getting pump calibration: %w", err)
+	}
+
+	wastePump, err := models.FindPump(ctx, tx, wastePumpID)
+	if err != nil {
+		return nil, fmt.Errorf("finding waste pump: %w", err)
+	}
+
+	_, err = wastePump.Calibrations().One(ctx, tx)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("refusing to create ATO with uncalibrated waste pump")
+	} else if err != nil {
+		return nil, fmt.Errorf("getting pump calibration: %w", err)
+	}
+
 	m := &models.AutoWaterChange{
 		ID:           uuid.New().String(),
 		FreshPumpID:  freshPumpID,
@@ -265,7 +312,7 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpI
 		ExchangeRate: exchangeRate,
 	}
 
-	err := m.Insert(ctx, r.db, boil.Infer())
+	err = m.Insert(ctx, tx, boil.Infer())
 	if err != nil {
 		return nil, fmt.Errorf("inserting auto water change: %w", err)
 	}
