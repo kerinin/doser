@@ -11,7 +11,6 @@ import (
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
 	"gobot.io/x/gobot/platforms/raspi"
-	"gobot.io/x/gobot/sysfs"
 )
 
 type ATOJob struct {
@@ -69,7 +68,7 @@ func (j *ATOJob) Run() {
 	// Ensure the water level sensors are functioning and water isn't currently detected
 	for _, sensor := range j.sensors {
 		// Read the sensor's current value
-		detected, err := WaterDetected(j.ctx, j.firmatas, sensor)
+		detected, err := WaterDetected(j.ctx, rpi, j.firmatas, sensor)
 		if err != nil {
 			j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("reading water level sensor: %w", err)}
 			return
@@ -115,16 +114,12 @@ func (j *ATOJob) Run() {
 		case <-ticker.C:
 			for _, sensor := range j.sensors {
 				// Read the sensor's current value
-				val, err := rpi.DigitalRead(string(sensor.Pin))
+				detected, err := WaterDetected(j.ctx, rpi, j.firmatas, sensor)
 				if err != nil {
-					j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("connecting to RPi: %w", err)}
-					if err := j.firmata.StepperStop(int(j.pump.DeviceID)); err != nil {
-						j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump after failing to read sensor: %w", err)}
-					}
+					j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("reading water level sensor: %w", err)}
 					return
 				}
-
-				if val == sysfs.LOW {
+				if !detected {
 					// No water detected, keep checking
 					continue
 				}

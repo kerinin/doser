@@ -16,6 +16,7 @@ import (
 	cron "github.com/robfig/cron/v3"
 	null "github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"gobot.io/x/gobot/platforms/raspi"
 )
 
 func (r *autoTopOffResolver) Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error) {
@@ -514,7 +515,14 @@ func (r *waterLevelSensorResolver) Kind(ctx context.Context, obj *models.WaterLe
 }
 
 func (r *waterLevelSensorResolver) WaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error) {
-	return controller.WaterDetected(ctx, r.firmatasController, obj)
+	// Connect to the RPi
+	rpi := raspi.NewAdaptor()
+	err := rpi.Connect()
+	if err != nil {
+		return false, fmt.Errorf("Connecting to pi: %w", err)
+	}
+
+	return controller.WaterDetected(ctx, rpi, r.firmatasController, obj)
 }
 
 func (r *waterLevelSensorResolver) DetectionThreshold(ctx context.Context, obj *models.WaterLevelSensor) (*int, error) {

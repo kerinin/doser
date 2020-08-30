@@ -35,9 +35,9 @@ func ConfigurePump(pump *models.Pump, firmata *gomata.Firmata) error {
 	return nil
 }
 
-func WaterDetected(ctx context.Context, firmatasController *Firmatas, obj *models.WaterLevelSensor) (bool, error) {
+func WaterDetected(ctx context.Context, rpi *raspi.Adaptor, firmatasController *Firmatas, obj *models.WaterLevelSensor) (bool, error) {
 	if !obj.FirmataID.Valid {
-		return gpioWaterDetected(ctx, obj)
+		return gpioWaterDetected(ctx, rpi, obj)
 	}
 
 	firmata, err := firmatasController.Get(ctx, obj.FirmataID.String)
@@ -51,13 +51,7 @@ func WaterDetected(ctx context.Context, firmatasController *Firmatas, obj *model
 	return firmata.Pins()[obj.Pin].Value > threshold, nil
 }
 
-func gpioWaterDetected(ctx context.Context, obj *models.WaterLevelSensor) (bool, error) {
-	rpi := raspi.NewAdaptor()
-	err := rpi.Connect()
-	if err != nil {
-		return false, fmt.Errorf("connecting to rpi: %w", err)
-	}
-
+func gpioWaterDetected(ctx context.Context, rpi *raspi.Adaptor, obj *models.WaterLevelSensor) (bool, error) {
 	pinString := strconv.Itoa(int(obj.Pin))
 	val, err := rpi.DigitalRead(pinString)
 	if err != nil {
