@@ -37,10 +37,10 @@ func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 	crn, err := c.setupCron(ctx, wg)
 	if err != nil {
 		log.Printf("Failed to create initial ATO jobs: %s", err)
+	} else {
+		crn.Start()
+		defer crn.Stop()
 	}
-
-	crn.Start()
-	defer crn.Stop()
 
 	for {
 		select {
@@ -62,6 +62,7 @@ func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 			if nextCrn != nil {
 				nextCrn.Start()
 			}
+			defer nextCrn.Stop()
 			crn = nextCrn
 
 		case <-ctx.Done():
