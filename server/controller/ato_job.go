@@ -20,6 +20,7 @@ type ATOJob struct {
 	eventCh     chan<- Event
 	ato         *models.AutoTopOff
 	pump        *models.Pump
+	firmatas    *Firmatas
 	firmata     *gomata.Firmata
 	sensors     []*models.WaterLevelSensor
 	calibration *models.Calibration
@@ -32,6 +33,7 @@ func NewATOJob(
 	eventCh chan<- Event,
 	ato *models.AutoTopOff,
 	pump *models.Pump,
+	firmatas *Firmatas,
 	firmata *gomata.Firmata,
 	sensors []*models.WaterLevelSensor,
 	calibration *models.Calibration,
@@ -42,6 +44,7 @@ func NewATOJob(
 		eventCh:     eventCh,
 		ato:         ato,
 		pump:        pump,
+		firmatas:    firmatas,
 		firmata:     firmata,
 		sensors:     sensors,
 		calibration: calibration,
@@ -66,12 +69,12 @@ func (j *ATOJob) Run() {
 	// Ensure the water level sensors are functioning and water isn't currently detected
 	for _, sensor := range j.sensors {
 		// Read the sensor's current value
-		val, err := rpi.DigitalRead(string(sensor.Pin))
+		detected, err := WaterDetected(j.ctx, j.firmatas, sensor)
 		if err != nil {
-			j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("reading RPi pin %d: %w", sensor.Pin, err)}
+			j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("reading water level sensor: %w", err)}
 			return
 		}
-		if val == sysfs.HIGH {
+		if detected {
 			j.eventCh <- &ATOJobComplete{j.ato, 0}
 			return
 		}

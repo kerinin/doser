@@ -106,7 +106,7 @@ func (c *ATO) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, er
 			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
 		}
 
-		_, err = crn.AddJob(ato.FillFrequency, NewATOJob(ctx, wg, c.eventCh, ato, pump, firmata, sensors, calibration))
+		_, err = crn.AddJob(ato.FillFrequency, NewATOJob(ctx, wg, c.eventCh, ato, pump, c.firmatas, firmata, sensors, calibration))
 		if err != nil {
 			return nil, fmt.Errorf("adding cron job: %w", err)
 		}
