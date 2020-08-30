@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/huin/goserial"
 	"github.com/kerinin/doser/service/models"
@@ -57,9 +58,21 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 	f := gomata.New()
 	f.Connect(port)
 	for _, sensor := range sensors {
-		err = f.ReportDigital(int(sensor.Pin), 1)
-		if err != nil {
-			return nil, fmt.Errorf("requesting digital reports for pin %d: %w", sensor.Pin, err)
+		if sensor.DetectionThreshold.Valid {
+			log.Printf("Requesting analog reports for firmata %s pin %d", firmataID, sensor.Pin)
+
+			err = f.ReportAnalog(int(sensor.Pin), 1)
+			if err != nil {
+				return nil, fmt.Errorf("requesting analog reports for pin %d: %w", sensor.Pin, err)
+			}
+		} else {
+
+			log.Printf("Requesting digital reports for firmata %s pin %d", firmataID, sensor.Pin)
+
+			err = f.ReportDigital(int(sensor.Pin), 1)
+			if err != nil {
+				return nil, fmt.Errorf("requesting digital reports for pin %d: %w", sensor.Pin, err)
+			}
 		}
 	}
 	c.firmatas[firmataID] = f

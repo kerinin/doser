@@ -3,7 +3,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/kerinin/doser/service/models"
@@ -49,10 +48,6 @@ func WaterDetected(ctx context.Context, rpi *raspi.Adaptor, firmatasController *
 	// Defaults to zero if not set
 	threshold := int(obj.DetectionThreshold.Int64)
 	pins := firmata.Pins()
-
-	for _, pin := range pins {
-		log.Printf("Firmata pin: %+v", pin)
-	}
 
 	return pins[obj.Pin].Value > threshold, nil
 }
