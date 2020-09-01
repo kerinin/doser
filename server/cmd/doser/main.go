@@ -29,6 +29,7 @@ var (
 func main() {
 	log.Printf("Starting...")
 	if *verbose {
+		log.Printf("Verbose logging enabled")
 		logrus.SetLevel(logrus.DebugLevel)
 	}
 
