@@ -113,10 +113,11 @@ func (r *mutationResolver) DeleteFirmata(ctx context.Context, id string) (bool, 
 	return rows > 0, nil
 }
 
-func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error) {
+func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) (*models.Pump, error) {
 	m := &models.Pump{
 		ID:        uuid.New().String(),
 		FirmataID: firmataID,
+		DeviceID:  int64(deviceID),
 		StepPin:   int64(stepPin),
 	}
 	if dirPin != nil {
@@ -136,10 +137,11 @@ func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, dev
 	return m, nil
 }
 
-func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error) {
+func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) (*models.Pump, error) {
 	m := &models.Pump{
 		ID:        id,
 		FirmataID: firmataID,
+		DeviceID:  int64(deviceID),
 		StepPin:   int64(stepPin),
 	}
 	if dirPin != nil {

@@ -90,7 +90,7 @@ type ComplexityRoot struct {
 		CreateAutoWaterChange  func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64) int
 		CreateDoser            func(childComplexity int, input model.DoserInput) int
 		CreateFirmata          func(childComplexity int, serialPort string, baud int) int
-		CreatePump             func(childComplexity int, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) int
+		CreatePump             func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) int
 		CreateWaterLevelSensor func(childComplexity int, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
 		DeleteAutoTopOff       func(childComplexity int, id string) int
 		DeleteAutoWaterChange  func(childComplexity int, id string) int
@@ -100,7 +100,7 @@ type ComplexityRoot struct {
 		DeleteWaterLevelSensor func(childComplexity int, id string) int
 		Pump                   func(childComplexity int, pumpID string, steps int, speed float64) int
 		UpdateAutoTopOff       func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) int
-		UpdatePump             func(childComplexity int, id string, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) int
+		UpdatePump             func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) int
 		UpdateWaterLevelSensor func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
 	}
 
@@ -157,8 +157,8 @@ type FirmataResolver interface {
 type MutationResolver interface {
 	CreateFirmata(ctx context.Context, serialPort string, baud int) (*models.Firmata, error)
 	DeleteFirmata(ctx context.Context, id string) (bool, error)
-	CreatePump(ctx context.Context, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
-	UpdatePump(ctx context.Context, id string, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
+	CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
+	UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
 	DeletePump(ctx context.Context, id string) (bool, error)
 	CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error)
 	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error)
@@ -406,7 +406,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreatePump(childComplexity, args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int)), true
+		return e.complexity.Mutation.CreatePump(childComplexity, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int)), true
 
 	case "Mutation.createWaterLevelSensor":
 		if e.complexity.Mutation.CreateWaterLevelSensor == nil {
@@ -526,7 +526,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdatePump(childComplexity, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int)), true
+		return e.complexity.Mutation.UpdatePump(childComplexity, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int)), true
 
 	case "Mutation.updateWaterLevelSensor":
 		if e.complexity.Mutation.UpdateWaterLevelSensor == nil {
@@ -828,7 +828,7 @@ type AutoTopOff {
   # Sensors of kind HIGH will terminate a top off run when their value chagnes from LOW to HIGH
   # Sensors of kind ALERT will terminate a top off run and cause an alert if their value chagnes from LOW to HIGH
   level_sensors: [WaterLevelSensor!]!
-  # The rate in mL/s to pump during top off runs
+  # The rate in mL/min to pump during top off runs
   fill_rate: Float!
   # How frequently top off runs should be scheduled.
   # Uses standard cron tab formatting.
@@ -860,8 +860,8 @@ type Mutation {
   createFirmata(serial_port: String!, baud: Int!): Firmata!
   deleteFirmata(id: ID!): Boolean!
 
-  createPump(firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
-  updatePump(id: ID!, firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  updatePump(id: ID!, firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
   deletePump(id: ID!): Boolean!
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
@@ -1067,10 +1067,10 @@ func (ec *executionContext) field_Mutation_createPump_args(ctx context.Context, 
 		}
 	}
 	args["firmata_id"] = arg0
-	var arg1 string
+	var arg1 int
 	if tmp, ok := rawArgs["device_ID"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("device_ID"))
-		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1352,10 +1352,10 @@ func (ec *executionContext) field_Mutation_updatePump_args(ctx context.Context, 
 		}
 	}
 	args["firmata_id"] = arg1
-	var arg2 string
+	var arg2 int
 	if tmp, ok := rawArgs["device_ID"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("device_ID"))
-		arg2, err = ec.unmarshalNID2string(ctx, tmp)
+		arg2, err = ec.unmarshalNInt2int(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2201,7 +2201,7 @@ func (ec *executionContext) _Mutation_createPump(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreatePump(rctx, args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
+		return ec.resolvers.Mutation().CreatePump(rctx, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2242,7 +2242,7 @@ func (ec *executionContext) _Mutation_updatePump(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdatePump(rctx, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
+		return ec.resolvers.Mutation().UpdatePump(rctx, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

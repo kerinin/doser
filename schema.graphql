@@ -114,8 +114,8 @@ type Mutation {
   createFirmata(serial_port: String!, baud: Int!): Firmata!
   deleteFirmata(id: ID!): Boolean!
 
-  createPump(firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
-  updatePump(id: ID!, firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  updatePump(id: ID!, firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
   deletePump(id: ID!): Boolean!
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
