@@ -20,8 +20,8 @@ func NullInt64ToIntPtr(v null.Int64) *int {
 func validateAutoTopOff(ctx context.Context, tx *sql.Tx, ato *models.AutoTopOff, sensors []*models.WaterLevelSensor) error {
 	intervalVolume := float64(ato.FillInterval) * ato.FillRate
 
-	if intervalVolume > ato.MaxFillVolume {
-		return fmt.Errorf("maximum possible job fill volume %f is less than requested maximum fill volume %f", intervalVolume, ato.MaxFillVolume)
+	if intervalVolume < ato.MaxFillVolume {
+		return fmt.Errorf("maximum possible job fill volume %d is less than requested maximum fill volume %d", intervalVolume, ato.MaxFillVolume)
 	}
 
 	pump, err := models.FindPump(ctx, tx, ato.PumpID)
