@@ -93,13 +93,17 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 		}
 	}
 
+	err = j.firmata.StepperZero(int(j.pump.DeviceID))
+	if err != nil {
+		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("zeroing stepper (aborting job run): %w", err)}
+		return
+	}
+
 	err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(speed))
 	if err != nil {
 		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("setting pump speed (aborting job run): %w", err)}
 		return
 	}
-
-	// TODO: Zero the stepper out occasionally (or every time)
 
 	// Command the stepper to pump the maximum fill volume (we'll interrupt it when a sensor is triggered)
 	err = j.firmata.StepperStep(int(j.pump.DeviceID), int32(maxSteps))
@@ -148,8 +152,10 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 
 				select {
 				case report := <-reportCh:
+					// TODO: Convert position to volume
 					duration := time.Now().Sub(startTime)
-					j.eventCh <- &ATOJobComplete{j.ato, duration, report.Position}
+					volume := float64(report.Position) * j.calibration.Volume / float64(j.calibration.Steps)
+					j.eventCh <- &ATOJobComplete{j.ato, duration, volume}
 					return
 				case <-ctx.Done():
 					return
