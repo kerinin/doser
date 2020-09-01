@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"math"
 
 	"github.com/google/uuid"
 	"github.com/kerinin/doser/service/controller"
@@ -476,7 +477,7 @@ func (r *mutationResolver) Pump(ctx context.Context, pumpID string, steps int, s
 		return false, fmt.Errorf("configuring pump: %w", err)
 	}
 
-	err = firmata.StepperSetSpeed(int(pump.DeviceID), float32(speed))
+	err = firmata.StepperSetSpeed(int(pump.DeviceID), float32(math.Floor(speed)))
 	if err != nil {
 		return false, fmt.Errorf("setting stepper speed: %w", err)
 	}

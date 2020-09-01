@@ -109,12 +109,12 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 			// TODO: make sure we don't go backwards
 
-			err = j.freshFirmata.StepperSetSpeed(int(j.freshPump.DeviceID), float32(freshSpeed))
+			err = j.freshFirmata.StepperSetSpeed(int(j.freshPump.DeviceID), float32(math.Floor(freshSpeed)))
 			if err != nil {
 				j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("setting fresh pump speed (aborting job run): %w", err)}
 				continue
 			}
-			err = j.wasteFirmata.StepperSetSpeed(int(j.wastePump.DeviceID), float32(wasteSpeed))
+			err = j.wasteFirmata.StepperSetSpeed(int(j.wastePump.DeviceID), float32(math.Floor(wasteSpeed)))
 			if err != nil {
 				j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("setting waste pump speed (aborting job run): %w", err)}
 				continue
