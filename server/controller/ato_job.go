@@ -128,7 +128,7 @@ func (j *ATOJob) Run() {
 				}
 
 				// water detected, stop stepper
-				reportCh := j.firmata.AwaitStepperReport(int32(j.pump.DeviceID))
+				reportCh := j.firmata.AwaitStepperMoveCompletion(int32(j.pump.DeviceID))
 
 				err = j.firmata.StepperStop(int(j.pump.DeviceID))
 				if err != nil {
