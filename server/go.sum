@@ -238,6 +238,10 @@ github.com/kerinin/gomata v0.0.0-20200822122319-d1e4752daae0 h1:cP8nDKyiwezNjerB
 github.com/kerinin/gomata v0.0.0-20200822122319-d1e4752daae0/go.mod h1:VmxbaUAiGbUUT/KbT3vYmA+2XfmOYlucORQfpmcbDTE=
 github.com/kerinin/gomata v0.0.0-20200830212811-9baed38904dd h1:mGGser51Idc4q4Iu7Xo2gEu4fTGr37yCRNdHlYnDN44=
 github.com/kerinin/gomata v0.0.0-20200830212811-9baed38904dd/go.mod h1:VmxbaUAiGbUUT/KbT3vYmA+2XfmOYlucORQfpmcbDTE=
+github.com/kerinin/gomata v0.0.0-20200830233736-3ad5a2344c94 h1:Lb4FvsJ3BEcyNr4a+z4/oX20qT5z+3o+XVHPyzuYuPE=
+github.com/kerinin/gomata v0.0.0-20200830233736-3ad5a2344c94/go.mod h1:VmxbaUAiGbUUT/KbT3vYmA+2XfmOYlucORQfpmcbDTE=
+github.com/kerinin/gomata v0.0.0-20200831130122-fa6cf9ae563b h1:7ejbUREUmLptOYvigLWNFYFpcDiUG5Ne0Q0o7EeRZXo=
+github.com/kerinin/gomata v0.0.0-20200831130122-fa6cf9ae563b/go.mod h1:VmxbaUAiGbUUT/KbT3vYmA+2XfmOYlucORQfpmcbDTE=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
@@ -573,6 +577,8 @@ golang.org/x/sys v0.0.0-20200821140526-fda516888d29 h1:mNuhGagCf3lDDm5C0376C/sxh
 golang.org/x/sys v0.0.0-20200821140526-fda516888d29/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200828194041-157a740278f4 h1:kCCpuwSAoYJPkNc6x0xT9yTtV4oKtARo4RGBQWOfg9E=
 golang.org/x/sys v0.0.0-20200828194041-157a740278f4/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
+golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a h1:i47hUS795cOydZI4AwJQCKXOr4BvxzvikwDoDtHhP2Y=
+golang.org/x/sys v0.0.0-20200831180312-196b9ba8737a/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/text v0.3.0 h1:g61tztE5qeGQ89tm6NTjjM9VPIm088od1l6aSorWRWg=
 golang.org/x/text v0.3.0/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=
 golang.org/x/text v0.3.2 h1:tW2bmiBqwgJj/UpqtC8EpXEZVYOwU0yG4iWbprSVAcs=

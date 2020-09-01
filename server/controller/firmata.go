@@ -61,6 +61,11 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		if sensor.DetectionThreshold.Valid {
 			log.Printf("Requesting analog reports for firmata %s pin %d", firmataID, sensor.Pin)
 
+			err = f.SetPinMode(int(sensor.Pin), gomata.AnalogPin)
+			if err != nil {
+				return nil, fmt.Errorf("setting pin mode: %w", err)
+			}
+
 			err = f.ReportAnalog(int(sensor.Pin), 1)
 			if err != nil {
 				return nil, fmt.Errorf("requesting analog reports for pin %d: %w", sensor.Pin, err)
@@ -68,6 +73,11 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		} else {
 
 			log.Printf("Requesting digital reports for firmata %s pin %d", firmataID, sensor.Pin)
+
+			err = f.SetPinMode(int(sensor.Pin), gomata.PullupPin)
+			if err != nil {
+				return nil, fmt.Errorf("setting pin mode: %w", err)
+			}
 
 			err = f.ReportDigital(int(sensor.Pin), 1)
 			if err != nil {
