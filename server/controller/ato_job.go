@@ -82,7 +82,7 @@ func (j *ATOJob) Run() {
 	// Configure the stepper
 	var (
 		maxSteps = j.ato.MaxFillVolume * float64(j.calibration.Steps) / j.calibration.Volume
-		speed    = j.ato.FillRate * float64(time.Second/time.Minute) * float64(j.calibration.Steps) / j.calibration.Volume
+		speed    = j.ato.FillRate * float64(time.Second) * float64(j.calibration.Steps) / j.calibration.Volume / float64(time.Minute)
 	)
 	log.Printf("ATO job params - deviceID:%d maxSteps:%f speed:%f", j.pump.DeviceID, maxSteps, speed)
 
