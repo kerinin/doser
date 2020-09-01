@@ -27,13 +27,13 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	log.Printf("Starting...")
 	if *verbose {
 		log.Printf("Verbose logging enabled")
 		logrus.SetLevel(logrus.DebugLevel)
 	}
-
-	flag.Parse()
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
