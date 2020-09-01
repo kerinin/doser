@@ -100,6 +100,7 @@ type ComplexityRoot struct {
 		DeleteWaterLevelSensor func(childComplexity int, id string) int
 		Pump                   func(childComplexity int, pumpID string, steps int, speed float64) int
 		UpdateAutoTopOff       func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) int
+		UpdatePump             func(childComplexity int, id string, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) int
 		UpdateWaterLevelSensor func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
 	}
 
@@ -157,6 +158,7 @@ type MutationResolver interface {
 	CreateFirmata(ctx context.Context, serialPort string, baud int) (*models.Firmata, error)
 	DeleteFirmata(ctx context.Context, id string) (bool, error)
 	CreatePump(ctx context.Context, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
+	UpdatePump(ctx context.Context, id string, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
 	DeletePump(ctx context.Context, id string) (bool, error)
 	CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error)
 	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error)
@@ -514,6 +516,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateAutoTopOff(childComplexity, args["id"].(string), args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_frequency"].(string), args["max_fill_volume"].(float64)), true
 
+	case "Mutation.updatePump":
+		if e.complexity.Mutation.UpdatePump == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updatePump_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdatePump(childComplexity, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int)), true
+
 	case "Mutation.updateWaterLevelSensor":
 		if e.complexity.Mutation.UpdateWaterLevelSensor == nil {
 			break
@@ -847,6 +861,7 @@ type Mutation {
   deleteFirmata(id: ID!): Boolean!
 
   createPump(firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  updatePump(id: ID!, firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
   deletePump(id: ID!): Boolean!
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
@@ -1313,6 +1328,66 @@ func (ec *executionContext) field_Mutation_updateAutoTopOff_args(ctx context.Con
 		}
 	}
 	args["max_fill_volume"] = arg5
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updatePump_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["firmata_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("firmata_id"))
+		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["firmata_id"] = arg1
+	var arg2 string
+	if tmp, ok := rawArgs["device_ID"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("device_ID"))
+		arg2, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["device_ID"] = arg2
+	var arg3 int
+	if tmp, ok := rawArgs["step_pin"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("step_pin"))
+		arg3, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["step_pin"] = arg3
+	var arg4 *int
+	if tmp, ok := rawArgs["dir_pin"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("dir_pin"))
+		arg4, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["dir_pin"] = arg4
+	var arg5 *int
+	if tmp, ok := rawArgs["en_pin"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("en_pin"))
+		arg5, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["en_pin"] = arg5
 	return args, nil
 }
 
@@ -2127,6 +2202,47 @@ func (ec *executionContext) _Mutation_createPump(ctx context.Context, field grap
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().CreatePump(rctx, args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Pump)
+	fc.Result = res
+	return ec.marshalNPump2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐPump(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_updatePump(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updatePump_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdatePump(rctx, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(string), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4784,6 +4900,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "createPump":
 			out.Values[i] = ec._Mutation_createPump(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updatePump":
+			out.Values[i] = ec._Mutation_updatePump(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

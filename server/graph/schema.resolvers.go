@@ -136,6 +136,29 @@ func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, dev
 	return m, nil
 }
 
+func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID string, deviceID string, stepPin int, dirPin *int, enPin *int) (*models.Pump, error) {
+	m := &models.Pump{
+		ID:        id,
+		FirmataID: firmataID,
+		StepPin:   int64(stepPin),
+	}
+	if dirPin != nil {
+		m.DirPin = null.Int64From(int64(*dirPin))
+	}
+	if enPin != nil {
+		m.EnPin = null.Int64From(int64(*enPin))
+	}
+
+	_, err := m.Update(ctx, r.db, boil.Infer())
+	if err != nil {
+		return nil, fmt.Errorf("inserting pump: %w", err)
+	}
+
+	r.firmatasController.Reset()
+
+	return m, nil
+}
+
 func (r *mutationResolver) DeletePump(ctx context.Context, id string) (bool, error) {
 	f := &models.Pump{ID: id}
 	rows, err := f.Delete(ctx, r.db)

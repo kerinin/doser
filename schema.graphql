@@ -82,7 +82,7 @@ type AutoTopOff {
   # Sensors of kind HIGH will terminate a top off run when their value chagnes from LOW to HIGH
   # Sensors of kind ALERT will terminate a top off run and cause an alert if their value chagnes from LOW to HIGH
   level_sensors: [WaterLevelSensor!]!
-  # The rate in mL/s to pump during top off runs
+  # The rate in mL/min to pump during top off runs
   fill_rate: Float!
   # How frequently top off runs should be scheduled.
   # Uses standard cron tab formatting.
@@ -115,6 +115,7 @@ type Mutation {
   deleteFirmata(id: ID!): Boolean!
 
   createPump(firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  updatePump(id: ID!, firmata_id: ID!, device_ID: ID!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
   deletePump(id: ID!): Boolean!
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
