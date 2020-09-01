@@ -58,7 +58,7 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	)
 	log.Printf("ATO job params - deviceID:%d maxSteps:%d speed:%d", j.pump.DeviceID, maxSteps, speed)
 
-	ticker := time.NewTicker(time.Duration(j.ato.FillInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(j.ato.FillInterval) * time.Minute)
 	defer ticker.Stop()
 
 	for {
