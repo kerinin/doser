@@ -58,6 +58,19 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	)
 	log.Printf("ATO job params - deviceID:%d maxSteps:%d speed:%d", j.pump.DeviceID, maxSteps, speed)
 
+	ticker := time.NewTicker(time.Duration(j.ato.FillInterval) * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			j.runJob(ctx, maxSteps, speed)
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 	// Connect to the RPi
 	rpi := raspi.NewAdaptor()
 	err := rpi.Connect()
@@ -66,14 +79,46 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 		return
 	}
 
-	ticker := time.NewTicker(time.Duration(j.ato.FillInterval) * time.Second)
-	defer ticker.Stop()
+	// Ensure the water level sensors are functioning and water isn't currently detected
+	for _, sensor := range j.sensors {
+		// Read the sensor's current value
+		detected, err := WaterDetected(ctx, rpi, j.firmatas, sensor)
+		if err != nil {
+			j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("reading water level sensor: %w", err)}
+			return
+		}
+		if detected {
+			j.eventCh <- &ATOJobComplete{j.ato, 0, 0}
+			return
+		}
+	}
 
+	err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(speed))
+	if err != nil {
+		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("setting pump speed (aborting job run): %w", err)}
+		return
+	}
+
+	// TODO: Zero the stepper out occasionally (or every time)
+
+	// Command the stepper to pump the maximum fill volume (we'll interrupt it when a sensor is triggered)
+	err = j.firmata.StepperStep(int(j.pump.DeviceID), int32(maxSteps))
+	if err != nil {
+		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("stepping pump (aborting job run): %w", err)}
+		return
+	}
+
+	var (
+		startTime    = time.Now()
+		complete     = j.firmata.AwaitStepperMoveCompletion(int32(j.pump.DeviceID))
+		sensorTicker = time.NewTicker(10 * time.Millisecond)
+	)
+	defer sensorTicker.Stop()
+
+	// Wait for completion (or termination)
 	for {
 		select {
-		case <-ticker.C:
-
-			// Ensure the water level sensors are functioning and water isn't currently detected
+		case <-sensorTicker.C:
 			for _, sensor := range j.sensors {
 				// Read the sensor's current value
 				detected, err := WaterDetected(ctx, rpi, j.firmatas, sensor)
@@ -81,89 +126,46 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 					j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("reading water level sensor: %w", err)}
 					return
 				}
-				if detected {
-					j.eventCh <- &ATOJobComplete{j.ato, 0, 0}
+				if !detected {
+					// No water detected, keep checking
+					continue
+				}
+
+				// water detected, stop stepper
+				reportCh := j.firmata.AwaitStepperMoveCompletion(int32(j.pump.DeviceID))
+
+				err = j.firmata.StepperStop(int(j.pump.DeviceID))
+				if err != nil {
+					j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump after sensor detected water: %w", err)}
 					return
 				}
-			}
 
-			err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(speed))
-			if err != nil {
-				j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("setting pump speed (aborting job run): %w", err)}
-				return
-			}
+				// if water is detected for alert sensors make some noise
+				if sensor.Kind == string(model.SensorKindAlert) {
+					j.eventCh <- &WaterLevelAlert{sensor}
+					return
+				}
 
-			// TODO: Zero the stepper out occasionally (or every time)
-
-			// Command the stepper to pump the maximum fill volume (we'll interrupt it when a sensor is triggered)
-			err = j.firmata.StepperStep(int(j.pump.DeviceID), int32(maxSteps))
-			if err != nil {
-				j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("stepping pump (aborting job run): %w", err)}
-				return
-			}
-
-			var (
-				startTime    = time.Now()
-				complete     = j.firmata.AwaitStepperMoveCompletion(int32(j.pump.DeviceID))
-				sensorTicker = time.NewTicker(10 * time.Millisecond)
-			)
-			defer sensorTicker.Stop()
-
-			// Wait for completion (or termination)
-			for {
 				select {
-				case <-sensorTicker.C:
-					for _, sensor := range j.sensors {
-						// Read the sensor's current value
-						detected, err := WaterDetected(ctx, rpi, j.firmatas, sensor)
-						if err != nil {
-							j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("reading water level sensor: %w", err)}
-							return
-						}
-						if !detected {
-							// No water detected, keep checking
-							continue
-						}
-
-						// water detected, stop stepper
-						reportCh := j.firmata.AwaitStepperMoveCompletion(int32(j.pump.DeviceID))
-
-						err = j.firmata.StepperStop(int(j.pump.DeviceID))
-						if err != nil {
-							j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump after sensor detected water: %w", err)}
-							return
-						}
-
-						// if water is detected for alert sensors make some noise
-						if sensor.Kind == string(model.SensorKindAlert) {
-							j.eventCh <- &WaterLevelAlert{sensor}
-							return
-						}
-
-						select {
-						case report := <-reportCh:
-							duration := time.Now().Sub(startTime)
-							j.eventCh <- &ATOJobComplete{j.ato, duration, report.Position}
-							return
-						case <-ctx.Done():
-							return
-						}
-					}
-
-				case <-complete:
-					// We reached the max fill volume, make some noise
-					j.eventCh <- &MaxFillVolumeError{j.ato}
+				case report := <-reportCh:
+					duration := time.Now().Sub(startTime)
+					j.eventCh <- &ATOJobComplete{j.ato, duration, report.Position}
 					return
-
 				case <-ctx.Done():
-					err = j.firmata.StepperStop(int(j.pump.DeviceID))
-					if err != nil {
-						j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump during shutdown of ATO job: %w", err)}
-					}
 					return
 				}
 			}
+
+		case <-complete:
+			// We reached the max fill volume, make some noise
+			j.eventCh <- &MaxFillVolumeError{j.ato}
+			return
+
 		case <-ctx.Done():
+			err = j.firmata.StepperStop(int(j.pump.DeviceID))
+			if err != nil {
+				j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump during shutdown of ATO job: %w", err)}
+			}
 			return
 		}
 	}
