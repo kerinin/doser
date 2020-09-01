@@ -989,7 +989,7 @@ func testAutoTopOffsSelect(t *testing.T) {
 }
 
 var (
-	autoTopOffDBTypes = map[string]string{`ID`: `UUID`, `PumpID`: `UUID`, `FillRate`: `REAL`, `FillFrequency`: `TEXT`, `MaxFillVolume`: `REAL`}
+	autoTopOffDBTypes = map[string]string{`ID`: `UUID`, `PumpID`: `UUID`, `FillRate`: `REAL`, `FillInterval`: `INT`, `MaxFillVolume`: `REAL`}
 	_                 = bytes.MinRead
 )
 

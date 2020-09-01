@@ -121,6 +121,7 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		} else if err != nil {
 			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
 		}
+
 		var (
 			jobCtx, cancel = context.WithCancel(ctx)
 			job            = NewAWCJob(c.eventCh, awc, freshPump, wastePump, freshFirmata, wasteFirmata, freshCalibration, wasteCalibration)
@@ -128,6 +129,7 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		jobs[awc.ID] = cancel
 		wg.Add(1)
 		go job.Run(jobCtx, wg)
+		log.Printf("Scheduled AWC job %s", awc.ID)
 	}
 
 	return jobs, nil

@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/kerinin/doser/service/models"
-	"github.com/robfig/cron/v3"
 )
 
 type ATO struct {
@@ -16,6 +15,7 @@ type ATO struct {
 	db       *sql.DB
 	firmatas *Firmatas
 	reset    chan struct{}
+	jobs     map[string]context.CancelFunc
 }
 
 func NewATO(eventCh chan<- Event, db *sql.DB, firmatas *Firmatas) *ATO {
@@ -34,44 +34,47 @@ func (c *ATO) Reset() {
 func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	crn, err := c.setupCron(ctx, wg)
+	jobs, err := c.setupJobs(ctx, wg)
 	if err != nil {
 		log.Printf("Failed to create initial ATO jobs: %s", err)
-	} else {
-		crn.Start()
-		defer crn.Stop()
 	}
 
 	for {
 		select {
 		case <-c.reset:
-			nextCrn, err := c.setupCron(ctx, wg)
+			for _, cancel := range jobs {
+				cancel()
+			}
+
+			// NOTE: It's possible the new job is trying to talk to arduino at
+			// the same time the old job is trying to shut down...
+			jobs, err = c.setupJobs(ctx, wg)
 			if err != nil {
-				log.Printf("Failed to refresh ATO jobs: %s", err)
-				continue
+				log.Printf("Failed to create ATO jobs: %s", err)
 			}
-
-			// Don't stop the running cron unless the new cron was created successfully
-			if crn != nil {
-				stopCtx := crn.Stop()
-				// NOTE: Do we want to wait for running jobs to terminate?
-				<-stopCtx.Done()
-			}
-
-			// Start processing the next cron
-			if nextCrn != nil {
-				nextCrn.Start()
-			}
-			defer nextCrn.Stop()
-			crn = nextCrn
 
 		case <-ctx.Done():
+			for _, cancel := range jobs {
+				cancel()
+			}
 			return
 		}
 	}
 }
 
-func (c *ATO) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, error) {
+func (c *ATO) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[string]context.CancelFunc, err error) {
+	jobs = make(map[string]context.CancelFunc)
+
+	// If setup fails partway through, make sure we tear down any jobs that
+	// were created before the failure
+	defer func() {
+		if err != nil {
+			for _, cancel := range jobs {
+				cancel()
+			}
+		}
+	}()
+
 	atos, err := models.AutoTopOffs().All(ctx, c.db)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -80,7 +83,6 @@ func (c *ATO) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, er
 		return nil, fmt.Errorf("getting ATOs: %w", err)
 	}
 
-	crn := cron.New()
 	for _, ato := range atos {
 		// Fetch resources necessary for the ATO job
 		pump, err := ato.Pump().One(ctx, c.db)
@@ -106,12 +108,15 @@ func (c *ATO) setupCron(ctx context.Context, wg *sync.WaitGroup) (*cron.Cron, er
 			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
 		}
 
-		_, err = crn.AddJob(ato.FillFrequency, NewATOJob(ctx, wg, c.eventCh, ato, pump, c.firmatas, firmata, sensors, calibration))
-		if err != nil {
-			return nil, fmt.Errorf("adding cron job: %w", err)
-		}
+		var (
+			jobCtx, cancel = context.WithCancel(ctx)
+			job            = NewATOJob(c.eventCh, ato, pump, c.firmatas, firmata, sensors, calibration)
+		)
+		jobs[ato.ID] = cancel
+		wg.Add(1)
+		go job.Run(jobCtx, wg)
 		log.Printf("Scheduled ATO job %s", ato.ID)
 	}
 
-	return crn, nil
+	return jobs, nil
 }

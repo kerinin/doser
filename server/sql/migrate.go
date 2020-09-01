@@ -97,6 +97,30 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					`ALTER TABLE water_level_sensors ADD COLUMN detection_threshold INT`,
 				},
 			},
+			&migrate.Migration{
+				Id: "002 interval-not-cron",
+				Up: []string{
+					`DROP TABLE auto_top_offs`,
+					`DROP TABLE auto_top_offs_water_level_sensors`,
+					`CREATE TABLE auto_top_offs(
+						id UUID NOT NULL,
+						pump_id UUID NOT NULL,
+						fill_rate REAL NOT NULL,
+						fill_interval INT NOT NULL,
+						max_fill_volume REAL NOT NULL,
+
+						PRIMARY KEY (id)
+						FOREIGN KEY(pump_id) REFERENCES pumps(id)
+					)`,
+					`CREATE TABLE auto_top_offs_water_level_sensors(
+						auto_top_off_id UUID NOT NULL,
+						water_level_sensor_id UUID NOT NULL,
+						PRIMARY KEY (auto_top_off_id, water_level_sensor_id)
+						FOREIGN KEY(auto_top_off_id) REFERENCES auto_top_offs(id)
+						FOREIGN KEY(water_level_sensor_id) REFERENCES water_level_sensors(id)
+					)`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

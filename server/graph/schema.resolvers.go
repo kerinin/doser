@@ -14,7 +14,6 @@ import (
 	"github.com/kerinin/doser/service/graph/generated"
 	"github.com/kerinin/doser/service/graph/model"
 	"github.com/kerinin/doser/service/models"
-	cron "github.com/robfig/cron/v3"
 	null "github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"gobot.io/x/gobot/platforms/raspi"
@@ -255,12 +254,7 @@ func (r *mutationResolver) DeleteWaterLevelSensor(ctx context.Context, id string
 	return rows > 0, nil
 }
 
-func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error) {
-	_, err := cron.ParseStandard(fillFrequency)
-	if err != nil {
-		return nil, fmt.Errorf("parsing fill frequency as cron: %w", err)
-	}
-
+func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -272,28 +266,21 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 		err = tx.Commit()
 	}()
 
-	pump, err := models.FindPump(ctx, tx, pumpID)
-	if err != nil {
-		return nil, fmt.Errorf("finding ATO pump: %w", err)
-	}
-
-	_, err = pump.Calibrations().One(ctx, tx)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("refusing to create ATO with uncalibrated pump")
-	} else if err != nil {
-		return nil, fmt.Errorf("getting pump calibration: %w", err)
-	}
-
 	m := &models.AutoTopOff{
 		ID:            uuid.New().String(),
 		PumpID:        pumpID,
 		FillRate:      fillRate,
-		FillFrequency: fillFrequency,
+		FillInterval:  int64(fillInterval),
 		MaxFillVolume: maxFillVolume,
 	}
 	waterLevelSensors := make([]*models.WaterLevelSensor, 0, len(levelSensors))
 	for _, sensor := range levelSensors {
 		waterLevelSensors = append(waterLevelSensors, &models.WaterLevelSensor{ID: sensor})
+	}
+
+	err = validateAutoTopOff(ctx, tx, m, waterLevelSensors)
+	if err != nil {
+		return nil, fmt.Errorf("validating auto top off: %w", err)
 	}
 
 	err = m.Insert(ctx, tx, boil.Infer())
@@ -312,12 +299,7 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 	return m, nil
 }
 
-func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error) {
-	_, err := cron.ParseStandard(fillFrequency)
-	if err != nil {
-		return nil, fmt.Errorf("parsing fill frequency as cron: %w", err)
-	}
-
+func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -329,28 +311,21 @@ func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pump
 		err = tx.Commit()
 	}()
 
-	pump, err := models.FindPump(ctx, tx, pumpID)
-	if err != nil {
-		return nil, fmt.Errorf("finding ATO pump: %w", err)
-	}
-
-	_, err = pump.Calibrations().One(ctx, tx)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("refusing to create ATO with uncalibrated pump")
-	} else if err != nil {
-		return nil, fmt.Errorf("getting pump calibration: %w", err)
-	}
-
 	m := &models.AutoTopOff{
 		ID:            id,
 		PumpID:        pumpID,
 		FillRate:      fillRate,
-		FillFrequency: fillFrequency,
+		FillInterval:  int64(fillInterval),
 		MaxFillVolume: maxFillVolume,
 	}
 	waterLevelSensors := make([]*models.WaterLevelSensor, 0, len(levelSensors))
 	for _, sensor := range levelSensors {
 		waterLevelSensors = append(waterLevelSensors, &models.WaterLevelSensor{ID: sensor})
+	}
+
+	err = validateAutoTopOff(ctx, tx, m, waterLevelSensors)
+	if err != nil {
+		return nil, fmt.Errorf("validating auto top off: %w", err)
 	}
 
 	_, err = m.Update(ctx, tx, boil.Infer())
@@ -666,3 +641,13 @@ type mutationResolver struct{ *Resolver }
 type pumpResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type waterLevelSensorResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//    it when you're done.
+//  - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *autoTopOffResolver) FillInterval(ctx context.Context, obj *models.AutoTopOff) (int, error) {
+	panic(fmt.Errorf("not implemented"))
+}

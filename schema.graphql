@@ -84,9 +84,8 @@ type AutoTopOff {
   level_sensors: [WaterLevelSensor!]!
   # The rate in mL/min to pump during top off runs
   fill_rate: Float!
-  # How frequently top off runs should be scheduled.
-  # Uses standard cron tab formatting.
-  fill_frequency: String
+  # The interval in minutes between scheduled top off runs.
+  fill_interval: Int!
   # The maximum volume in mL to fill in a single run.
   # Causes an alert if this volume is exceeded
   max_fill_volume: Float
@@ -124,8 +123,8 @@ type Mutation {
   updateWaterLevelSensor(id: ID!, pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int): WaterLevelSensor!
   deleteWaterLevelSensor(id: ID!): Boolean!
 
-  createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_frequency: String!, max_fill_volume: Float!): AutoTopOff!
-  updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_frequency: String!, max_fill_volume: Float!): AutoTopOff!
+  createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
+  updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
   deleteAutoTopOff(id: ID!): Boolean!
 
   createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!): AutoWaterChange!

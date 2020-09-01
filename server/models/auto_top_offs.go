@@ -25,7 +25,7 @@ type AutoTopOff struct {
 	ID            string  `boil:"id" json:"id" toml:"id" yaml:"id"`
 	PumpID        string  `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
 	FillRate      float64 `boil:"fill_rate" json:"fill_rate" toml:"fill_rate" yaml:"fill_rate"`
-	FillFrequency string  `boil:"fill_frequency" json:"fill_frequency" toml:"fill_frequency" yaml:"fill_frequency"`
+	FillInterval  int64   `boil:"fill_interval" json:"fill_interval" toml:"fill_interval" yaml:"fill_interval"`
 	MaxFillVolume float64 `boil:"max_fill_volume" json:"max_fill_volume" toml:"max_fill_volume" yaml:"max_fill_volume"`
 
 	R *autoTopOffR `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -36,13 +36,13 @@ var AutoTopOffColumns = struct {
 	ID            string
 	PumpID        string
 	FillRate      string
-	FillFrequency string
+	FillInterval  string
 	MaxFillVolume string
 }{
 	ID:            "id",
 	PumpID:        "pump_id",
 	FillRate:      "fill_rate",
-	FillFrequency: "fill_frequency",
+	FillInterval:  "fill_interval",
 	MaxFillVolume: "max_fill_volume",
 }
 
@@ -100,17 +100,40 @@ func (w whereHelperfloat64) NIN(slice []float64) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
+type whereHelperint64 struct{ field string }
+
+func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint64) IN(slice []int64) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
 var AutoTopOffWhere = struct {
 	ID            whereHelperstring
 	PumpID        whereHelperstring
 	FillRate      whereHelperfloat64
-	FillFrequency whereHelperstring
+	FillInterval  whereHelperint64
 	MaxFillVolume whereHelperfloat64
 }{
 	ID:            whereHelperstring{field: "\"auto_top_offs\".\"id\""},
 	PumpID:        whereHelperstring{field: "\"auto_top_offs\".\"pump_id\""},
 	FillRate:      whereHelperfloat64{field: "\"auto_top_offs\".\"fill_rate\""},
-	FillFrequency: whereHelperstring{field: "\"auto_top_offs\".\"fill_frequency\""},
+	FillInterval:  whereHelperint64{field: "\"auto_top_offs\".\"fill_interval\""},
 	MaxFillVolume: whereHelperfloat64{field: "\"auto_top_offs\".\"max_fill_volume\""},
 }
 
@@ -138,8 +161,8 @@ func (*autoTopOffR) NewStruct() *autoTopOffR {
 type autoTopOffL struct{}
 
 var (
-	autoTopOffAllColumns            = []string{"id", "pump_id", "fill_rate", "fill_frequency", "max_fill_volume"}
-	autoTopOffColumnsWithoutDefault = []string{"id", "pump_id", "fill_rate", "fill_frequency", "max_fill_volume"}
+	autoTopOffAllColumns            = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume"}
+	autoTopOffColumnsWithoutDefault = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume"}
 	autoTopOffColumnsWithDefault    = []string{}
 	autoTopOffPrimaryKeyColumns     = []string{"id"}
 )

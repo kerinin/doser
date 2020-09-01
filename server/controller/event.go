@@ -18,7 +18,7 @@ type ATOJobComplete struct {
 }
 
 func (e *ATOJobComplete) Message() string {
-	return fmt.Sprintf("ATO job %s completed in %ds", e.AutoTopOff.ID, e.Duration.Seconds())
+	return fmt.Sprintf("ATO job %s completed in %fs", e.AutoTopOff.ID, e.Duration.Seconds())
 }
 
 type AWCStatus struct {
