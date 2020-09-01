@@ -84,6 +84,8 @@ func (j *ATOJob) Run() {
 		maxSteps = j.ato.MaxFillVolume * float64(j.calibration.Steps) / j.calibration.Volume
 		speed    = j.ato.FillRate * float64(j.calibration.Steps) / j.calibration.Volume
 	)
+	log.Printf("ATO job params - deviceID:%d maxSteps:%f speed%f", j.pump.DeviceID, maxSteps, speed)
+
 	err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(speed))
 	if err != nil {
 		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("setting pump speed (aborting job run): %w", err)}

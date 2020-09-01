@@ -278,6 +278,63 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 	return m, nil
 }
 
+func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error) {
+	_, err := cron.ParseStandard(fillFrequency)
+	if err != nil {
+		return nil, fmt.Errorf("parsing fill frequency as cron: %w", err)
+	}
+
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+		err = tx.Commit()
+	}()
+
+	pump, err := models.FindPump(ctx, tx, pumpID)
+	if err != nil {
+		return nil, fmt.Errorf("finding ATO pump: %w", err)
+	}
+
+	_, err = pump.Calibrations().One(ctx, tx)
+	if err == sql.ErrNoRows {
+		return nil, fmt.Errorf("refusing to create ATO with uncalibrated pump")
+	} else if err != nil {
+		return nil, fmt.Errorf("getting pump calibration: %w", err)
+	}
+
+	m := &models.AutoTopOff{
+		ID:            id,
+		PumpID:        pumpID,
+		FillRate:      fillRate,
+		FillFrequency: fillFrequency,
+		MaxFillVolume: maxFillVolume,
+	}
+	waterLevelSensors := make([]*models.WaterLevelSensor, 0, len(levelSensors))
+	for _, sensor := range levelSensors {
+		waterLevelSensors = append(waterLevelSensors, &models.WaterLevelSensor{ID: sensor})
+	}
+
+	_, err = m.Update(ctx, tx, boil.Infer())
+	if err != nil {
+		return nil, fmt.Errorf("inserting auto top off: %w", err)
+	}
+
+	err = m.SetWaterLevelSensors(ctx, tx, false, waterLevelSensors...)
+	if err != nil {
+		return nil, fmt.Errorf("associating water level sensor: %w")
+	}
+
+	r.atoController.Reset()
+	r.firmatasController.Reset()
+
+	return m, nil
+}
+
 func (r *mutationResolver) DeleteAutoTopOff(ctx context.Context, id string) (bool, error) {
 	f := &models.AutoTopOff{ID: id}
 	rows, err := f.Delete(ctx, r.db)

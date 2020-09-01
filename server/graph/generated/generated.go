@@ -99,6 +99,7 @@ type ComplexityRoot struct {
 		DeletePump             func(childComplexity int, id string) int
 		DeleteWaterLevelSensor func(childComplexity int, id string) int
 		Pump                   func(childComplexity int, pumpID string, steps int, speed float64) int
+		UpdateAutoTopOff       func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) int
 		UpdateWaterLevelSensor func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
 	}
 
@@ -162,6 +163,7 @@ type MutationResolver interface {
 	UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error)
 	DeleteWaterLevelSensor(ctx context.Context, id string) (bool, error)
 	CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error)
+	UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillFrequency string, maxFillVolume float64) (*models.AutoTopOff, error)
 	DeleteAutoTopOff(ctx context.Context, id string) (bool, error)
 	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64) (*models.AutoWaterChange, error)
 	DeleteAutoWaterChange(ctx context.Context, id string) (bool, error)
@@ -499,6 +501,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Pump(childComplexity, args["pump_id"].(string), args["steps"].(int), args["speed"].(float64)), true
+
+	case "Mutation.updateAutoTopOff":
+		if e.complexity.Mutation.UpdateAutoTopOff == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateAutoTopOff_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateAutoTopOff(childComplexity, args["id"].(string), args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_frequency"].(string), args["max_fill_volume"].(float64)), true
 
 	case "Mutation.updateWaterLevelSensor":
 		if e.complexity.Mutation.UpdateWaterLevelSensor == nil {
@@ -842,6 +856,7 @@ type Mutation {
   deleteWaterLevelSensor(id: ID!): Boolean!
 
   createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_frequency: String!, max_fill_volume: Float!): AutoTopOff!
+  updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_frequency: String!, max_fill_volume: Float!): AutoTopOff!
   deleteAutoTopOff(id: ID!): Boolean!
 
   createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!): AutoWaterChange!
@@ -1238,6 +1253,66 @@ func (ec *executionContext) field_Mutation_pump_args(ctx context.Context, rawArg
 		}
 	}
 	args["speed"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateAutoTopOff_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["pump_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("pump_id"))
+		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["pump_id"] = arg1
+	var arg2 []string
+	if tmp, ok := rawArgs["level_sensors"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("level_sensors"))
+		arg2, err = ec.unmarshalNID2ᚕstringᚄ(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["level_sensors"] = arg2
+	var arg3 float64
+	if tmp, ok := rawArgs["fill_rate"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fill_rate"))
+		arg3, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["fill_rate"] = arg3
+	var arg4 string
+	if tmp, ok := rawArgs["fill_frequency"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fill_frequency"))
+		arg4, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["fill_frequency"] = arg4
+	var arg5 float64
+	if tmp, ok := rawArgs["max_fill_volume"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("max_fill_volume"))
+		arg5, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["max_fill_volume"] = arg5
 	return args, nil
 }
 
@@ -2298,6 +2373,47 @@ func (ec *executionContext) _Mutation_createAutoTopOff(ctx context.Context, fiel
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().CreateAutoTopOff(rctx, args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_frequency"].(string), args["max_fill_volume"].(float64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.AutoTopOff)
+	fc.Result = res
+	return ec.marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_updateAutoTopOff(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateAutoTopOff_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateAutoTopOff(rctx, args["id"].(string), args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_frequency"].(string), args["max_fill_volume"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4698,6 +4814,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "createAutoTopOff":
 			out.Values[i] = ec._Mutation_createAutoTopOff(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateAutoTopOff":
+			out.Values[i] = ec._Mutation_updateAutoTopOff(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

@@ -21,13 +21,16 @@ import (
 )
 
 var (
-	data = flag.String("data", "./data.db", "Path for storing data")
-	port = flag.String("port", "8080", "Service HTTP port")
+	data    = flag.String("data", "./data.db", "Path for storing data")
+	port    = flag.String("port", "8080", "Service HTTP port")
+	verbose = flag.Bool("verbose", false, "Verbose logging")
 )
 
 func main() {
 	log.Printf("Starting...")
-	logrus.SetLevel(logrus.DebugLevel)
+	if *verbose {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
 
 	flag.Parse()
 
