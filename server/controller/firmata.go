@@ -55,6 +55,8 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		return nil, fmt.Errorf("opening serial port: %w", err)
 	}
 
+	log.Printf("Connecting to firmata at port %s", firmata.SerialPort)
+
 	f := gomata.New()
 	f.Connect(port)
 	for _, sensor := range sensors {

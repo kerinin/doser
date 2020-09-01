@@ -75,7 +75,7 @@ func (j *ATOJob) Run() {
 			return
 		}
 		if detected {
-			j.eventCh <- &ATOJobComplete{j.ato, 0}
+			j.eventCh <- &ATOJobComplete{j.ato, 0, 0}
 			return
 		}
 	}
@@ -128,6 +128,8 @@ func (j *ATOJob) Run() {
 				}
 
 				// water detected, stop stepper
+				reportCh := j.firmata.AwaitStepperReport(int32(j.pump.DeviceID))
+
 				err = j.firmata.StepperStop(int(j.pump.DeviceID))
 				if err != nil {
 					j.eventCh <- &UncontrolledPumpError{j.pump.ID, fmt.Errorf("stopping pump after sensor detected water: %w", err)}
@@ -140,9 +142,14 @@ func (j *ATOJob) Run() {
 					return
 				}
 
-				duration := time.Now().Sub(startTime)
-				j.eventCh <- &ATOJobComplete{j.ato, duration}
-				return
+				select {
+				case report := <-reportCh:
+					duration := time.Now().Sub(startTime)
+					j.eventCh <- &ATOJobComplete{j.ato, duration, report.Position}
+					return
+				case <-j.ctx.Done():
+					return
+				}
 			}
 
 		case <-complete:

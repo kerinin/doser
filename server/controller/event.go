@@ -14,10 +14,11 @@ type Event interface {
 type ATOJobComplete struct {
 	AutoTopOff *models.AutoTopOff
 	Duration   time.Duration
+	Position   int32
 }
 
 func (e *ATOJobComplete) Message() string {
-	return fmt.Sprintf("ATO job %s completed in %ds", e.AutoTopOff.ID, e.Duration)
+	return fmt.Sprintf("ATO job %s completed in %ds", e.AutoTopOff.ID, e.Duration.Seconds())
 }
 
 type AWCStatus struct {
