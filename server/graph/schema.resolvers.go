@@ -133,6 +133,8 @@ func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, dev
 	}
 
 	r.firmatasController.Reset()
+	r.atoController.Reset()
+	r.awcController.Reset()
 
 	return m, nil
 }
@@ -157,6 +159,8 @@ func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID 
 	}
 
 	r.firmatasController.Reset()
+	r.atoController.Reset()
+	r.awcController.Reset()
 
 	return m, nil
 }
@@ -169,6 +173,8 @@ func (r *mutationResolver) DeletePump(ctx context.Context, id string) (bool, err
 	}
 
 	r.firmatasController.Reset()
+	r.atoController.Reset()
+	r.awcController.Reset()
 
 	return rows > 0, nil
 }
@@ -230,6 +236,8 @@ func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string
 	}
 
 	r.firmatasController.Reset()
+	r.atoController.Reset()
+	r.awcController.Reset()
 
 	return m, nil
 }
