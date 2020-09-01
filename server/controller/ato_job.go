@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math"
 	"sync"
 	"time"
 
@@ -54,10 +53,10 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	// Configure the stepper
 	var (
-		maxSteps = j.ato.MaxFillVolume * float64(j.calibration.Steps) / j.calibration.Volume
-		speed    = j.ato.FillRate * float64(time.Second) * float64(j.calibration.Steps) / j.calibration.Volume / float64(time.Minute)
+		maxSteps = int32(j.ato.MaxFillVolume * float64(j.calibration.Steps) / j.calibration.Volume)
+		speed    = (int32(j.ato.FillRate*float64(time.Second)*float64(j.calibration.Steps)/j.calibration.Volume/float64(time.Minute)) / 100) * 100
 	)
-	log.Printf("ATO job params - deviceID:%d maxSteps:%f speed:%f", j.pump.DeviceID, maxSteps, speed)
+	log.Printf("ATO job params - deviceID:%d maxSteps:%d speed:%d", j.pump.DeviceID, maxSteps, speed)
 
 	// Connect to the RPi
 	rpi := raspi.NewAdaptor()
@@ -88,7 +87,7 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 				}
 			}
 
-			err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(math.Floor(speed)))
+			err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(speed))
 			if err != nil {
 				j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("setting pump speed (aborting job run): %w", err)}
 				return
