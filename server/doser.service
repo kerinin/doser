@@ -1,0 +1,10 @@
+ [Unit]
+ Description=Doser
+ After=multi-user.target
+
+ [Service]
+ Type=idle
+ ExecStart=/home/kerinin/go/bin/doser > /home/kerinin/doser.log 2>&1
+
+ [Install]
+ WantedBy=multi-user.target
