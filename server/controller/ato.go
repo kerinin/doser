@@ -15,7 +15,6 @@ type ATO struct {
 	db       *sql.DB
 	firmatas *Firmatas
 	reset    chan struct{}
-	jobs     map[string]context.CancelFunc
 }
 
 func NewATO(eventCh chan<- Event, db *sql.DB, firmatas *Firmatas) *ATO {
@@ -42,8 +41,11 @@ func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-c.reset:
-			for _, cancel := range jobs {
-				cancel()
+			for _, job := range jobs {
+				job.cancelFunc()
+			}
+			for _, job := range jobs {
+				job.wg.Wait()
 			}
 
 			// NOTE: It's possible the new job is trying to talk to arduino at
@@ -54,23 +56,29 @@ func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 			}
 
 		case <-ctx.Done():
-			for _, cancel := range jobs {
-				cancel()
+			for _, job := range jobs {
+				job.cancelFunc()
+			}
+			for _, job := range jobs {
+				job.wg.Wait()
 			}
 			return
 		}
 	}
 }
 
-func (c *ATO) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[string]context.CancelFunc, err error) {
-	jobs = make(map[string]context.CancelFunc)
+func (c *ATO) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[string]*Job, err error) {
+	jobs = make(map[string]*Job)
 
 	// If setup fails partway through, make sure we tear down any jobs that
 	// were created before the failure
 	defer func() {
 		if err != nil {
-			for _, cancel := range jobs {
-				cancel()
+			for _, job := range jobs {
+				job.cancelFunc()
+			}
+			for _, job := range jobs {
+				job.wg.Wait()
 			}
 		}
 	}()
@@ -110,11 +118,12 @@ func (c *ATO) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 
 		var (
 			jobCtx, cancel = context.WithCancel(ctx)
+			jobWg          = &sync.WaitGroup{}
 			job            = NewATOJob(c.eventCh, ato, pump, c.firmatas, firmata, sensors, calibration)
 		)
-		jobs[ato.ID] = cancel
-		wg.Add(1)
-		go job.Run(jobCtx, wg)
+		jobs[ato.ID] = &Job{cancelFunc: cancel, wg: jobWg}
+		jobWg.Add(1)
+		go job.Run(jobCtx, jobWg)
 		log.Printf("Scheduled ATO job %s", ato.ID)
 	}
 

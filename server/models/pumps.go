@@ -23,31 +23,34 @@ import (
 
 // Pump is an object representing the database table.
 type Pump struct {
-	ID        string     `boil:"id" json:"id" toml:"id" yaml:"id"`
-	FirmataID string     `boil:"firmata_id" json:"firmata_id" toml:"firmata_id" yaml:"firmata_id"`
-	DeviceID  int64      `boil:"device_id" json:"device_id" toml:"device_id" yaml:"device_id"`
-	StepPin   int64      `boil:"step_pin" json:"step_pin" toml:"step_pin" yaml:"step_pin"`
-	DirPin    null.Int64 `boil:"dir_pin" json:"dir_pin,omitempty" toml:"dir_pin" yaml:"dir_pin,omitempty"`
-	EnPin     null.Int64 `boil:"en_pin" json:"en_pin,omitempty" toml:"en_pin" yaml:"en_pin,omitempty"`
+	ID           string       `boil:"id" json:"id" toml:"id" yaml:"id"`
+	FirmataID    string       `boil:"firmata_id" json:"firmata_id" toml:"firmata_id" yaml:"firmata_id"`
+	DeviceID     int64        `boil:"device_id" json:"device_id" toml:"device_id" yaml:"device_id"`
+	StepPin      int64        `boil:"step_pin" json:"step_pin" toml:"step_pin" yaml:"step_pin"`
+	DirPin       null.Int64   `boil:"dir_pin" json:"dir_pin,omitempty" toml:"dir_pin" yaml:"dir_pin,omitempty"`
+	EnPin        null.Int64   `boil:"en_pin" json:"en_pin,omitempty" toml:"en_pin" yaml:"en_pin,omitempty"`
+	Acceleration null.Float64 `boil:"acceleration" json:"acceleration,omitempty" toml:"acceleration" yaml:"acceleration,omitempty"`
 
 	R *pumpR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L pumpL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var PumpColumns = struct {
-	ID        string
-	FirmataID string
-	DeviceID  string
-	StepPin   string
-	DirPin    string
-	EnPin     string
+	ID           string
+	FirmataID    string
+	DeviceID     string
+	StepPin      string
+	DirPin       string
+	EnPin        string
+	Acceleration string
 }{
-	ID:        "id",
-	FirmataID: "firmata_id",
-	DeviceID:  "device_id",
-	StepPin:   "step_pin",
-	DirPin:    "dir_pin",
-	EnPin:     "en_pin",
+	ID:           "id",
+	FirmataID:    "firmata_id",
+	DeviceID:     "device_id",
+	StepPin:      "step_pin",
+	DirPin:       "dir_pin",
+	EnPin:        "en_pin",
+	Acceleration: "acceleration",
 }
 
 // Generated where
@@ -75,20 +78,45 @@ func (w whereHelpernull_Int64) GTE(x null.Int64) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
+type whereHelpernull_Float64 struct{ field string }
+
+func (w whereHelpernull_Float64) EQ(x null.Float64) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Float64) NEQ(x null.Float64) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Float64) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Float64) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelpernull_Float64) LT(x null.Float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Float64) LTE(x null.Float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Float64) GT(x null.Float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Float64) GTE(x null.Float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
 var PumpWhere = struct {
-	ID        whereHelperstring
-	FirmataID whereHelperstring
-	DeviceID  whereHelperint64
-	StepPin   whereHelperint64
-	DirPin    whereHelpernull_Int64
-	EnPin     whereHelpernull_Int64
+	ID           whereHelperstring
+	FirmataID    whereHelperstring
+	DeviceID     whereHelperint64
+	StepPin      whereHelperint64
+	DirPin       whereHelpernull_Int64
+	EnPin        whereHelpernull_Int64
+	Acceleration whereHelpernull_Float64
 }{
-	ID:        whereHelperstring{field: "\"pumps\".\"id\""},
-	FirmataID: whereHelperstring{field: "\"pumps\".\"firmata_id\""},
-	DeviceID:  whereHelperint64{field: "\"pumps\".\"device_id\""},
-	StepPin:   whereHelperint64{field: "\"pumps\".\"step_pin\""},
-	DirPin:    whereHelpernull_Int64{field: "\"pumps\".\"dir_pin\""},
-	EnPin:     whereHelpernull_Int64{field: "\"pumps\".\"en_pin\""},
+	ID:           whereHelperstring{field: "\"pumps\".\"id\""},
+	FirmataID:    whereHelperstring{field: "\"pumps\".\"firmata_id\""},
+	DeviceID:     whereHelperint64{field: "\"pumps\".\"device_id\""},
+	StepPin:      whereHelperint64{field: "\"pumps\".\"step_pin\""},
+	DirPin:       whereHelpernull_Int64{field: "\"pumps\".\"dir_pin\""},
+	EnPin:        whereHelpernull_Int64{field: "\"pumps\".\"en_pin\""},
+	Acceleration: whereHelpernull_Float64{field: "\"pumps\".\"acceleration\""},
 }
 
 // PumpRels is where relationship names are stored.
@@ -127,8 +155,8 @@ func (*pumpR) NewStruct() *pumpR {
 type pumpL struct{}
 
 var (
-	pumpAllColumns            = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin"}
-	pumpColumnsWithoutDefault = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin"}
+	pumpAllColumns            = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin", "acceleration"}
+	pumpColumnsWithoutDefault = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin", "acceleration"}
 	pumpColumnsWithDefault    = []string{}
 	pumpPrimaryKeyColumns     = []string{"id"}
 )

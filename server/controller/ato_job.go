@@ -61,6 +61,9 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	ticker := time.NewTicker(time.Duration(j.ato.FillInterval) * time.Minute)
 	defer ticker.Stop()
 
+	// Run first job immediately
+	j.runJob(ctx, maxSteps, speed)
+
 	for {
 		select {
 		case <-ticker.C:
@@ -97,6 +100,14 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 	if err != nil {
 		j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("zeroing stepper (aborting job run): %w", err)}
 		return
+	}
+
+	if j.pump.Acceleration.Valid {
+		err = j.firmata.StepperSetAcceleration(int(j.pump.DeviceID), float32(j.pump.Acceleration.Float64))
+		if err != nil {
+			j.eventCh <- &ATOJobError{j.ato, fmt.Errorf("setting pump speed (aborting job run): %w", err)}
+			return
+		}
 	}
 
 	err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(speed))

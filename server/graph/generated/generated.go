@@ -90,7 +90,7 @@ type ComplexityRoot struct {
 		CreateAutoWaterChange  func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64) int
 		CreateDoser            func(childComplexity int, input model.DoserInput) int
 		CreateFirmata          func(childComplexity int, serialPort string, baud int) int
-		CreatePump             func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) int
+		CreatePump             func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
 		CreateWaterLevelSensor func(childComplexity int, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
 		DeleteAutoTopOff       func(childComplexity int, id string) int
 		DeleteAutoWaterChange  func(childComplexity int, id string) int
@@ -100,17 +100,18 @@ type ComplexityRoot struct {
 		DeleteWaterLevelSensor func(childComplexity int, id string) int
 		Pump                   func(childComplexity int, pumpID string, steps int, speed float64) int
 		UpdateAutoTopOff       func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) int
-		UpdatePump             func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) int
+		UpdatePump             func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
 		UpdateWaterLevelSensor func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
 	}
 
 	Pump struct {
-		Calibration func(childComplexity int) int
-		DeviceID    func(childComplexity int) int
-		EnPin       func(childComplexity int) int
-		Firmata     func(childComplexity int) int
-		ID          func(childComplexity int) int
-		StepPin     func(childComplexity int) int
+		Acceleration func(childComplexity int) int
+		Calibration  func(childComplexity int) int
+		DeviceID     func(childComplexity int) int
+		EnPin        func(childComplexity int) int
+		Firmata      func(childComplexity int) int
+		ID           func(childComplexity int) int
+		StepPin      func(childComplexity int) int
 	}
 
 	Query struct {
@@ -157,8 +158,8 @@ type FirmataResolver interface {
 type MutationResolver interface {
 	CreateFirmata(ctx context.Context, serialPort string, baud int) (*models.Firmata, error)
 	DeleteFirmata(ctx context.Context, id string) (bool, error)
-	CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
-	UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) (*models.Pump, error)
+	CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error)
+	UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error)
 	DeletePump(ctx context.Context, id string) (bool, error)
 	CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error)
 	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error)
@@ -178,6 +179,7 @@ type PumpResolver interface {
 
 	EnPin(ctx context.Context, obj *models.Pump) (*int, error)
 	Calibration(ctx context.Context, obj *models.Pump) (*models.Calibration, error)
+	Acceleration(ctx context.Context, obj *models.Pump) (*float64, error)
 }
 type QueryResolver interface {
 	Firmatas(ctx context.Context) ([]*models.Firmata, error)
@@ -406,7 +408,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreatePump(childComplexity, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int)), true
+		return e.complexity.Mutation.CreatePump(childComplexity, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64)), true
 
 	case "Mutation.createWaterLevelSensor":
 		if e.complexity.Mutation.CreateWaterLevelSensor == nil {
@@ -526,7 +528,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdatePump(childComplexity, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int)), true
+		return e.complexity.Mutation.UpdatePump(childComplexity, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64)), true
 
 	case "Mutation.updateWaterLevelSensor":
 		if e.complexity.Mutation.UpdateWaterLevelSensor == nil {
@@ -539,6 +541,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.UpdateWaterLevelSensor(childComplexity, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int)), true
+
+	case "Pump.acceleration":
+		if e.complexity.Pump.Acceleration == nil {
+			break
+		}
+
+		return e.complexity.Pump.Acceleration(childComplexity), true
 
 	case "Pump.calibration":
 		if e.complexity.Pump.Calibration == nil {
@@ -783,6 +792,8 @@ type Pump {
   en_pin: Int
   # The pump's volume calibration
   calibration: TwoPointCalibration
+  # Acceleration to use when changing pump speed, in steps/s/s
+  acceleration: Float
 }
 
 type TwoPointCalibration {
@@ -859,8 +870,8 @@ type Mutation {
   createFirmata(serial_port: String!, baud: Int!): Firmata!
   deleteFirmata(id: ID!): Boolean!
 
-  createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
-  updatePump(id: ID!, firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float): Pump!
+  updatePump(id: ID!, firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float): Pump!
   deletePump(id: ID!): Boolean!
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
@@ -1102,6 +1113,15 @@ func (ec *executionContext) field_Mutation_createPump_args(ctx context.Context, 
 		}
 	}
 	args["en_pin"] = arg4
+	var arg5 *float64
+	if tmp, ok := rawArgs["acceleration"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("acceleration"))
+		arg5, err = ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["acceleration"] = arg5
 	return args, nil
 }
 
@@ -1387,6 +1407,15 @@ func (ec *executionContext) field_Mutation_updatePump_args(ctx context.Context, 
 		}
 	}
 	args["en_pin"] = arg5
+	var arg6 *float64
+	if tmp, ok := rawArgs["acceleration"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("acceleration"))
+		arg6, err = ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["acceleration"] = arg6
 	return args, nil
 }
 
@@ -2203,7 +2232,7 @@ func (ec *executionContext) _Mutation_createPump(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreatePump(rctx, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
+		return ec.resolvers.Mutation().CreatePump(rctx, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2244,7 +2273,7 @@ func (ec *executionContext) _Mutation_updatePump(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdatePump(rctx, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int))
+		return ec.resolvers.Mutation().UpdatePump(rctx, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2990,6 +3019,37 @@ func (ec *executionContext) _Pump_calibration(ctx context.Context, field graphql
 	res := resTmp.(*models.Calibration)
 	fc.Result = res
 	return ec.marshalOTwoPointCalibration2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐCalibration(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Pump_acceleration(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Pump",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Pump().Acceleration(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*float64)
+	fc.Result = res
+	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_firmatas(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -5051,6 +5111,17 @@ func (ec *executionContext) _Pump(ctx context.Context, sel ast.SelectionSet, obj
 				res = ec._Pump_calibration(ctx, field, obj)
 				return res
 			})
+		case "acceleration":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Pump_acceleration(ctx, field, obj)
+				return res
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6283,6 +6354,21 @@ func (ec *executionContext) unmarshalOFloat2float64(ctx context.Context, v inter
 
 func (ec *executionContext) marshalOFloat2float64(ctx context.Context, sel ast.SelectionSet, v float64) graphql.Marshaler {
 	return graphql.MarshalFloat(v)
+}
+
+func (ec *executionContext) unmarshalOFloat2ᚖfloat64(ctx context.Context, v interface{}) (*float64, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalFloat(v)
+	return &res, graphql.WrapErrorWithInputPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOFloat2ᚖfloat64(ctx context.Context, sel ast.SelectionSet, v *float64) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return graphql.MarshalFloat(*v)
 }
 
 func (ec *executionContext) unmarshalOID2ᚖstring(ctx context.Context, v interface{}) (*string, error) {

@@ -37,6 +37,8 @@ type Pump {
   en_pin: Int
   # The pump's volume calibration
   calibration: TwoPointCalibration
+  # Acceleration to use when changing pump speed, in steps/s/s
+  acceleration: Float
 }
 
 type TwoPointCalibration {
@@ -113,8 +115,8 @@ type Mutation {
   createFirmata(serial_port: String!, baud: Int!): Firmata!
   deleteFirmata(id: ID!): Boolean!
 
-  createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
-  updatePump(id: ID!, firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int): Pump!
+  createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float): Pump!
+  updatePump(id: ID!, firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float): Pump!
   deletePump(id: ID!): Boolean!
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!

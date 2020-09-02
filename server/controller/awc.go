@@ -15,7 +15,6 @@ type AWC struct {
 	db       *sql.DB
 	firmatas *Firmatas
 	reset    chan struct{}
-	jobs     map[string]context.CancelFunc
 }
 
 func NewAWC(eventCh chan<- Event, db *sql.DB, firmatas *Firmatas) *AWC {
@@ -42,8 +41,11 @@ func (c *AWC) Run(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-c.reset:
-			for _, cancel := range jobs {
-				cancel()
+			for _, job := range jobs {
+				job.cancelFunc()
+			}
+			for _, job := range jobs {
+				job.wg.Wait()
 			}
 
 			// NOTE: It's possible the new job is trying to talk to arduino at
@@ -54,23 +56,26 @@ func (c *AWC) Run(ctx context.Context, wg *sync.WaitGroup) {
 			}
 
 		case <-ctx.Done():
-			for _, cancel := range jobs {
-				cancel()
+			for _, job := range jobs {
+				job.cancelFunc()
 			}
 			return
 		}
 	}
 }
 
-func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[string]context.CancelFunc, err error) {
-	jobs = make(map[string]context.CancelFunc)
+func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[string]*Job, err error) {
+	jobs = make(map[string]*Job)
 
 	// If setup fails partway through, make sure we tear down any jobs that
 	// were created before the failure
 	defer func() {
 		if err != nil {
-			for _, cancel := range jobs {
-				cancel()
+			for _, job := range jobs {
+				job.cancelFunc()
+			}
+			for _, job := range jobs {
+				job.wg.Wait()
 			}
 		}
 	}()
@@ -124,11 +129,12 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 
 		var (
 			jobCtx, cancel = context.WithCancel(ctx)
+			jobWg          = &sync.WaitGroup{}
 			job            = NewAWCJob(c.eventCh, awc, freshPump, wastePump, freshFirmata, wasteFirmata, freshCalibration, wasteCalibration)
 		)
-		jobs[awc.ID] = cancel
-		wg.Add(1)
-		go job.Run(jobCtx, wg)
+		jobs[awc.ID] = &Job{cancel, jobWg}
+		jobWg.Add(1)
+		go job.Run(jobCtx, jobWg)
 		log.Printf("Scheduled AWC job %s", awc.ID)
 	}
 

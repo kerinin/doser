@@ -121,6 +121,12 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					)`,
 				},
 			},
+			&migrate.Migration{
+				Id: "003 pump-acceleration",
+				Up: []string{
+					`ALTER TABLE pumps ADD COLUMN acceleration REAL`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

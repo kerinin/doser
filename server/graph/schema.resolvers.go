@@ -113,12 +113,13 @@ func (r *mutationResolver) DeleteFirmata(ctx context.Context, id string) (bool, 
 	return rows > 0, nil
 }
 
-func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) (*models.Pump, error) {
+func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error) {
 	m := &models.Pump{
-		ID:        uuid.New().String(),
-		FirmataID: firmataID,
-		DeviceID:  int64(deviceID),
-		StepPin:   int64(stepPin),
+		ID:           uuid.New().String(),
+		FirmataID:    firmataID,
+		DeviceID:     int64(deviceID),
+		StepPin:      int64(stepPin),
+		Acceleration: null.Float64FromPtr(acceleration),
 	}
 	if dirPin != nil {
 		m.DirPin = null.Int64From(int64(*dirPin))
@@ -139,12 +140,13 @@ func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, dev
 	return m, nil
 }
 
-func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int) (*models.Pump, error) {
+func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error) {
 	m := &models.Pump{
-		ID:        id,
-		FirmataID: firmataID,
-		DeviceID:  int64(deviceID),
-		StepPin:   int64(stepPin),
+		ID:           id,
+		FirmataID:    firmataID,
+		DeviceID:     int64(deviceID),
+		StepPin:      int64(stepPin),
+		Acceleration: null.Float64FromPtr(acceleration),
 	}
 	if dirPin != nil {
 		m.DirPin = null.Int64From(int64(*dirPin))
@@ -452,6 +454,13 @@ func (r *mutationResolver) Pump(ctx context.Context, pumpID string, steps int, s
 		return false, fmt.Errorf("configuring pump: %w", err)
 	}
 
+	if pump.Acceleration.Valid {
+		err = firmata.StepperSetAcceleration(int(pump.DeviceID), float32(pump.Acceleration.Float64))
+		if err != nil {
+			return false, fmt.Errorf("setting pump acceleration: %w", err)
+		}
+	}
+
 	err = firmata.StepperSetSpeed(int(pump.DeviceID), float32(math.Floor(speed)))
 	if err != nil {
 		return false, fmt.Errorf("setting stepper speed: %w", err)
@@ -502,6 +511,13 @@ func (r *pumpResolver) Calibration(ctx context.Context, obj *models.Pump) (*mode
 	}
 
 	return calibration, nil
+}
+
+func (r *pumpResolver) Acceleration(ctx context.Context, obj *models.Pump) (*float64, error) {
+	if obj.Acceleration.Valid {
+		return &obj.Acceleration.Float64, nil
+	}
+	return nil, nil
 }
 
 func (r *queryResolver) Firmatas(ctx context.Context) ([]*models.Firmata, error) {
@@ -641,13 +657,3 @@ type mutationResolver struct{ *Resolver }
 type pumpResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type waterLevelSensorResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//  - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//    it when you're done.
-//  - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *autoTopOffResolver) FillInterval(ctx context.Context, obj *models.AutoTopOff) (int, error) {
-	panic(fmt.Errorf("not implemented"))
-}
