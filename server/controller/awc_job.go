@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kerinin/doser/service/graph/model"
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
 )
@@ -15,7 +16,7 @@ import (
 const targetDurationSec = 60
 
 type AWCJob struct {
-	eventCh          chan<- Event
+	eventCh          chan<- model.AutoWaterChangeEvent
 	awc              *models.AutoWaterChange
 	freshPump        *models.Pump
 	wastePump        *models.Pump
@@ -26,7 +27,7 @@ type AWCJob struct {
 }
 
 func NewAWCJob(
-	eventCh chan<- Event,
+	eventCh chan<- model.AutoWaterChangeEvent,
 	awc *models.AutoWaterChange,
 	freshPump, wastePump *models.Pump,
 	freshFirmata, wasteFirmata *gomata.Firmata,
@@ -72,11 +73,11 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 		case <-ctx.Done():
 			err := j.freshFirmata.StepperStop(int(j.freshPump.DeviceID))
 			if err != nil {
-				j.eventCh <- &UncontrolledPumpError{j.freshPump.ID, fmt.Errorf("stopping fresh pump during shutdown of ATO job: %w", err)}
+				j.eventCh <- &model.UncontrolledPumpError{int(time.Now().Unix()), j.freshPump.ID, fmt.Errorf("stopping fresh pump during shutdown of ATO job: %w", err).Error()}
 			}
 			err = j.wasteFirmata.StepperStop(int(j.wastePump.DeviceID))
 			if err != nil {
-				j.eventCh <- &UncontrolledPumpError{j.wastePump.ID, fmt.Errorf("stopping waste pump during shutdown of ATO job: %w", err)}
+				j.eventCh <- &model.UncontrolledPumpError{int(time.Now().Unix()), j.wastePump.ID, fmt.Errorf("stopping waste pump during shutdown of ATO job: %w", err).Error()}
 			}
 
 			return
@@ -87,12 +88,12 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 func (j *AWCJob) runJob(ctx context.Context, initialTime time.Time, mlPerSecond float64, initialFreshPosition, initialWastePosition *gomata.StepperPosition) {
 	currentFreshPosition, err := j.getPosition(ctx, j.freshFirmata, j.freshPump)
 	if err != nil {
-		j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("getting fresh pump position (aborting job run): %w", err)}
+		j.eventCh <- &model.AWCJobError{int(time.Now().Unix()), fmt.Errorf("getting fresh pump position (aborting job run): %w", err).Error()}
 		return
 	}
 	currentWastePosition, err := j.getPosition(ctx, j.wasteFirmata, j.wastePump)
 	if err != nil {
-		j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("getting fresh pump position (aborting job run): %w", err)}
+		j.eventCh <- &model.AWCJobError{int(time.Now().Unix()), fmt.Errorf("getting fresh pump position (aborting job run): %w", err).Error()}
 		return
 	}
 
@@ -106,7 +107,7 @@ func (j *AWCJob) runJob(ctx context.Context, initialTime time.Time, mlPerSecond 
 			totalWasteSteps  = currentWastePosition.Position - initialWastePosition.Position
 			totalWasteVolume = float64(totalWasteSteps) * j.wasteCalibration.Volume / float64(j.wasteCalibration.Steps)
 		)
-		j.eventCh <- &AWCStatus{j.awc, time.Now().Sub(initialTime), totalFreshVolume, totalWasteVolume}
+		j.eventCh <- &model.AWCStatus{int(time.Now().Unix()), time.Now().Sub(initialTime).Seconds(), totalFreshVolume, totalWasteVolume}
 	}
 
 	// NOTE: This attempts to minimize accumulated inaccuracy due to
@@ -135,7 +136,7 @@ func (j *AWCJob) runJob(ctx context.Context, initialTime time.Time, mlPerSecond 
 	if j.freshPump.Acceleration.Valid {
 		err = j.freshFirmata.StepperSetAcceleration(int(j.freshPump.DeviceID), float32(j.freshPump.Acceleration.Float64))
 		if err != nil {
-			j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("setting fresh pump speed (aborting job run): %w", err)}
+			j.eventCh <- &model.AWCJobError{int(time.Now().Unix()), fmt.Errorf("setting fresh pump speed (aborting job run): %w", err).Error()}
 			return
 		}
 	}
@@ -143,30 +144,30 @@ func (j *AWCJob) runJob(ctx context.Context, initialTime time.Time, mlPerSecond 
 	if j.wastePump.Acceleration.Valid {
 		err = j.wasteFirmata.StepperSetAcceleration(int(j.wastePump.DeviceID), float32(j.wastePump.Acceleration.Float64))
 		if err != nil {
-			j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("setting waste pump speed (aborting job run): %w", err)}
+			j.eventCh <- &model.AWCJobError{int(time.Now().Unix()), fmt.Errorf("setting waste pump speed (aborting job run): %w", err).Error()}
 			return
 		}
 	}
 
 	err = j.freshFirmata.StepperSetSpeed(int(j.freshPump.DeviceID), float32(math.Floor(freshSpeed)))
 	if err != nil {
-		j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("setting fresh pump speed (aborting job run): %w", err)}
+		j.eventCh <- &model.AWCJobError{int(time.Now().Unix()), fmt.Errorf("setting fresh pump speed (aborting job run): %w", err).Error()}
 		return
 	}
 	err = j.wasteFirmata.StepperSetSpeed(int(j.wastePump.DeviceID), float32(math.Floor(wasteSpeed)))
 	if err != nil {
-		j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("setting waste pump speed (aborting job run): %w", err)}
+		j.eventCh <- &model.AWCJobError{int(time.Now().Unix()), fmt.Errorf("setting waste pump speed (aborting job run): %w", err).Error()}
 		return
 	}
 
 	err = j.freshFirmata.StepperTo(int(j.freshPump.DeviceID), int32(nextFreshSteps))
 	if err != nil {
-		j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("stepping fresh pump (aborting job run): %w", err)}
+		j.eventCh <- &model.AWCJobError{int(time.Now().Unix()), fmt.Errorf("stepping fresh pump (aborting job run): %w", err).Error()}
 		return
 	}
 	err = j.wasteFirmata.StepperTo(int(j.wastePump.DeviceID), int32(nextWasteSteps))
 	if err != nil {
-		j.eventCh <- &AWCJobError{j.awc, fmt.Errorf("stepping waste pump (aborting job run): %w", err)}
+		j.eventCh <- &model.AWCJobError{int(time.Now().Unix()), fmt.Errorf("stepping waste pump (aborting job run): %w", err).Error()}
 		return
 	}
 }

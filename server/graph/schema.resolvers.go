@@ -6,6 +6,7 @@ package graph
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"math"
 
@@ -37,6 +38,51 @@ func (r *autoTopOffResolver) LevelSensors(ctx context.Context, obj *models.AutoT
 	return ms, nil
 }
 
+func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff) ([]model.AutoTopOffEvent, error) {
+	atoEvents, err := obj.AtoEvents().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting ATO events: %w", err)
+	}
+
+	events := make([]model.AutoTopOffEvent, len(atoEvents), 0)
+	for _, atoEvent := range atoEvents {
+		switch atoEvent.Kind {
+		case "ATOJobComplete":
+			event := &model.ATOJobComplete{Timestamp: int(atoEvent.Timestamp)}
+			err = json.Unmarshal([]byte(atoEvent.Data), event)
+			if err != nil {
+				return nil, fmt.Errorf("deserializing event: %w", err)
+			}
+			events = append(events, event)
+		case "ATOJobError":
+			event := &model.ATOJobError{Timestamp: int(atoEvent.Timestamp)}
+			err = json.Unmarshal([]byte(atoEvent.Data), event)
+			if err != nil {
+				return nil, fmt.Errorf("deserializing event: %w", err)
+			}
+			events = append(events, event)
+		case "MaxFillVolumeError":
+			event := &model.MaxFillVolumeError{Timestamp: int(atoEvent.Timestamp)}
+			err = json.Unmarshal([]byte(atoEvent.Data), event)
+			if err != nil {
+				return nil, fmt.Errorf("deserializing event: %w", err)
+			}
+			events = append(events, event)
+		case "WaterLevelAlert":
+			event := &model.WaterLevelAlert{Timestamp: int(atoEvent.Timestamp)}
+			err = json.Unmarshal([]byte(atoEvent.Data), event)
+			if err != nil {
+				return nil, fmt.Errorf("deserializing event: %w", err)
+			}
+			events = append(events, event)
+		default:
+			return nil, fmt.Errorf("unrecognized ATO event: %+v", atoEvent)
+		}
+	}
+
+	return events, nil
+}
+
 func (r *autoWaterChangeResolver) FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error) {
 	m, err := obj.FreshPump().One(ctx, r.db)
 	if err != nil {
@@ -53,6 +99,42 @@ func (r *autoWaterChangeResolver) WastePump(ctx context.Context, obj *models.Aut
 	}
 
 	return m, nil
+}
+
+func (r *autoWaterChangeResolver) Events(ctx context.Context, obj *models.AutoWaterChange) ([]model.AutoWaterChangeEvent, error) {
+	awcEvents, err := obj.AwcEvents().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting AWC events: %w", err)
+	}
+
+	events := make([]model.AutoWaterChangeEvent, len(awcEvents), 0)
+	for _, awcEvent := range awcEvents {
+		switch awcEvent.Kind {
+		case "AWCStatus":
+			event := &model.AWCStatus{Timestamp: int(awcEvent.Timestamp)}
+			err = json.Unmarshal([]byte(awcEvent.Data), event)
+			if err != nil {
+				return nil, fmt.Errorf("deserializing event: %w", err)
+			}
+			events = append(events, event)
+		case "AWCJobError":
+			event := &model.AWCJobError{Timestamp: int(awcEvent.Timestamp)}
+			err = json.Unmarshal([]byte(awcEvent.Data), event)
+			if err != nil {
+				return nil, fmt.Errorf("deserializing event: %w", err)
+			}
+			events = append(events, event)
+		case "UncontrolledPumpError":
+			event := &model.UncontrolledPumpError{Timestamp: int(awcEvent.Timestamp)}
+			err = json.Unmarshal([]byte(awcEvent.Data), event)
+			if err != nil {
+				return nil, fmt.Errorf("deserializing event: %w", err)
+			}
+			events = append(events, event)
+		}
+	}
+
+	return events, nil
 }
 
 func (r *doserResolver) Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error) {

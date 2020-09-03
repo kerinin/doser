@@ -494,6 +494,84 @@ func testAutoTopOffsInsertWhitelist(t *testing.T) {
 	}
 }
 
+func testAutoTopOffToManyAtoEvents(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a AutoTopOff
+	var b, c AtoEvent
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, autoTopOffDBTypes, true, autoTopOffColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize AutoTopOff struct: %s", err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = randomize.Struct(seed, &b, atoEventDBTypes, false, atoEventColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, atoEventDBTypes, false, atoEventColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+
+	b.AutoTopOffID = a.ID
+	c.AutoTopOffID = a.ID
+
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := a.AtoEvents().All(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range check {
+		if v.AutoTopOffID == b.AutoTopOffID {
+			bFound = true
+		}
+		if v.AutoTopOffID == c.AutoTopOffID {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := AutoTopOffSlice{&a}
+	if err = a.L.LoadAtoEvents(ctx, tx, false, (*[]*AutoTopOff)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.AtoEvents); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.AtoEvents = nil
+	if err = a.L.LoadAtoEvents(ctx, tx, true, &a, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.AtoEvents); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", check)
+	}
+}
+
 func testAutoTopOffToManyWaterLevelSensors(t *testing.T) {
 	var err error
 	ctx := context.Background()
@@ -578,6 +656,81 @@ func testAutoTopOffToManyWaterLevelSensors(t *testing.T) {
 	}
 }
 
+func testAutoTopOffToManyAddOpAtoEvents(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a AutoTopOff
+	var b, c, d, e AtoEvent
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, autoTopOffDBTypes, false, strmangle.SetComplement(autoTopOffPrimaryKeyColumns, autoTopOffColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*AtoEvent{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, atoEventDBTypes, false, strmangle.SetComplement(atoEventPrimaryKeyColumns, atoEventColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*AtoEvent{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddAtoEvents(ctx, tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if a.ID != first.AutoTopOffID {
+			t.Error("foreign key was wrong value", a.ID, first.AutoTopOffID)
+		}
+		if a.ID != second.AutoTopOffID {
+			t.Error("foreign key was wrong value", a.ID, second.AutoTopOffID)
+		}
+
+		if first.R.AutoTopOff != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.AutoTopOff != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.AtoEvents[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.AtoEvents[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.AtoEvents().Count(ctx, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
 func testAutoTopOffToManyAddOpWaterLevelSensors(t *testing.T) {
 	var err error
 

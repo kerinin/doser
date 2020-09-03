@@ -91,6 +91,8 @@ type AutoTopOff {
   # The maximum volume in mL to fill in a single run.
   # Causes an alert if this volume is exceeded
   max_fill_volume: Float
+
+  events: [AutoTopOffEvent!]
 }
 
 type AutoWaterChange {
@@ -99,17 +101,62 @@ type AutoWaterChange {
   waste_pump: Pump!
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
   exchange_rate: Float!
+
+  events: [AutoWaterChangeEvent!]
 }
 
 type Doser {
   id: ID!
   components: [DoserComponent!]
 }
+
 type DoserComponent {
   pump: Pump!
   # The rate to dose in mL/day
   dose_rate: Float!
 }
+
+union AutoTopOffEvent = ATOJobComplete | ATOJobError | MaxFillVolumeError | WaterLevelAlert | UncontrolledPumpError
+
+type ATOJobComplete {
+  timestamp: Int!
+  duration: Float!
+  volume: Float!
+}
+
+type ATOJobError {
+  timestamp: Int!
+  error: String!
+}
+
+union AutoWaterChangeEvent = AWCStatus | AWCJobError | UncontrolledPumpError
+
+type AWCStatus {
+  timestamp: Int!
+  duration: Float!
+  fresh_volume: Float!
+  waste_volume: Float!
+}
+
+type AWCJobError {
+  timestamp: Int!
+  error: String!
+}
+
+type MaxFillVolumeError {
+  timestamp: Int!
+}
+
+type UncontrolledPumpError {
+  timestamp: Int!
+  pump_id: ID!
+  error: String!
+}
+
+type WaterLevelAlert {
+  timestamp: Int!
+}
+  
 
 type Mutation {
   createFirmata(serial_port: String!, baud: Int!): Firmata!

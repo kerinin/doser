@@ -7,19 +7,20 @@ import (
 	"log"
 	"sync"
 
+	"github.com/kerinin/doser/service/graph/model"
 	"github.com/kerinin/doser/service/models"
 )
 
 type AWC struct {
-	eventCh  chan<- Event
+	eventCh  chan<- model.AutoWaterChangeEvent
 	db       *sql.DB
 	firmatas *Firmatas
 	reset    chan struct{}
 }
 
-func NewAWC(eventCh chan<- Event, db *sql.DB, firmatas *Firmatas) *AWC {
+func NewAWC(db *sql.DB, firmatas *Firmatas) *AWC {
 	return &AWC{
-		eventCh:  eventCh,
+		eventCh:  make(chan<- model.AutoWaterChangeEvent),
 		db:       db,
 		firmatas: firmatas,
 		reset:    make(chan struct{}, 1),

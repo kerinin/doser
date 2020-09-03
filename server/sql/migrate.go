@@ -127,6 +127,31 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					`ALTER TABLE pumps ADD COLUMN acceleration REAL`,
 				},
 			},
+			&migrate.Migration{
+				Id: "004 events",
+				Up: []string{
+					`CREATE TABLE ato_events(
+						id UUID NOT NULL,
+						auto_top_off_id UUID NOT NULL,
+						timestamp INT NOT NULL,
+						kind STRING NOT NULL,
+						data STRING NOT NULL,
+
+						PRIMARY KEY (id)
+						FOREIGN KEY(auto_top_off_id) REFERENCES auto_top_offs(id)
+					)`,
+					`CREATE TABLE awc_events(
+						id UUID NOT NULL,
+						auto_water_change_id UUID NOT NULL,
+						timestamp INT NOT NULL,
+						kind STRING NOT NULL,
+						data STRING NOT NULL,
+
+						PRIMARY KEY (id)
+						FOREIGN KEY(auto_water_change_id) REFERENCES auto_water_changes(id)
+					)`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

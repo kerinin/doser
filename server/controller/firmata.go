@@ -12,14 +12,13 @@ import (
 )
 
 type Firmatas struct {
-	eventCh  chan<- Event
 	db       *sql.DB
 	firmatas map[string]*gomata.Firmata
 	reset    chan struct{}
 }
 
-func NewFirmatas(eventCh chan<- Event, db *sql.DB) *Firmatas {
-	return &Firmatas{eventCh, db, make(map[string]*gomata.Firmata), make(chan struct{}, 1)}
+func NewFirmatas(db *sql.DB) *Firmatas {
+	return &Firmatas{db, make(map[string]*gomata.Firmata), make(chan struct{}, 1)}
 }
 
 func (c *Firmatas) Reset() error {

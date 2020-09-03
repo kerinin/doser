@@ -61,15 +61,18 @@ var AutoWaterChangeWhere = struct {
 var AutoWaterChangeRels = struct {
 	WastePump string
 	FreshPump string
+	AwcEvents string
 }{
 	WastePump: "WastePump",
 	FreshPump: "FreshPump",
+	AwcEvents: "AwcEvents",
 }
 
 // autoWaterChangeR is where relationships are stored.
 type autoWaterChangeR struct {
-	WastePump *Pump `boil:"WastePump" json:"WastePump" toml:"WastePump" yaml:"WastePump"`
-	FreshPump *Pump `boil:"FreshPump" json:"FreshPump" toml:"FreshPump" yaml:"FreshPump"`
+	WastePump *Pump         `boil:"WastePump" json:"WastePump" toml:"WastePump" yaml:"WastePump"`
+	FreshPump *Pump         `boil:"FreshPump" json:"FreshPump" toml:"FreshPump" yaml:"FreshPump"`
+	AwcEvents AwcEventSlice `boil:"AwcEvents" json:"AwcEvents" toml:"AwcEvents" yaml:"AwcEvents"`
 }
 
 // NewStruct creates a new relationship struct
@@ -390,6 +393,27 @@ func (o *AutoWaterChange) FreshPump(mods ...qm.QueryMod) pumpQuery {
 	return query
 }
 
+// AwcEvents retrieves all the awc_event's AwcEvents with an executor.
+func (o *AutoWaterChange) AwcEvents(mods ...qm.QueryMod) awcEventQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"awc_events\".\"auto_water_change_id\"=?", o.ID),
+	)
+
+	query := AwcEvents(queryMods...)
+	queries.SetFrom(query.Query, "\"awc_events\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"awc_events\".*"})
+	}
+
+	return query
+}
+
 // LoadWastePump allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (autoWaterChangeL) LoadWastePump(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAutoWaterChange interface{}, mods queries.Applicator) error {
@@ -598,6 +622,104 @@ func (autoWaterChangeL) LoadFreshPump(ctx context.Context, e boil.ContextExecuto
 	return nil
 }
 
+// LoadAwcEvents allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (autoWaterChangeL) LoadAwcEvents(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAutoWaterChange interface{}, mods queries.Applicator) error {
+	var slice []*AutoWaterChange
+	var object *AutoWaterChange
+
+	if singular {
+		object = maybeAutoWaterChange.(*AutoWaterChange)
+	} else {
+		slice = *maybeAutoWaterChange.(*[]*AutoWaterChange)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &autoWaterChangeR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &autoWaterChangeR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`awc_events`),
+		qm.WhereIn(`awc_events.auto_water_change_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load awc_events")
+	}
+
+	var resultSlice []*AwcEvent
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice awc_events")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on awc_events")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for awc_events")
+	}
+
+	if len(awcEventAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.AwcEvents = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &awcEventR{}
+			}
+			foreign.R.AutoWaterChange = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.AutoWaterChangeID {
+				local.R.AwcEvents = append(local.R.AwcEvents, foreign)
+				if foreign.R == nil {
+					foreign.R = &awcEventR{}
+				}
+				foreign.R.AutoWaterChange = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetWastePump of the autoWaterChange to the related item.
 // Sets o.R.WastePump to related.
 // Adds o to related.R.WastePumpAutoWaterChanges.
@@ -689,6 +811,59 @@ func (o *AutoWaterChange) SetFreshPump(ctx context.Context, exec boil.ContextExe
 		related.R.FreshPumpAutoWaterChanges = append(related.R.FreshPumpAutoWaterChanges, o)
 	}
 
+	return nil
+}
+
+// AddAwcEvents adds the given related objects to the existing relationships
+// of the auto_water_change, optionally inserting them as new records.
+// Appends related to o.R.AwcEvents.
+// Sets related.R.AutoWaterChange appropriately.
+func (o *AutoWaterChange) AddAwcEvents(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AwcEvent) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.AutoWaterChangeID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"awc_events\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 0, []string{"auto_water_change_id"}),
+				strmangle.WhereClause("\"", "\"", 0, awcEventPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.AutoWaterChangeID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &autoWaterChangeR{
+			AwcEvents: related,
+		}
+	} else {
+		o.R.AwcEvents = append(o.R.AwcEvents, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &awcEventR{
+				AutoWaterChange: o,
+			}
+		} else {
+			rel.R.AutoWaterChange = o
+		}
+	}
 	return nil
 }
 

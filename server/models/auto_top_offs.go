@@ -48,29 +48,6 @@ var AutoTopOffColumns = struct {
 
 // Generated where
 
-type whereHelperstring struct{ field string }
-
-func (w whereHelperstring) EQ(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperstring) NEQ(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperstring) LT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperstring) LTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperstring) GT(x string) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperstring) GTE(x string) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperstring) IN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
 type whereHelperfloat64 struct{ field string }
 
 func (w whereHelperfloat64) EQ(x float64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.EQ, x) }
@@ -100,29 +77,6 @@ func (w whereHelperfloat64) NIN(slice []float64) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
-type whereHelperint64 struct{ field string }
-
-func (w whereHelperint64) EQ(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
-func (w whereHelperint64) NEQ(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
-func (w whereHelperint64) LT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
-func (w whereHelperint64) LTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
-func (w whereHelperint64) GT(x int64) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
-func (w whereHelperint64) GTE(x int64) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
-func (w whereHelperint64) IN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
-}
-func (w whereHelperint64) NIN(slice []int64) qm.QueryMod {
-	values := make([]interface{}, 0, len(slice))
-	for _, value := range slice {
-		values = append(values, value)
-	}
-	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
-}
-
 var AutoTopOffWhere = struct {
 	ID            whereHelperstring
 	PumpID        whereHelperstring
@@ -140,15 +94,18 @@ var AutoTopOffWhere = struct {
 // AutoTopOffRels is where relationship names are stored.
 var AutoTopOffRels = struct {
 	Pump              string
+	AtoEvents         string
 	WaterLevelSensors string
 }{
 	Pump:              "Pump",
+	AtoEvents:         "AtoEvents",
 	WaterLevelSensors: "WaterLevelSensors",
 }
 
 // autoTopOffR is where relationships are stored.
 type autoTopOffR struct {
 	Pump              *Pump                 `boil:"Pump" json:"Pump" toml:"Pump" yaml:"Pump"`
+	AtoEvents         AtoEventSlice         `boil:"AtoEvents" json:"AtoEvents" toml:"AtoEvents" yaml:"AtoEvents"`
 	WaterLevelSensors WaterLevelSensorSlice `boil:"WaterLevelSensors" json:"WaterLevelSensors" toml:"WaterLevelSensors" yaml:"WaterLevelSensors"`
 }
 
@@ -456,6 +413,27 @@ func (o *AutoTopOff) Pump(mods ...qm.QueryMod) pumpQuery {
 	return query
 }
 
+// AtoEvents retrieves all the ato_event's AtoEvents with an executor.
+func (o *AutoTopOff) AtoEvents(mods ...qm.QueryMod) atoEventQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"ato_events\".\"auto_top_off_id\"=?", o.ID),
+	)
+
+	query := AtoEvents(queryMods...)
+	queries.SetFrom(query.Query, "\"ato_events\"")
+
+	if len(queries.GetSelect(query.Query)) == 0 {
+		queries.SetSelect(query.Query, []string{"\"ato_events\".*"})
+	}
+
+	return query
+}
+
 // WaterLevelSensors retrieves all the water_level_sensor's WaterLevelSensors with an executor.
 func (o *AutoTopOff) WaterLevelSensors(mods ...qm.QueryMod) waterLevelSensorQuery {
 	var queryMods []qm.QueryMod
@@ -574,6 +552,104 @@ func (autoTopOffL) LoadPump(ctx context.Context, e boil.ContextExecutor, singula
 					foreign.R = &pumpR{}
 				}
 				foreign.R.AutoTopOffs = append(foreign.R.AutoTopOffs, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadAtoEvents allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (autoTopOffL) LoadAtoEvents(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAutoTopOff interface{}, mods queries.Applicator) error {
+	var slice []*AutoTopOff
+	var object *AutoTopOff
+
+	if singular {
+		object = maybeAutoTopOff.(*AutoTopOff)
+	} else {
+		slice = *maybeAutoTopOff.(*[]*AutoTopOff)
+	}
+
+	args := make([]interface{}, 0, 1)
+	if singular {
+		if object.R == nil {
+			object.R = &autoTopOffR{}
+		}
+		args = append(args, object.ID)
+	} else {
+	Outer:
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &autoTopOffR{}
+			}
+
+			for _, a := range args {
+				if a == obj.ID {
+					continue Outer
+				}
+			}
+
+			args = append(args, obj.ID)
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	query := NewQuery(
+		qm.From(`ato_events`),
+		qm.WhereIn(`ato_events.auto_top_off_id in ?`, args...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load ato_events")
+	}
+
+	var resultSlice []*AtoEvent
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice ato_events")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on ato_events")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for ato_events")
+	}
+
+	if len(atoEventAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.AtoEvents = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &atoEventR{}
+			}
+			foreign.R.AutoTopOff = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.AutoTopOffID {
+				local.R.AtoEvents = append(local.R.AtoEvents, foreign)
+				if foreign.R == nil {
+					foreign.R = &atoEventR{}
+				}
+				foreign.R.AutoTopOff = local
 				break
 			}
 		}
@@ -741,6 +817,59 @@ func (o *AutoTopOff) SetPump(ctx context.Context, exec boil.ContextExecutor, ins
 		related.R.AutoTopOffs = append(related.R.AutoTopOffs, o)
 	}
 
+	return nil
+}
+
+// AddAtoEvents adds the given related objects to the existing relationships
+// of the auto_top_off, optionally inserting them as new records.
+// Appends related to o.R.AtoEvents.
+// Sets related.R.AutoTopOff appropriately.
+func (o *AutoTopOff) AddAtoEvents(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AtoEvent) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.AutoTopOffID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"ato_events\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 0, []string{"auto_top_off_id"}),
+				strmangle.WhereClause("\"", "\"", 0, atoEventPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.AutoTopOffID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &autoTopOffR{
+			AtoEvents: related,
+		}
+	} else {
+		o.R.AtoEvents = append(o.R.AtoEvents, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &atoEventR{
+				AutoTopOff: o,
+			}
+		} else {
+			rel.R.AutoTopOff = o
+		}
+	}
 	return nil
 }
 

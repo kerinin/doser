@@ -10,16 +10,24 @@ import (
 	"github.com/kerinin/doser/service/models"
 )
 
+const (
+	ATOJobErrorKind        = "ATOJobError"
+	ATOJobCompleteKind     = "ATOJobCompleteKind"
+	UncontrolledPumpKind   = "UncontrolledPumpKind"
+	WaterLevelAlertKind    = "WaterLevelAlertKind"
+	MaxFillVolumeErrorKind = "MaxFillVolumeErrorKind"
+)
+
 type ATO struct {
-	eventCh  chan<- Event
+	eventCh  chan<- *models.AtoEvent
 	db       *sql.DB
 	firmatas *Firmatas
 	reset    chan struct{}
 }
 
-func NewATO(eventCh chan<- Event, db *sql.DB, firmatas *Firmatas) *ATO {
+func NewATO(db *sql.DB, firmatas *Firmatas) *ATO {
 	return &ATO{
-		eventCh:  eventCh,
+		eventCh:  make(chan<- *models.AtoEvent),
 		db:       db,
 		firmatas: firmatas,
 		reset:    make(chan struct{}, 1),
@@ -110,9 +118,7 @@ func (c *ATO) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 			return nil, fmt.Errorf("getting sensors (aborting job run): %w", err)
 		}
 		calibration, err := pump.Calibrations().One(ctx, c.db)
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("refusing to run ATO job with uncalibrated pump")
-		} else if err != nil {
+		if err != nil {
 			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
 		}
 

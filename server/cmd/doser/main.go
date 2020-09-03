@@ -53,10 +53,9 @@ func main() {
 	defer db.Close()
 
 	log.Printf("Creating controllers...")
-	events := make(chan controller.Event, 1)
-	firmatasController := controller.NewFirmatas(events, db)
-	atoController := controller.NewATO(events, db, firmatasController)
-	awcController := controller.NewAWC(events, db, firmatasController)
+	firmatasController := controller.NewFirmatas(db)
+	atoController := controller.NewATO(db, firmatasController)
+	awcController := controller.NewAWC(db, firmatasController)
 
 	log.Printf("Creating API handlers...")
 	graphqlSrv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
@@ -84,9 +83,6 @@ func main() {
 	log.Printf("Connect to http://localhost:%s/ for GraphQL playground", *port)
 	for {
 		select {
-		case event := <-events:
-			// TODO: Handle these more robustly
-			log.Printf("Event: %s", event.Message())
 		case <-ctx.Done():
 			log.Printf("Shutting down...")
 			wg.Wait()

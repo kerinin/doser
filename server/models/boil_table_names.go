@@ -4,9 +4,11 @@
 package models
 
 var TableNames = struct {
+	AtoEvents                    string
 	AutoTopOffs                  string
 	AutoTopOffsWaterLevelSensors string
 	AutoWaterChanges             string
+	AwcEvents                    string
 	Calibrations                 string
 	DoserComponents              string
 	Dosers                       string
@@ -15,9 +17,11 @@ var TableNames = struct {
 	Pumps                        string
 	WaterLevelSensors            string
 }{
+	AtoEvents:                    "ato_events",
 	AutoTopOffs:                  "auto_top_offs",
 	AutoTopOffsWaterLevelSensors: "auto_top_offs_water_level_sensors",
 	AutoWaterChanges:             "auto_water_changes",
+	AwcEvents:                    "awc_events",
 	Calibrations:                 "calibrations",
 	DoserComponents:              "doser_components",
 	Dosers:                       "dosers",
