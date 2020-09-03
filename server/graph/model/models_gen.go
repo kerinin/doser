@@ -8,45 +8,6 @@ import (
 	"strconv"
 )
 
-type AutoTopOffEvent interface {
-	IsAutoTopOffEvent()
-}
-
-type AutoWaterChangeEvent interface {
-	IsAutoWaterChangeEvent()
-}
-
-type ATOJobComplete struct {
-	Timestamp int     `json:"timestamp"`
-	Duration  float64 `json:"duration"`
-	Volume    float64 `json:"volume"`
-}
-
-func (ATOJobComplete) IsAutoTopOffEvent() {}
-
-type ATOJobError struct {
-	Timestamp int    `json:"timestamp"`
-	Error     string `json:"error"`
-}
-
-func (ATOJobError) IsAutoTopOffEvent() {}
-
-type AWCJobError struct {
-	Timestamp int    `json:"timestamp"`
-	Error     string `json:"error"`
-}
-
-func (AWCJobError) IsAutoWaterChangeEvent() {}
-
-type AWCStatus struct {
-	Timestamp   int     `json:"timestamp"`
-	Duration    float64 `json:"duration"`
-	FreshVolume float64 `json:"fresh_volume"`
-	WasteVolume float64 `json:"waste_volume"`
-}
-
-func (AWCStatus) IsAutoWaterChangeEvent() {}
-
 type DoserComponentInput struct {
 	PumpID   string  `json:"pump_id"`
 	DoseRate float64 `json:"dose_rate"`
@@ -55,27 +16,6 @@ type DoserComponentInput struct {
 type DoserInput struct {
 	Components []*DoserComponentInput `json:"components"`
 }
-
-type MaxFillVolumeError struct {
-	Timestamp int `json:"timestamp"`
-}
-
-func (MaxFillVolumeError) IsAutoTopOffEvent() {}
-
-type UncontrolledPumpError struct {
-	Timestamp int    `json:"timestamp"`
-	PumpID    string `json:"pump_id"`
-	Error     string `json:"error"`
-}
-
-func (UncontrolledPumpError) IsAutoTopOffEvent()      {}
-func (UncontrolledPumpError) IsAutoWaterChangeEvent() {}
-
-type WaterLevelAlert struct {
-	Timestamp int `json:"timestamp"`
-}
-
-func (WaterLevelAlert) IsAutoTopOffEvent() {}
 
 type SensorKind string
 

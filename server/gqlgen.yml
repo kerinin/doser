@@ -54,3 +54,7 @@ models:
     model: github.com/kerinin/doser/service/models.Doser
   DoserComponent:
     model: github.com/kerinin/doser/service/models.DoserComponent
+  AtoEvent:
+    model: github.com/kerinin/doser/service/models.AtoEvent
+  AwcEvent:
+    model: github.com/kerinin/doser/service/models.AwcEvent

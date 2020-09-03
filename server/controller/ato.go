@@ -10,14 +10,6 @@ import (
 	"github.com/kerinin/doser/service/models"
 )
 
-const (
-	ATOJobErrorKind        = "ATOJobError"
-	ATOJobCompleteKind     = "ATOJobCompleteKind"
-	UncontrolledPumpKind   = "UncontrolledPumpKind"
-	WaterLevelAlertKind    = "WaterLevelAlertKind"
-	MaxFillVolumeErrorKind = "MaxFillVolumeErrorKind"
-)
-
 type ATO struct {
 	eventCh  chan<- *models.AtoEvent
 	db       *sql.DB

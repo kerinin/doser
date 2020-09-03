@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -52,27 +51,11 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	ATOJobComplete struct {
-		Duration  func(childComplexity int) int
+	AtoEvent struct {
+		Data      func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Kind      func(childComplexity int) int
 		Timestamp func(childComplexity int) int
-		Volume    func(childComplexity int) int
-	}
-
-	ATOJobError struct {
-		Error     func(childComplexity int) int
-		Timestamp func(childComplexity int) int
-	}
-
-	AWCJobError struct {
-		Error     func(childComplexity int) int
-		Timestamp func(childComplexity int) int
-	}
-
-	AWCStatus struct {
-		Duration    func(childComplexity int) int
-		FreshVolume func(childComplexity int) int
-		Timestamp   func(childComplexity int) int
-		WasteVolume func(childComplexity int) int
 	}
 
 	AutoTopOff struct {
@@ -93,6 +76,13 @@ type ComplexityRoot struct {
 		WastePump    func(childComplexity int) int
 	}
 
+	AwcEvent struct {
+		Data      func(childComplexity int) int
+		ID        func(childComplexity int) int
+		Kind      func(childComplexity int) int
+		Timestamp func(childComplexity int) int
+	}
+
 	Doser struct {
 		Components func(childComplexity int) int
 		ID         func(childComplexity int) int
@@ -108,10 +98,6 @@ type ComplexityRoot struct {
 		ID         func(childComplexity int) int
 		Pumps      func(childComplexity int) int
 		SerialPort func(childComplexity int) int
-	}
-
-	MaxFillVolumeError struct {
-		Timestamp func(childComplexity int) int
 	}
 
 	Mutation struct {
@@ -158,16 +144,6 @@ type ComplexityRoot struct {
 		Volume func(childComplexity int) int
 	}
 
-	UncontrolledPumpError struct {
-		Error     func(childComplexity int) int
-		PumpID    func(childComplexity int) int
-		Timestamp func(childComplexity int) int
-	}
-
-	WaterLevelAlert struct {
-		Timestamp func(childComplexity int) int
-	}
-
 	WaterLevelSensor struct {
 		DetectionThreshold func(childComplexity int) int
 		FirmataID          func(childComplexity int) int
@@ -182,13 +158,13 @@ type AutoTopOffResolver interface {
 	Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error)
 	LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error)
 
-	Events(ctx context.Context, obj *models.AutoTopOff) ([]model.AutoTopOffEvent, error)
+	Events(ctx context.Context, obj *models.AutoTopOff) ([]*models.AtoEvent, error)
 }
 type AutoWaterChangeResolver interface {
 	FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 	WastePump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 
-	Events(ctx context.Context, obj *models.AutoWaterChange) ([]model.AutoWaterChangeEvent, error)
+	Events(ctx context.Context, obj *models.AutoWaterChange) ([]*models.AwcEvent, error)
 }
 type DoserResolver interface {
 	Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error)
@@ -256,82 +232,33 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "ATOJobComplete.duration":
-		if e.complexity.ATOJobComplete.Duration == nil {
+	case "AtoEvent.data":
+		if e.complexity.AtoEvent.Data == nil {
 			break
 		}
 
-		return e.complexity.ATOJobComplete.Duration(childComplexity), true
+		return e.complexity.AtoEvent.Data(childComplexity), true
 
-	case "ATOJobComplete.timestamp":
-		if e.complexity.ATOJobComplete.Timestamp == nil {
+	case "AtoEvent.id":
+		if e.complexity.AtoEvent.ID == nil {
 			break
 		}
 
-		return e.complexity.ATOJobComplete.Timestamp(childComplexity), true
+		return e.complexity.AtoEvent.ID(childComplexity), true
 
-	case "ATOJobComplete.volume":
-		if e.complexity.ATOJobComplete.Volume == nil {
+	case "AtoEvent.kind":
+		if e.complexity.AtoEvent.Kind == nil {
 			break
 		}
 
-		return e.complexity.ATOJobComplete.Volume(childComplexity), true
+		return e.complexity.AtoEvent.Kind(childComplexity), true
 
-	case "ATOJobError.error":
-		if e.complexity.ATOJobError.Error == nil {
+	case "AtoEvent.timestamp":
+		if e.complexity.AtoEvent.Timestamp == nil {
 			break
 		}
 
-		return e.complexity.ATOJobError.Error(childComplexity), true
-
-	case "ATOJobError.timestamp":
-		if e.complexity.ATOJobError.Timestamp == nil {
-			break
-		}
-
-		return e.complexity.ATOJobError.Timestamp(childComplexity), true
-
-	case "AWCJobError.error":
-		if e.complexity.AWCJobError.Error == nil {
-			break
-		}
-
-		return e.complexity.AWCJobError.Error(childComplexity), true
-
-	case "AWCJobError.timestamp":
-		if e.complexity.AWCJobError.Timestamp == nil {
-			break
-		}
-
-		return e.complexity.AWCJobError.Timestamp(childComplexity), true
-
-	case "AWCStatus.duration":
-		if e.complexity.AWCStatus.Duration == nil {
-			break
-		}
-
-		return e.complexity.AWCStatus.Duration(childComplexity), true
-
-	case "AWCStatus.fresh_volume":
-		if e.complexity.AWCStatus.FreshVolume == nil {
-			break
-		}
-
-		return e.complexity.AWCStatus.FreshVolume(childComplexity), true
-
-	case "AWCStatus.timestamp":
-		if e.complexity.AWCStatus.Timestamp == nil {
-			break
-		}
-
-		return e.complexity.AWCStatus.Timestamp(childComplexity), true
-
-	case "AWCStatus.waste_volume":
-		if e.complexity.AWCStatus.WasteVolume == nil {
-			break
-		}
-
-		return e.complexity.AWCStatus.WasteVolume(childComplexity), true
+		return e.complexity.AtoEvent.Timestamp(childComplexity), true
 
 	case "AutoTopOff.events":
 		if e.complexity.AutoTopOff.Events == nil {
@@ -417,6 +344,34 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AutoWaterChange.WastePump(childComplexity), true
 
+	case "AwcEvent.data":
+		if e.complexity.AwcEvent.Data == nil {
+			break
+		}
+
+		return e.complexity.AwcEvent.Data(childComplexity), true
+
+	case "AwcEvent.id":
+		if e.complexity.AwcEvent.ID == nil {
+			break
+		}
+
+		return e.complexity.AwcEvent.ID(childComplexity), true
+
+	case "AwcEvent.kind":
+		if e.complexity.AwcEvent.Kind == nil {
+			break
+		}
+
+		return e.complexity.AwcEvent.Kind(childComplexity), true
+
+	case "AwcEvent.timestamp":
+		if e.complexity.AwcEvent.Timestamp == nil {
+			break
+		}
+
+		return e.complexity.AwcEvent.Timestamp(childComplexity), true
+
 	case "Doser.components":
 		if e.complexity.Doser.Components == nil {
 			break
@@ -472,13 +427,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Firmata.SerialPort(childComplexity), true
-
-	case "MaxFillVolumeError.timestamp":
-		if e.complexity.MaxFillVolumeError.Timestamp == nil {
-			break
-		}
-
-		return e.complexity.MaxFillVolumeError.Timestamp(childComplexity), true
 
 	case "Mutation.calibratePump":
 		if e.complexity.Mutation.CalibratePump == nil {
@@ -789,34 +737,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.TwoPointCalibration.Volume(childComplexity), true
 
-	case "UncontrolledPumpError.error":
-		if e.complexity.UncontrolledPumpError.Error == nil {
-			break
-		}
-
-		return e.complexity.UncontrolledPumpError.Error(childComplexity), true
-
-	case "UncontrolledPumpError.pump_id":
-		if e.complexity.UncontrolledPumpError.PumpID == nil {
-			break
-		}
-
-		return e.complexity.UncontrolledPumpError.PumpID(childComplexity), true
-
-	case "UncontrolledPumpError.timestamp":
-		if e.complexity.UncontrolledPumpError.Timestamp == nil {
-			break
-		}
-
-		return e.complexity.UncontrolledPumpError.Timestamp(childComplexity), true
-
-	case "WaterLevelAlert.timestamp":
-		if e.complexity.WaterLevelAlert.Timestamp == nil {
-			break
-		}
-
-		return e.complexity.WaterLevelAlert.Timestamp(childComplexity), true
-
 	case "WaterLevelSensor.detection_threshold":
 		if e.complexity.WaterLevelSensor.DetectionThreshold == nil {
 			break
@@ -1017,7 +937,7 @@ type AutoTopOff {
   # Causes an alert if this volume is exceeded
   max_fill_volume: Float
 
-  events: [AutoTopOffEvent!]
+  events: [AtoEvent!]
 }
 
 type AutoWaterChange {
@@ -1027,7 +947,7 @@ type AutoWaterChange {
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
   exchange_rate: Float!
 
-  events: [AutoWaterChangeEvent!]
+  events: [AwcEvent!]
 }
 
 type Doser {
@@ -1041,47 +961,19 @@ type DoserComponent {
   dose_rate: Float!
 }
 
-union AutoTopOffEvent = ATOJobComplete | ATOJobError | MaxFillVolumeError | WaterLevelAlert | UncontrolledPumpError
-
-type ATOJobComplete {
+type AtoEvent {
+  id: ID!
   timestamp: Int!
-  duration: Float!
-  volume: Float!
+  kind: String!
+  data: String!
 }
 
-type ATOJobError {
+type AwcEvent {
+  id: ID!
   timestamp: Int!
-  error: String!
+  kind: String!
+  data: String!
 }
-
-union AutoWaterChangeEvent = AWCStatus | AWCJobError | UncontrolledPumpError
-
-type AWCStatus {
-  timestamp: Int!
-  duration: Float!
-  fresh_volume: Float!
-  waste_volume: Float!
-}
-
-type AWCJobError {
-  timestamp: Int!
-  error: String!
-}
-
-type MaxFillVolumeError {
-  timestamp: Int!
-}
-
-type UncontrolledPumpError {
-  timestamp: Int!
-  pump_id: ID!
-  error: String!
-}
-
-type WaterLevelAlert {
-  timestamp: Int!
-}
-  
 
 type Mutation {
   createFirmata(serial_port: String!, baud: Int!): Firmata!
@@ -1740,7 +1632,7 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _ATOJobComplete_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.ATOJobComplete) (ret graphql.Marshaler) {
+func (ec *executionContext) _AtoEvent_id(ctx context.Context, field graphql.CollectedField, obj *models.AtoEvent) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1748,7 +1640,41 @@ func (ec *executionContext) _ATOJobComplete_timestamp(ctx context.Context, field
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:   "ATOJobComplete",
+		Object:   "AtoEvent",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AtoEvent_timestamp(ctx context.Context, field graphql.CollectedField, obj *models.AtoEvent) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AtoEvent",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -1769,12 +1695,12 @@ func (ec *executionContext) _ATOJobComplete_timestamp(ctx context.Context, field
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(int64)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _ATOJobComplete_duration(ctx context.Context, field graphql.CollectedField, obj *model.ATOJobComplete) (ret graphql.Marshaler) {
+func (ec *executionContext) _AtoEvent_kind(ctx context.Context, field graphql.CollectedField, obj *models.AtoEvent) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1782,7 +1708,7 @@ func (ec *executionContext) _ATOJobComplete_duration(ctx context.Context, field 
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:   "ATOJobComplete",
+		Object:   "AtoEvent",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -1791,109 +1717,7 @@ func (ec *executionContext) _ATOJobComplete_duration(ctx context.Context, field 
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Duration, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(float64)
-	fc.Result = res
-	return ec.marshalNFloat2float64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _ATOJobComplete_volume(ctx context.Context, field graphql.CollectedField, obj *model.ATOJobComplete) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "ATOJobComplete",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Volume, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(float64)
-	fc.Result = res
-	return ec.marshalNFloat2float64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _ATOJobError_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.ATOJobError) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "ATOJobError",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Timestamp, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _ATOJobError_error(ctx context.Context, field graphql.CollectedField, obj *model.ATOJobError) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "ATOJobError",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Error, nil
+		return obj.Kind, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1910,7 +1734,7 @@ func (ec *executionContext) _ATOJobError_error(ctx context.Context, field graphq
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _AWCJobError_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.AWCJobError) (ret graphql.Marshaler) {
+func (ec *executionContext) _AtoEvent_data(ctx context.Context, field graphql.CollectedField, obj *models.AtoEvent) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -1918,7 +1742,7 @@ func (ec *executionContext) _AWCJobError_timestamp(ctx context.Context, field gr
 		}
 	}()
 	fc := &graphql.FieldContext{
-		Object:   "AWCJobError",
+		Object:   "AtoEvent",
 		Field:    field,
 		Args:     nil,
 		IsMethod: false,
@@ -1927,41 +1751,7 @@ func (ec *executionContext) _AWCJobError_timestamp(ctx context.Context, field gr
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Timestamp, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _AWCJobError_error(ctx context.Context, field graphql.CollectedField, obj *model.AWCJobError) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "AWCJobError",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Error, nil
+		return obj.Data, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1976,142 +1766,6 @@ func (ec *executionContext) _AWCJobError_error(ctx context.Context, field graphq
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _AWCStatus_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.AWCStatus) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "AWCStatus",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Timestamp, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _AWCStatus_duration(ctx context.Context, field graphql.CollectedField, obj *model.AWCStatus) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "AWCStatus",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Duration, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(float64)
-	fc.Result = res
-	return ec.marshalNFloat2float64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _AWCStatus_fresh_volume(ctx context.Context, field graphql.CollectedField, obj *model.AWCStatus) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "AWCStatus",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.FreshVolume, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(float64)
-	fc.Result = res
-	return ec.marshalNFloat2float64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _AWCStatus_waste_volume(ctx context.Context, field graphql.CollectedField, obj *model.AWCStatus) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "AWCStatus",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.WasteVolume, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(float64)
-	fc.Result = res
-	return ec.marshalNFloat2float64(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoTopOff_id(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
@@ -2341,9 +1995,9 @@ func (ec *executionContext) _AutoTopOff_events(ctx context.Context, field graphq
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]model.AutoTopOffEvent)
+	res := resTmp.([]*models.AtoEvent)
 	fc.Result = res
-	return ec.marshalOAutoTopOffEvent2ᚕgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOffEventᚄ(ctx, field.Selections, res)
+	return ec.marshalOAtoEvent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAtoEventᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoWaterChange_id(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
@@ -2508,9 +2162,145 @@ func (ec *executionContext) _AutoWaterChange_events(ctx context.Context, field g
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.([]model.AutoWaterChangeEvent)
+	res := resTmp.([]*models.AwcEvent)
 	fc.Result = res
-	return ec.marshalOAutoWaterChangeEvent2ᚕgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChangeEventᚄ(ctx, field.Selections, res)
+	return ec.marshalOAwcEvent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAwcEventᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AwcEvent_id(ctx context.Context, field graphql.CollectedField, obj *models.AwcEvent) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AwcEvent",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AwcEvent_timestamp(ctx context.Context, field graphql.CollectedField, obj *models.AwcEvent) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AwcEvent",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Timestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AwcEvent_kind(ctx context.Context, field graphql.CollectedField, obj *models.AwcEvent) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AwcEvent",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Kind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AwcEvent_data(ctx context.Context, field graphql.CollectedField, obj *models.AwcEvent) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AwcEvent",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Data, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Doser_id(ctx context.Context, field graphql.CollectedField, obj *models.Doser) (ret graphql.Marshaler) {
@@ -2777,40 +2567,6 @@ func (ec *executionContext) _Firmata_baud(ctx context.Context, field graphql.Col
 	res := resTmp.(int64)
 	fc.Result = res
 	return ec.marshalNInt2int64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _MaxFillVolumeError_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.MaxFillVolumeError) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "MaxFillVolumeError",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Timestamp, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createFirmata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -4060,142 +3816,6 @@ func (ec *executionContext) _TwoPointCalibration_volume(ctx context.Context, fie
 	res := resTmp.(float64)
 	fc.Result = res
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _UncontrolledPumpError_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.UncontrolledPumpError) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "UncontrolledPumpError",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Timestamp, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _UncontrolledPumpError_pump_id(ctx context.Context, field graphql.CollectedField, obj *model.UncontrolledPumpError) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "UncontrolledPumpError",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PumpID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _UncontrolledPumpError_error(ctx context.Context, field graphql.CollectedField, obj *model.UncontrolledPumpError) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "UncontrolledPumpError",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Error, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) _WaterLevelAlert_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.WaterLevelAlert) (ret graphql.Marshaler) {
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	fc := &graphql.FieldContext{
-		Object:   "WaterLevelAlert",
-		Field:    field,
-		Args:     nil,
-		IsMethod: false,
-	}
-
-	ctx = graphql.WithFieldContext(ctx, fc)
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Timestamp, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _WaterLevelSensor_id(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
@@ -5503,213 +5123,38 @@ func (ec *executionContext) unmarshalInputDoserInput(ctx context.Context, obj in
 
 // region    ************************** interface.gotpl ***************************
 
-func (ec *executionContext) _AutoTopOffEvent(ctx context.Context, sel ast.SelectionSet, obj model.AutoTopOffEvent) graphql.Marshaler {
-	switch obj := (obj).(type) {
-	case nil:
-		return graphql.Null
-	case model.ATOJobComplete:
-		return ec._ATOJobComplete(ctx, sel, &obj)
-	case *model.ATOJobComplete:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._ATOJobComplete(ctx, sel, obj)
-	case model.ATOJobError:
-		return ec._ATOJobError(ctx, sel, &obj)
-	case *model.ATOJobError:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._ATOJobError(ctx, sel, obj)
-	case model.MaxFillVolumeError:
-		return ec._MaxFillVolumeError(ctx, sel, &obj)
-	case *model.MaxFillVolumeError:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._MaxFillVolumeError(ctx, sel, obj)
-	case model.WaterLevelAlert:
-		return ec._WaterLevelAlert(ctx, sel, &obj)
-	case *model.WaterLevelAlert:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._WaterLevelAlert(ctx, sel, obj)
-	case model.UncontrolledPumpError:
-		return ec._UncontrolledPumpError(ctx, sel, &obj)
-	case *model.UncontrolledPumpError:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._UncontrolledPumpError(ctx, sel, obj)
-	default:
-		panic(fmt.Errorf("unexpected type %T", obj))
-	}
-}
-
-func (ec *executionContext) _AutoWaterChangeEvent(ctx context.Context, sel ast.SelectionSet, obj model.AutoWaterChangeEvent) graphql.Marshaler {
-	switch obj := (obj).(type) {
-	case nil:
-		return graphql.Null
-	case model.AWCStatus:
-		return ec._AWCStatus(ctx, sel, &obj)
-	case *model.AWCStatus:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._AWCStatus(ctx, sel, obj)
-	case model.AWCJobError:
-		return ec._AWCJobError(ctx, sel, &obj)
-	case *model.AWCJobError:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._AWCJobError(ctx, sel, obj)
-	case model.UncontrolledPumpError:
-		return ec._UncontrolledPumpError(ctx, sel, &obj)
-	case *model.UncontrolledPumpError:
-		if obj == nil {
-			return graphql.Null
-		}
-		return ec._UncontrolledPumpError(ctx, sel, obj)
-	default:
-		panic(fmt.Errorf("unexpected type %T", obj))
-	}
-}
-
 // endregion ************************** interface.gotpl ***************************
 
 // region    **************************** object.gotpl ****************************
 
-var aTOJobCompleteImplementors = []string{"ATOJobComplete", "AutoTopOffEvent"}
+var atoEventImplementors = []string{"AtoEvent"}
 
-func (ec *executionContext) _ATOJobComplete(ctx context.Context, sel ast.SelectionSet, obj *model.ATOJobComplete) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, aTOJobCompleteImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ATOJobComplete")
-		case "timestamp":
-			out.Values[i] = ec._ATOJobComplete_timestamp(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "duration":
-			out.Values[i] = ec._ATOJobComplete_duration(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "volume":
-			out.Values[i] = ec._ATOJobComplete_volume(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var aTOJobErrorImplementors = []string{"ATOJobError", "AutoTopOffEvent"}
-
-func (ec *executionContext) _ATOJobError(ctx context.Context, sel ast.SelectionSet, obj *model.ATOJobError) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, aTOJobErrorImplementors)
+func (ec *executionContext) _AtoEvent(ctx context.Context, sel ast.SelectionSet, obj *models.AtoEvent) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, atoEventImplementors)
 
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("ATOJobError")
+			out.Values[i] = graphql.MarshalString("AtoEvent")
+		case "id":
+			out.Values[i] = ec._AtoEvent_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "timestamp":
-			out.Values[i] = ec._ATOJobError_timestamp(ctx, field, obj)
+			out.Values[i] = ec._AtoEvent_timestamp(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "error":
-			out.Values[i] = ec._ATOJobError_error(ctx, field, obj)
+		case "kind":
+			out.Values[i] = ec._AtoEvent_kind(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var aWCJobErrorImplementors = []string{"AWCJobError", "AutoWaterChangeEvent"}
-
-func (ec *executionContext) _AWCJobError(ctx context.Context, sel ast.SelectionSet, obj *model.AWCJobError) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, aWCJobErrorImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("AWCJobError")
-		case "timestamp":
-			out.Values[i] = ec._AWCJobError_timestamp(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "error":
-			out.Values[i] = ec._AWCJobError_error(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var aWCStatusImplementors = []string{"AWCStatus", "AutoWaterChangeEvent"}
-
-func (ec *executionContext) _AWCStatus(ctx context.Context, sel ast.SelectionSet, obj *model.AWCStatus) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, aWCStatusImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("AWCStatus")
-		case "timestamp":
-			out.Values[i] = ec._AWCStatus_timestamp(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "duration":
-			out.Values[i] = ec._AWCStatus_duration(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "fresh_volume":
-			out.Values[i] = ec._AWCStatus_fresh_volume(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "waste_volume":
-			out.Values[i] = ec._AWCStatus_waste_volume(ctx, field, obj)
+		case "data":
+			out.Values[i] = ec._AtoEvent_data(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -5873,6 +5318,48 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 	return out
 }
 
+var awcEventImplementors = []string{"AwcEvent"}
+
+func (ec *executionContext) _AwcEvent(ctx context.Context, sel ast.SelectionSet, obj *models.AwcEvent) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, awcEventImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AwcEvent")
+		case "id":
+			out.Values[i] = ec._AwcEvent_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "timestamp":
+			out.Values[i] = ec._AwcEvent_timestamp(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "kind":
+			out.Values[i] = ec._AwcEvent_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "data":
+			out.Values[i] = ec._AwcEvent_data(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var doserImplementors = []string{"Doser"}
 
 func (ec *executionContext) _Doser(ctx context.Context, sel ast.SelectionSet, obj *models.Doser) graphql.Marshaler {
@@ -5988,33 +5475,6 @@ func (ec *executionContext) _Firmata(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = ec._Firmata_baud(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var maxFillVolumeErrorImplementors = []string{"MaxFillVolumeError", "AutoTopOffEvent"}
-
-func (ec *executionContext) _MaxFillVolumeError(ctx context.Context, sel ast.SelectionSet, obj *model.MaxFillVolumeError) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, maxFillVolumeErrorImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("MaxFillVolumeError")
-		case "timestamp":
-			out.Values[i] = ec._MaxFillVolumeError_timestamp(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -6336,70 +5796,6 @@ func (ec *executionContext) _TwoPointCalibration(ctx context.Context, sel ast.Se
 			}
 		case "volume":
 			out.Values[i] = ec._TwoPointCalibration_volume(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var uncontrolledPumpErrorImplementors = []string{"UncontrolledPumpError", "AutoTopOffEvent", "AutoWaterChangeEvent"}
-
-func (ec *executionContext) _UncontrolledPumpError(ctx context.Context, sel ast.SelectionSet, obj *model.UncontrolledPumpError) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, uncontrolledPumpErrorImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("UncontrolledPumpError")
-		case "timestamp":
-			out.Values[i] = ec._UncontrolledPumpError_timestamp(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "pump_id":
-			out.Values[i] = ec._UncontrolledPumpError_pump_id(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "error":
-			out.Values[i] = ec._UncontrolledPumpError_error(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var waterLevelAlertImplementors = []string{"WaterLevelAlert", "AutoTopOffEvent"}
-
-func (ec *executionContext) _WaterLevelAlert(ctx context.Context, sel ast.SelectionSet, obj *model.WaterLevelAlert) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, waterLevelAlertImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("WaterLevelAlert")
-		case "timestamp":
-			out.Values[i] = ec._WaterLevelAlert_timestamp(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -6741,6 +6137,16 @@ func (ec *executionContext) ___Type(ctx context.Context, sel ast.SelectionSet, o
 
 // region    ***************************** type.gotpl *****************************
 
+func (ec *executionContext) marshalNAtoEvent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAtoEvent(ctx context.Context, sel ast.SelectionSet, v *models.AtoEvent) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._AtoEvent(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNAutoTopOff2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx context.Context, sel ast.SelectionSet, v models.AutoTopOff) graphql.Marshaler {
 	return ec._AutoTopOff(ctx, sel, &v)
 }
@@ -6753,16 +6159,6 @@ func (ec *executionContext) marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoser
 		return graphql.Null
 	}
 	return ec._AutoTopOff(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNAutoTopOffEvent2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOffEvent(ctx context.Context, sel ast.SelectionSet, v model.AutoTopOffEvent) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	return ec._AutoTopOffEvent(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNAutoWaterChange2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx context.Context, sel ast.SelectionSet, v models.AutoWaterChange) graphql.Marshaler {
@@ -6779,14 +6175,14 @@ func (ec *executionContext) marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋ
 	return ec._AutoWaterChange(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNAutoWaterChangeEvent2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChangeEvent(ctx context.Context, sel ast.SelectionSet, v model.AutoWaterChangeEvent) graphql.Marshaler {
+func (ec *executionContext) marshalNAwcEvent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAwcEvent(ctx context.Context, sel ast.SelectionSet, v *models.AwcEvent) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "must not be null")
 		}
 		return graphql.Null
 	}
-	return ec._AutoWaterChangeEvent(ctx, sel, v)
+	return ec._AwcEvent(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
@@ -7296,6 +6692,46 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 	return res
 }
 
+func (ec *executionContext) marshalOAtoEvent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAtoEventᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.AtoEvent) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNAtoEvent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAtoEvent(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
 func (ec *executionContext) marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOffᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.AutoTopOff) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -7324,46 +6760,6 @@ func (ec *executionContext) marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdo
 				defer wg.Done()
 			}
 			ret[i] = ec.marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-	return ret
-}
-
-func (ec *executionContext) marshalOAutoTopOffEvent2ᚕgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOffEventᚄ(ctx context.Context, sel ast.SelectionSet, v []model.AutoTopOffEvent) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNAutoTopOffEvent2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoTopOffEvent(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -7416,7 +6812,7 @@ func (ec *executionContext) marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerinin
 	return ret
 }
 
-func (ec *executionContext) marshalOAutoWaterChangeEvent2ᚕgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChangeEventᚄ(ctx context.Context, sel ast.SelectionSet, v []model.AutoWaterChangeEvent) graphql.Marshaler {
+func (ec *executionContext) marshalOAwcEvent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAwcEventᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.AwcEvent) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
 	}
@@ -7443,7 +6839,7 @@ func (ec *executionContext) marshalOAutoWaterChangeEvent2ᚕgithubᚗcomᚋkerin
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNAutoWaterChangeEvent2githubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAutoWaterChangeEvent(ctx, sel, v[i])
+			ret[i] = ec.marshalNAwcEvent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAwcEvent(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
