@@ -8,10 +8,11 @@ import (
 	"sync"
 
 	"github.com/kerinin/doser/service/models"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 type AWC struct {
-	eventCh  chan<- *models.AwcEvent
+	eventCh  chan *models.AwcEvent
 	db       *sql.DB
 	firmatas *Firmatas
 	reset    chan struct{}
@@ -19,7 +20,7 @@ type AWC struct {
 
 func NewAWC(db *sql.DB, firmatas *Firmatas) *AWC {
 	return &AWC{
-		eventCh:  make(chan<- *models.AwcEvent),
+		eventCh:  make(chan *models.AwcEvent),
 		db:       db,
 		firmatas: firmatas,
 		reset:    make(chan struct{}, 1),
@@ -32,6 +33,9 @@ func (c *AWC) Reset() {
 
 func (c *AWC) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	wg.Add(1)
+	go c.writeEvents(ctx, wg)
 
 	jobs, err := c.setupJobs(ctx, wg)
 	if err != nil {
@@ -59,6 +63,27 @@ func (c *AWC) Run(ctx context.Context, wg *sync.WaitGroup) {
 			for _, job := range jobs {
 				job.cancelFunc()
 			}
+			return
+		}
+	}
+}
+
+func (c *AWC) writeEvents(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	for {
+		select {
+		case event := <-c.eventCh:
+			if event == nil {
+				return // channel closed
+			}
+			err := event.Insert(ctx, c.db, boil.Infer())
+			if err != nil {
+				log.Printf("Failed to persist AWC event %+v: %w", event, err)
+			} else {
+				log.Printf("AWC Event: %+v", event)
+			}
+		case <-ctx.Done():
 			return
 		}
 	}

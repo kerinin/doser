@@ -8,10 +8,11 @@ import (
 	"sync"
 
 	"github.com/kerinin/doser/service/models"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 type ATO struct {
-	eventCh  chan<- *models.AtoEvent
+	eventCh  chan *models.AtoEvent
 	db       *sql.DB
 	firmatas *Firmatas
 	reset    chan struct{}
@@ -19,7 +20,7 @@ type ATO struct {
 
 func NewATO(db *sql.DB, firmatas *Firmatas) *ATO {
 	return &ATO{
-		eventCh:  make(chan<- *models.AtoEvent),
+		eventCh:  make(chan *models.AtoEvent),
 		db:       db,
 		firmatas: firmatas,
 		reset:    make(chan struct{}, 1),
@@ -32,6 +33,9 @@ func (c *ATO) Reset() {
 
 func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
+
+	wg.Add(1)
+	go c.writeEvents(ctx, wg)
 
 	jobs, err := c.setupJobs(ctx, wg)
 	if err != nil {
@@ -62,6 +66,27 @@ func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 			for _, job := range jobs {
 				job.wg.Wait()
 			}
+			return
+		}
+	}
+}
+
+func (c *ATO) writeEvents(ctx context.Context, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	for {
+		select {
+		case event := <-c.eventCh:
+			if event == nil {
+				return // channel closed
+			}
+			err := event.Insert(ctx, c.db, boil.Infer())
+			if err != nil {
+				log.Printf("Failed to persist ATO event %+v: %w", event, err)
+			} else {
+				log.Printf("ATO Event: %+v", event)
+			}
+		case <-ctx.Done():
 			return
 		}
 	}
