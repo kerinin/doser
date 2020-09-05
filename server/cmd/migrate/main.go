@@ -15,6 +15,8 @@ var (
 )
 
 func main() {
+	flag.Parse()
+
 	log.Printf("Migrating %s", *data)
 
 	db, err := sql.Open("sqlite3", *data)
