@@ -152,6 +152,21 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					)`,
 				},
 			},
+			&migrate.Migration{
+				Id: "005 doses",
+				Up: []string{
+					`CREATE TABLE doses(
+						id UUID NOT NULL,
+						pump_id UUID NOT NULL,
+						timestamp INT NOT NULL,
+						volume REAL NOT NULL,
+						message STRING,
+
+						PRIMARY KEY (id)
+						FOREIGN KEY(pump_id) REFERENCES pumps(id)
+					)`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

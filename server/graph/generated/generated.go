@@ -38,6 +38,7 @@ type Config struct {
 type ResolverRoot interface {
 	AutoTopOff() AutoTopOffResolver
 	AutoWaterChange() AutoWaterChangeResolver
+	Dose() DoseResolver
 	Doser() DoserResolver
 	DoserComponent() DoserComponentResolver
 	Firmata() FirmataResolver
@@ -83,6 +84,12 @@ type ComplexityRoot struct {
 		Timestamp func(childComplexity int) int
 	}
 
+	Dose struct {
+		Message   func(childComplexity int) int
+		Timestamp func(childComplexity int) int
+		Volume    func(childComplexity int) int
+	}
+
 	Doser struct {
 		Components func(childComplexity int) int
 		ID         func(childComplexity int) int
@@ -126,6 +133,7 @@ type ComplexityRoot struct {
 		DeviceID     func(childComplexity int) int
 		EnPin        func(childComplexity int) int
 		Firmata      func(childComplexity int) int
+		History      func(childComplexity int) int
 		ID           func(childComplexity int) int
 		StepPin      func(childComplexity int) int
 	}
@@ -166,6 +174,9 @@ type AutoWaterChangeResolver interface {
 
 	Events(ctx context.Context, obj *models.AutoWaterChange) ([]*models.AwcEvent, error)
 }
+type DoseResolver interface {
+	Message(ctx context.Context, obj *models.Dose) (*string, error)
+}
 type DoserResolver interface {
 	Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error)
 }
@@ -200,6 +211,7 @@ type PumpResolver interface {
 	EnPin(ctx context.Context, obj *models.Pump) (*int, error)
 	Calibration(ctx context.Context, obj *models.Pump) (*models.Calibration, error)
 	Acceleration(ctx context.Context, obj *models.Pump) (*float64, error)
+	History(ctx context.Context, obj *models.Pump) ([]*models.Dose, error)
 }
 type QueryResolver interface {
 	Firmatas(ctx context.Context) ([]*models.Firmata, error)
@@ -371,6 +383,27 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AwcEvent.Timestamp(childComplexity), true
+
+	case "Dose.message":
+		if e.complexity.Dose.Message == nil {
+			break
+		}
+
+		return e.complexity.Dose.Message(childComplexity), true
+
+	case "Dose.timestamp":
+		if e.complexity.Dose.Timestamp == nil {
+			break
+		}
+
+		return e.complexity.Dose.Timestamp(childComplexity), true
+
+	case "Dose.volume":
+		if e.complexity.Dose.Volume == nil {
+			break
+		}
+
+		return e.complexity.Dose.Volume(childComplexity), true
 
 	case "Doser.components":
 		if e.complexity.Doser.Components == nil {
@@ -667,6 +700,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Pump.Firmata(childComplexity), true
 
+	case "Pump.history":
+		if e.complexity.Pump.History == nil {
+			break
+		}
+
+		return e.complexity.Pump.History(childComplexity), true
+
 	case "Pump.id":
 		if e.complexity.Pump.ID == nil {
 			break
@@ -884,6 +924,13 @@ type Pump {
   calibration: TwoPointCalibration
   # Acceleration to use when changing pump speed, in steps/s/s
   acceleration: Float
+  history: [Dose!]
+}
+
+type Dose {
+  timestamp: Int!
+  volume: Float!
+  message: String
 }
 
 type TwoPointCalibration {
@@ -2303,6 +2350,105 @@ func (ec *executionContext) _AwcEvent_data(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Dose_timestamp(ctx context.Context, field graphql.CollectedField, obj *models.Dose) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Dose",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Timestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int64)
+	fc.Result = res
+	return ec.marshalNInt2int64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Dose_volume(ctx context.Context, field graphql.CollectedField, obj *models.Dose) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Dose",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Volume, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Dose_message(ctx context.Context, field graphql.CollectedField, obj *models.Dose) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Dose",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Dose().Message(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Doser_id(ctx context.Context, field graphql.CollectedField, obj *models.Doser) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3493,6 +3639,37 @@ func (ec *executionContext) _Pump_acceleration(ctx context.Context, field graphq
 	res := resTmp.(*float64)
 	fc.Result = res
 	return ec.marshalOFloat2ᚖfloat64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Pump_history(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Pump",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Pump().History(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*models.Dose)
+	fc.Result = res
+	return ec.marshalODose2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoseᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_firmatas(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -5360,6 +5537,49 @@ func (ec *executionContext) _AwcEvent(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var doseImplementors = []string{"Dose"}
+
+func (ec *executionContext) _Dose(ctx context.Context, sel ast.SelectionSet, obj *models.Dose) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, doseImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Dose")
+		case "timestamp":
+			out.Values[i] = ec._Dose_timestamp(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "volume":
+			out.Values[i] = ec._Dose_volume(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "message":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Dose_message(ctx, field, obj)
+				return res
+			})
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var doserImplementors = []string{"Doser"}
 
 func (ec *executionContext) _Doser(ctx context.Context, sel ast.SelectionSet, obj *models.Doser) graphql.Marshaler {
@@ -5669,6 +5889,17 @@ func (ec *executionContext) _Pump(ctx context.Context, sel ast.SelectionSet, obj
 					}
 				}()
 				res = ec._Pump_acceleration(ctx, field, obj)
+				return res
+			})
+		case "history":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Pump_history(ctx, field, obj)
 				return res
 			})
 		default:
@@ -6198,6 +6429,16 @@ func (ec *executionContext) marshalNBoolean2bool(ctx context.Context, sel ast.Se
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) marshalNDose2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDose(ctx context.Context, sel ast.SelectionSet, v *models.Dose) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._Dose(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNDoser2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoser(ctx context.Context, sel ast.SelectionSet, v models.Doser) graphql.Marshaler {
@@ -6874,6 +7115,46 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	return graphql.MarshalBoolean(*v)
+}
+
+func (ec *executionContext) marshalODose2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoseᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Dose) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNDose2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDose(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
 }
 
 func (ec *executionContext) marshalODoser2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Doser) graphql.Marshaler {

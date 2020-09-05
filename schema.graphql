@@ -39,6 +39,13 @@ type Pump {
   calibration: TwoPointCalibration
   # Acceleration to use when changing pump speed, in steps/s/s
   acceleration: Float
+  history: [Dose!]
+}
+
+type Dose {
+  timestamp: Int!
+  volume: Float!
+  message: String
 }
 
 type TwoPointCalibration {

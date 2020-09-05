@@ -12,6 +12,7 @@ var TableNames = struct {
 	Calibrations                 string
 	DoserComponents              string
 	Dosers                       string
+	Doses                        string
 	Firmatas                     string
 	GorpMigrations               string
 	Pumps                        string
@@ -25,6 +26,7 @@ var TableNames = struct {
 	Calibrations:                 "calibrations",
 	DoserComponents:              "doser_components",
 	Dosers:                       "dosers",
+	Doses:                        "doses",
 	Firmatas:                     "firmatas",
 	GorpMigrations:               "gorp_migrations",
 	Pumps:                        "pumps",

@@ -155,7 +155,7 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		var (
 			jobCtx, cancel = context.WithCancel(ctx)
 			jobWg          = &sync.WaitGroup{}
-			job            = NewAWCJob(c.eventCh, awc, freshPump, wastePump, freshFirmata, wasteFirmata, freshCalibration, wasteCalibration)
+			job            = NewAWCJob(c.eventCh, c.db, awc, freshPump, wastePump, freshFirmata, wasteFirmata, freshCalibration, wasteCalibration)
 		)
 		jobs[awc.ID] = &Job{cancel, jobWg}
 		jobWg.Add(1)

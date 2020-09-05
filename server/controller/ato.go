@@ -142,7 +142,7 @@ func (c *ATO) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		var (
 			jobCtx, cancel = context.WithCancel(ctx)
 			jobWg          = &sync.WaitGroup{}
-			job            = NewATOJob(c.eventCh, ato, pump, c.firmatas, firmata, sensors, calibration)
+			job            = NewATOJob(c.eventCh, c.db, ato, pump, c.firmatas, firmata, sensors, calibration)
 		)
 		jobs[ato.ID] = &Job{cancelFunc: cancel, wg: jobWg}
 		jobWg.Add(1)

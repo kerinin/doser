@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"sync"
@@ -11,11 +12,14 @@ import (
 	"github.com/kerinin/doser/service/graph/model"
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
+	null "github.com/volatiletech/null/v8"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 	"gobot.io/x/gobot/platforms/raspi"
 )
 
 type ATOJob struct {
 	eventCh     chan<- *models.AtoEvent
+	db          *sql.DB
 	ato         *models.AutoTopOff
 	pump        *models.Pump
 	firmatas    *Firmatas
@@ -27,6 +31,7 @@ type ATOJob struct {
 
 func NewATOJob(
 	eventCh chan<- *models.AtoEvent,
+	db *sql.DB,
 	ato *models.AutoTopOff,
 	pump *models.Pump,
 	firmatas *Firmatas,
@@ -36,6 +41,7 @@ func NewATOJob(
 ) *ATOJob {
 	return &ATOJob{
 		eventCh:     eventCh,
+		db:          db,
 		ato:         ato,
 		pump:        pump,
 		firmatas:    firmatas,
@@ -178,6 +184,7 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 					// TODO: Convert position to volume
 					duration := time.Now().Sub(startTime)
 					volume := float64(report.Position) * j.calibration.Volume / float64(j.calibration.Steps)
+					j.recordDose(ctx, volume, "ATO %s: %fs", j.ato.ID, duration.Seconds())
 					j.event(ATOJobCompleteKind, "Completed ATO - filled %fmL in %fs", volume, duration.Seconds())
 					return
 				case <-ctx.Done():
@@ -188,6 +195,7 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 		case <-complete:
 			// We reached the max fill volume, make some noise
 			j.event(MaxFillVolumeErrorKind, "Reached maximum fill volume without detecting water")
+			j.recordDose(ctx, j.ato.MaxFillVolume, "ATO %s: max-fill", j.ato.ID)
 			return
 
 		case <-ctx.Done():
@@ -197,5 +205,19 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 			}
 			return
 		}
+	}
+}
+
+func (j *ATOJob) recordDose(ctx context.Context, volume float64, message string, args ...interface{}) {
+	dose := models.Dose{
+		ID:        uuid.New().String(),
+		PumpID:    j.pump.ID,
+		Timestamp: time.Now().Unix(),
+		Volume:    volume,
+		Message:   null.StringFrom(fmt.Sprintf(message, args...)),
+	}
+	err := dose.Insert(ctx, j.db, boil.Infer())
+	if err != nil {
+		j.event(ATOJobErrorKind, "Failure to insert dose: %w", err)
 	}
 }

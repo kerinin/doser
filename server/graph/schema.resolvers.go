@@ -73,6 +73,10 @@ func (r *autoWaterChangeResolver) Events(ctx context.Context, obj *models.AutoWa
 	return events, nil
 }
 
+func (r *doseResolver) Message(ctx context.Context, obj *models.Dose) (*string, error) {
+	panic(fmt.Errorf("not implemented"))
+}
+
 func (r *doserResolver) Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error) {
 	ms, err := obj.DoserComponents().All(ctx, r.db)
 	if err != nil {
@@ -538,6 +542,15 @@ func (r *pumpResolver) Acceleration(ctx context.Context, obj *models.Pump) (*flo
 	return nil, nil
 }
 
+func (r *pumpResolver) History(ctx context.Context, obj *models.Pump) ([]*models.Dose, error) {
+	doses, err := obj.Doses().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting dose history: %w", err)
+	}
+
+	return doses, nil
+}
+
 func (r *queryResolver) Firmatas(ctx context.Context) ([]*models.Firmata, error) {
 	firmatas, err := models.Firmatas().All(ctx, r.db)
 	if err == sql.ErrNoRows {
@@ -641,6 +654,9 @@ func (r *Resolver) AutoWaterChange() generated.AutoWaterChangeResolver {
 	return &autoWaterChangeResolver{r}
 }
 
+// Dose returns generated.DoseResolver implementation.
+func (r *Resolver) Dose() generated.DoseResolver { return &doseResolver{r} }
+
 // Doser returns generated.DoserResolver implementation.
 func (r *Resolver) Doser() generated.DoserResolver { return &doserResolver{r} }
 
@@ -668,6 +684,7 @@ func (r *Resolver) WaterLevelSensor() generated.WaterLevelSensorResolver {
 
 type autoTopOffResolver struct{ *Resolver }
 type autoWaterChangeResolver struct{ *Resolver }
+type doseResolver struct{ *Resolver }
 type doserResolver struct{ *Resolver }
 type doserComponentResolver struct{ *Resolver }
 type firmataResolver struct{ *Resolver }

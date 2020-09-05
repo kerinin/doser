@@ -16,8 +16,10 @@ require (
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/viper v1.6.3
 	github.com/vektah/gqlparser/v2 v2.0.1
+	github.com/volatiletech/null v8.0.0+incompatible
 	github.com/volatiletech/null/v8 v8.1.0
 	github.com/volatiletech/randomize v0.0.1
+	github.com/volatiletech/sqlboiler v3.7.1+incompatible // indirect
 	github.com/volatiletech/sqlboiler-sqlite3 v0.0.0-20200618013359-a93887c09a14 // indirect
 	github.com/volatiletech/sqlboiler/v4 v4.2.0
 	github.com/volatiletech/strmangle v0.0.1

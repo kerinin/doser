@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"math"
@@ -11,12 +12,15 @@ import (
 	"github.com/google/uuid"
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
+	null "github.com/volatiletech/null/v8"
+	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
 const targetDurationSec = 60
 
 type AWCJob struct {
 	eventCh          chan<- *models.AwcEvent
+	db               *sql.DB
 	awc              *models.AutoWaterChange
 	freshPump        *models.Pump
 	wastePump        *models.Pump
@@ -28,6 +32,7 @@ type AWCJob struct {
 
 func NewAWCJob(
 	eventCh chan<- *models.AwcEvent,
+	db *sql.DB,
 	awc *models.AutoWaterChange,
 	freshPump, wastePump *models.Pump,
 	freshFirmata, wasteFirmata *gomata.Firmata,
@@ -35,6 +40,7 @@ func NewAWCJob(
 ) *AWCJob {
 	return &AWCJob{
 		eventCh:          eventCh,
+		db:               db,
 		awc:              awc,
 		freshPump:        freshPump,
 		wastePump:        wastePump,
@@ -51,24 +57,28 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	log.Printf("Starting AWC job %s", j.awc.ID)
 
 	var (
-		initialTime = time.Now()
-
 		// Exchange rate is in L/day, stepper is in steps/sec
-		mlPerSecond          = j.awc.ExchangeRate * 1000 / 24 / 60 / 60
-		initialFreshPosition *gomata.StepperPosition
-		initialWastePosition *gomata.StepperPosition
+		mlPerSecond = j.awc.ExchangeRate * 1000 / 24 / 60 / 60
 	)
+
+	err := j.freshFirmata.StepperZero(int(j.freshPump.DeviceID))
+	if err != nil {
+		j.event(AWCJobErrorKind, "Failure zeroing fresh pump: %w", err)
+	}
 
 	ticker := time.NewTicker(targetDurationSec * time.Second)
 	defer ticker.Stop()
 
 	// Run first job immediately
-	j.runJob(ctx, initialTime, mlPerSecond, initialFreshPosition, initialWastePosition)
+	j.runJob(ctx, mlPerSecond)
 
 	for {
 		select {
 		case <-ticker.C:
-			j.runJob(ctx, initialTime, mlPerSecond, initialFreshPosition, initialWastePosition)
+			status, err := j.runJob(ctx, mlPerSecond)
+			if err != nil {
+				j.event(status, err.Error())
+			}
 
 		case <-ctx.Done():
 			err := j.freshFirmata.StepperStop(int(j.freshPump.DeviceID))
@@ -95,97 +105,65 @@ func (j *AWCJob) event(kind string, data string, args ...interface{}) {
 	}
 }
 
-func (j *AWCJob) runJob(ctx context.Context, initialTime time.Time, mlPerSecond float64, initialFreshPosition, initialWastePosition *gomata.StepperPosition) {
-	currentFreshPosition, err := j.getPosition(ctx, j.freshFirmata, j.freshPump)
+func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) (string, error) {
+	status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, mlPerSecond)
 	if err != nil {
-		j.event(AWCJobErrorKind, "Failure getting fresh pump position (aborting job run): %w", err)
-		return
-	}
-	currentWastePosition, err := j.getPosition(ctx, j.wasteFirmata, j.wastePump)
-	if err != nil {
-		j.event(AWCJobErrorKind, "Failure getting fresh pump position (aborting job run): %w", err)
-		return
+		return status, err
 	}
 
-	if initialFreshPosition == nil || initialWastePosition == nil {
-		initialFreshPosition = currentFreshPosition
-		initialWastePosition = currentWastePosition
-	} else {
-		var (
-			totalFreshSteps  = currentFreshPosition.Position - initialFreshPosition.Position
-			totalFreshVolume = float64(totalFreshSteps) * j.freshCalibration.Volume / float64(j.freshCalibration.Steps)
-			totalWasteSteps  = currentWastePosition.Position - initialWastePosition.Position
-			totalWasteVolume = float64(totalWasteSteps) * j.wasteCalibration.Volume / float64(j.wasteCalibration.Steps)
-		)
-		j.event(AWCStatusKind, "AWC Status - %fs elapsed, pumped %fmL fresh and %fmL waste", time.Now().Sub(initialTime).Seconds(), totalFreshVolume, totalWasteVolume)
+	status, err = j.dose(ctx, "waste", j.wasteFirmata, j.wastePump, j.wasteCalibration, mlPerSecond)
+	if err != nil {
+		return status, err
 	}
 
-	// NOTE: This attempts to minimize accumulated inaccuracy due to
-	// rounding errors or precision losses. At each step, it determines
-	// when the current step will end, then uses the target exchange
-	// rate to determine how much fluid should have been pumped by that
-	// time. The speed is set to pump the required amount in the expected
-	// duration and the pump is instructed to move to the target
-	// volume (in steps).
+	return "", nil
+}
+
+func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata, pump *models.Pump, calibration *models.Calibration, mlPerSecond float64) (string, error) {
+	report, err := j.getPosition(ctx, firmata, pump)
+	if err != nil {
+		return AWCJobErrorKind, fmt.Errorf("Failure getting %s pump position (aborting job run): %w", name, err)
+	}
+	if report.Position > 0 {
+		volume := float64(report.Position) * calibration.Volume / float64(calibration.Steps)
+		j.recordDose(ctx, pump, volume, "AWC %s pump", name)
+	}
+
+	err = firmata.StepperZero(int(pump.DeviceID))
+	if err != nil {
+		return AWCJobErrorKind, fmt.Errorf("Failure zeroing %s pump speed (aborting job run): %w", name, err)
+	}
+
 	var (
 		nextTime    = time.Now().Add(targetDurationSec * time.Second)
-		nextElapsed = nextTime.Sub(initialTime)
-
-		nextFreshSteps = mlPerSecond * float64(nextElapsed/time.Second) * float64(j.freshCalibration.Steps) / j.freshCalibration.Volume
-		nextWasteSteps = mlPerSecond * float64(nextElapsed/time.Second) * float64(j.wasteCalibration.Steps) / j.wasteCalibration.Volume
-
-		deltaFreshSteps = nextFreshSteps - float64(currentFreshPosition.Position)
-		deltaWasteSteps = nextWasteSteps - float64(currentWastePosition.Position)
-
-		freshSpeed = deltaFreshSteps / targetDurationSec
-		wasteSpeed = deltaWasteSteps / targetDurationSec
+		nextElapsed = nextTime.Sub(time.Now())
+		nextSteps   = mlPerSecond * float64(nextElapsed/time.Second) * float64(calibration.Steps) / calibration.Volume
+		speed       = nextSteps / targetDurationSec
 	)
 
-	// TODO: make sure we don't go backwards
-
-	if j.freshPump.Acceleration.Valid {
-		err = j.freshFirmata.StepperSetAcceleration(int(j.freshPump.DeviceID), float32(j.freshPump.Acceleration.Float64))
+	if pump.Acceleration.Valid {
+		err = firmata.StepperSetAcceleration(int(pump.DeviceID), float32(pump.Acceleration.Float64))
 		if err != nil {
-			j.event(AWCJobErrorKind, "Failure setting fresh pump speed (aborting job run): %w", err)
-			return
+			return AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
 		}
 	}
 
-	if j.wastePump.Acceleration.Valid {
-		err = j.wasteFirmata.StepperSetAcceleration(int(j.wastePump.DeviceID), float32(j.wastePump.Acceleration.Float64))
-		if err != nil {
-			j.event(AWCJobErrorKind, "Failure setting waste pump speed (aborting job run): %w", err)
-			return
-		}
+	err = firmata.StepperSetSpeed(int(pump.DeviceID), float32(math.Floor(speed)))
+	if err != nil {
+		return AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
 	}
 
-	err = j.freshFirmata.StepperSetSpeed(int(j.freshPump.DeviceID), float32(math.Floor(freshSpeed)))
+	err = firmata.StepperTo(int(pump.DeviceID), int32(nextSteps))
 	if err != nil {
-		j.event(AWCJobErrorKind, "Failure setting fresh pump speed (aborting job run): %w", err)
-		return
-	}
-	err = j.wasteFirmata.StepperSetSpeed(int(j.wastePump.DeviceID), float32(math.Floor(wasteSpeed)))
-	if err != nil {
-		j.event(AWCJobErrorKind, "Failure setting waste pump speed (aborting job run): %w", err)
-		return
+		return AWCJobErrorKind, fmt.Errorf("stepping %s pump (aborting job run): %w", name, err)
 	}
 
-	err = j.freshFirmata.StepperTo(int(j.freshPump.DeviceID), int32(nextFreshSteps))
-	if err != nil {
-		j.event(AWCJobErrorKind, "stepping fresh pump (aborting job run): %w", err)
-		return
-	}
-	err = j.wasteFirmata.StepperTo(int(j.wastePump.DeviceID), int32(nextWasteSteps))
-	if err != nil {
-		j.event(AWCJobErrorKind, "Failure stepping waste pump (aborting job run): %w", err)
-		return
-	}
+	return "", nil
 }
 
 func (j *AWCJob) getPosition(ctx context.Context, firmata *gomata.Firmata, pump *models.Pump) (*gomata.StepperPosition, error) {
 	reportCh := firmata.AwaitStepperReport(int32(pump.DeviceID))
 
-	// TODO: The firmata hasn't been connected when we get here and it causes a panic
 	err := firmata.StepperReport(int(pump.DeviceID))
 	if err != nil {
 		return nil, fmt.Errorf("requesting pump position report: %w", err)
@@ -200,5 +178,19 @@ func (j *AWCJob) getPosition(ctx context.Context, firmata *gomata.Firmata, pump 
 
 	case <-ctx.Done():
 		return nil, ctx.Err()
+	}
+}
+
+func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float64, message string, args ...interface{}) {
+	dose := models.Dose{
+		ID:        uuid.New().String(),
+		PumpID:    pump.ID,
+		Timestamp: time.Now().Unix(),
+		Volume:    volume,
+		Message:   null.StringFrom(fmt.Sprintf(message, args...)),
+	}
+	err := dose.Insert(ctx, j.db, boil.Infer())
+	if err != nil {
+		j.event(ATOJobErrorKind, "Failure to insert dose: %w", err)
 	}
 }
