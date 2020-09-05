@@ -74,7 +74,10 @@ func (r *autoWaterChangeResolver) Events(ctx context.Context, obj *models.AutoWa
 }
 
 func (r *doseResolver) Message(ctx context.Context, obj *models.Dose) (*string, error) {
-	panic(fmt.Errorf("not implemented"))
+	if obj.Message.Valid {
+		return &obj.Message.String, nil
+	}
+	return nil, nil
 }
 
 func (r *doserResolver) Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error) {
