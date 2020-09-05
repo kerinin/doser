@@ -15,6 +15,8 @@ var (
 )
 
 func main() {
+	log.Printf("Migrating %s", *data)
+
 	db, err := sql.Open("sqlite3", *data)
 	if err != nil {
 		log.Fatalf("Failed to create SQLite DB: %s", err)
@@ -28,4 +30,6 @@ func main() {
 	if applied > 0 {
 		log.Printf("Applied %d migrations", applied)
 	}
+
+	log.Print("Done")
 }
