@@ -46,6 +46,33 @@ func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff)
 	return events, nil
 }
 
+func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff) ([]*model.AtoRate, error) {
+	pump := &models.Pump{ID: obj.PumpID}
+	doses, err := pump.Doses().All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting dose history: %w", err)
+	}
+
+	if len(doses) < 2 {
+		return nil, nil
+	}
+
+	rates := make([]*model.AtoRate, 0, len(doses)-1)
+	for i := 1; i < len(doses); i++ {
+		if doses[i].Timestamp == doses[i-1].Timestamp {
+			continue
+		}
+
+		rate := &model.AtoRate{
+			Timestamp: int(doses[i].Timestamp),
+			Rate:      doses[i].Volume * 60 * 60 / float64(doses[i].Timestamp-doses[i-1].Timestamp),
+		}
+		rates = append(rates, rate)
+	}
+
+	return rates, nil
+}
+
 func (r *autoWaterChangeResolver) FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error) {
 	m, err := obj.FreshPump().One(ctx, r.db)
 	if err != nil {

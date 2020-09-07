@@ -8,6 +8,11 @@ import (
 	"strconv"
 )
 
+type AtoRate struct {
+	Timestamp int     `json:"timestamp"`
+	Rate      float64 `json:"rate"`
+}
+
 type DoserComponentInput struct {
 	PumpID   string  `json:"pump_id"`
 	DoseRate float64 `json:"dose_rate"`

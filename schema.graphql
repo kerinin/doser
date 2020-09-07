@@ -100,6 +100,13 @@ type AutoTopOff {
   max_fill_volume: Float
 
   events: [AtoEvent!]
+  rate: [AtoRate!]
+}
+
+type AtoRate {
+  timestamp: Int!
+  # Top-off rate in mL/h
+  rate: Float!
 }
 
 type AutoWaterChange {

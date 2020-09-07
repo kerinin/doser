@@ -59,6 +59,11 @@ type ComplexityRoot struct {
 		Timestamp func(childComplexity int) int
 	}
 
+	AtoRate struct {
+		Rate      func(childComplexity int) int
+		Timestamp func(childComplexity int) int
+	}
+
 	AutoTopOff struct {
 		Events        func(childComplexity int) int
 		FillInterval  func(childComplexity int) int
@@ -67,6 +72,7 @@ type ComplexityRoot struct {
 		LevelSensors  func(childComplexity int) int
 		MaxFillVolume func(childComplexity int) int
 		Pump          func(childComplexity int) int
+		Rate          func(childComplexity int) int
 	}
 
 	AutoWaterChange struct {
@@ -167,6 +173,7 @@ type AutoTopOffResolver interface {
 	LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error)
 
 	Events(ctx context.Context, obj *models.AutoTopOff) ([]*models.AtoEvent, error)
+	Rate(ctx context.Context, obj *models.AutoTopOff) ([]*model.AtoRate, error)
 }
 type AutoWaterChangeResolver interface {
 	FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
@@ -272,6 +279,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AtoEvent.Timestamp(childComplexity), true
 
+	case "AtoRate.rate":
+		if e.complexity.AtoRate.Rate == nil {
+			break
+		}
+
+		return e.complexity.AtoRate.Rate(childComplexity), true
+
+	case "AtoRate.timestamp":
+		if e.complexity.AtoRate.Timestamp == nil {
+			break
+		}
+
+		return e.complexity.AtoRate.Timestamp(childComplexity), true
+
 	case "AutoTopOff.events":
 		if e.complexity.AutoTopOff.Events == nil {
 			break
@@ -320,6 +341,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AutoTopOff.Pump(childComplexity), true
+
+	case "AutoTopOff.rate":
+		if e.complexity.AutoTopOff.Rate == nil {
+			break
+		}
+
+		return e.complexity.AutoTopOff.Rate(childComplexity), true
 
 	case "AutoWaterChange.events":
 		if e.complexity.AutoWaterChange.Events == nil {
@@ -985,6 +1013,13 @@ type AutoTopOff {
   max_fill_volume: Float
 
   events: [AtoEvent!]
+  rate: [AtoRate!]
+}
+
+type AtoRate {
+  timestamp: Int!
+  # Top-off rate in mL/h
+  rate: Float!
 }
 
 type AutoWaterChange {
@@ -1815,6 +1850,74 @@ func (ec *executionContext) _AtoEvent_data(ctx context.Context, field graphql.Co
 	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _AtoRate_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.AtoRate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AtoRate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Timestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AtoRate_rate(ctx context.Context, field graphql.CollectedField, obj *model.AtoRate) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AtoRate",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Rate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _AutoTopOff_id(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2045,6 +2148,37 @@ func (ec *executionContext) _AutoTopOff_events(ctx context.Context, field graphq
 	res := resTmp.([]*models.AtoEvent)
 	fc.Result = res
 	return ec.marshalOAtoEvent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAtoEventᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AutoTopOff_rate(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoTopOff",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.AutoTopOff().Rate(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.AtoRate)
+	fc.Result = res
+	return ec.marshalOAtoRate2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAtoRateᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoWaterChange_id(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
@@ -5346,6 +5480,38 @@ func (ec *executionContext) _AtoEvent(ctx context.Context, sel ast.SelectionSet,
 	return out
 }
 
+var atoRateImplementors = []string{"AtoRate"}
+
+func (ec *executionContext) _AtoRate(ctx context.Context, sel ast.SelectionSet, obj *model.AtoRate) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, atoRateImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("AtoRate")
+		case "timestamp":
+			out.Values[i] = ec._AtoRate_timestamp(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "rate":
+			out.Values[i] = ec._AtoRate_rate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var autoTopOffImplementors = []string{"AutoTopOff"}
 
 func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSet, obj *models.AutoTopOff) graphql.Marshaler {
@@ -5411,6 +5577,17 @@ func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSe
 					}
 				}()
 				res = ec._AutoTopOff_events(ctx, field, obj)
+				return res
+			})
+		case "rate":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoTopOff_rate(ctx, field, obj)
 				return res
 			})
 		default:
@@ -6378,6 +6555,16 @@ func (ec *executionContext) marshalNAtoEvent2ᚖgithubᚗcomᚋkerininᚋdoser�
 	return ec._AtoEvent(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNAtoRate2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAtoRate(ctx context.Context, sel ast.SelectionSet, v *model.AtoRate) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._AtoRate(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNAutoTopOff2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx context.Context, sel ast.SelectionSet, v models.AutoTopOff) graphql.Marshaler {
 	return ec._AutoTopOff(ctx, sel, &v)
 }
@@ -6961,6 +7148,46 @@ func (ec *executionContext) marshalOAtoEvent2ᚕᚖgithubᚗcomᚋkerininᚋdose
 				defer wg.Done()
 			}
 			ret[i] = ec.marshalNAtoEvent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAtoEvent(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalOAtoRate2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAtoRateᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.AtoRate) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNAtoRate2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐAtoRate(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
