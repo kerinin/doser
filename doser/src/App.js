@@ -1,24 +1,17 @@
 import React from 'react';
 import CssBaseline from '@material-ui/core/CssBaseline';
-import { createMuiTheme, makeStyles, ThemeProvider } from '@material-ui/core/styles';
+import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 import purple from '@material-ui/core/colors/purple';
-import green from '@material-ui/core/colors/green';
-import { VictoryBar } from 'victory';
-import Button from '@material-ui/core/Button';
-import AppBar from '@material-ui/core/AppBar';
-import Toolbar from '@material-ui/core/Toolbar';
-import Typography from '@material-ui/core/Typography';
-import IconButton from '@material-ui/core/IconButton';
-import MenuIcon from '@material-ui/icons/Menu';
-import Paper from '@material-ui/core/Paper';
-import Card from '@material-ui/core/Card';
-import CardActions from '@material-ui/core/CardActions';
-import CardContent from '@material-ui/core/CardContent';
-import CardHeader from '@material-ui/core/CardHeader';
-import VerticalAlignTopIcon from '@material-ui/icons/VerticalAlignTop';
-import TimerIcon from '@material-ui/icons/Timer';
-import Avatar from '@material-ui/core/Avatar';
-import AutorenewIcon from '@material-ui/icons/Autorenew';
+import yellow from '@material-ui/core/colors/yellow';
+import Grid from '@material-ui/core/Grid';
+import Box from '@material-ui/core/Box';
+
+import DoserAppBar from './DoserAppBar';
+import AutoTopOffs from './AutoTopOffs';
+import AutoWaterChanges from './AutoWaterChanges';
+import Dosers from './Dosers';
+
 
 const theme = createMuiTheme({
   palette: {
@@ -26,16 +19,16 @@ const theme = createMuiTheme({
       main: purple[500],
     },
     secondary: {
-      main: green[500],
+      main: yellow[500],
     },
   },
 });
 
-const useStyles = makeStyles({
-  card: {
-    margin: 20,
+const useStyles = makeStyles((theme) => ({
+  grid: {
+    flexGrow: 1,
   },
-});
+}));
 
 function App() {
   const classes = useStyles();
@@ -44,34 +37,20 @@ function App() {
     <React.Fragment>
       <CssBaseline />
       <ThemeProvider theme={theme}>
-        <AppBar position="static">
-          <Toolbar>
-            <Typography variant="h6">
-              Doser
-            </Typography>
-          </Toolbar>
-        </AppBar>
-
-        <Card className={classes.card}>
-          <CardHeader avatar={<Avatar><VerticalAlignTopIcon /></Avatar>} title="Auto Top-Off" />
-          <CardContent>
-            <Button variant="contained" color="primary">Add ATO</Button>
-          </CardContent>
-        </Card>
-
-        <Card className={classes.card}>
-          <CardHeader avatar={<Avatar><AutorenewIcon /></Avatar>} title="Auto Water Change" />
-          <CardContent>
-            <Button variant="contained" color="primary">Add AWC</Button>
-          </CardContent>
-        </Card>
-
-        <Card className={classes.card}>
-          <CardHeader avatar={<Avatar><TimerIcon /></Avatar>} title="Doser" />
-          <CardContent>
-            <Button variant="contained" color="primary">Add Doser</Button>
-          </CardContent>
-        </Card>
+        <DoserAppBar />
+        <Box m={2}>
+          <Grid container spacing={2} className={classes.grid}>
+            <Grid item xs={6}>
+              <AutoTopOffs />
+            </Grid>
+            <Grid item xs={6}>
+              <AutoWaterChanges />
+            </Grid>
+            <Grid item xs={6}>
+              <Dosers />
+            </Grid>
+          </Grid>
+        </Box>
       </ThemeProvider>
     </React.Fragment>
   );
