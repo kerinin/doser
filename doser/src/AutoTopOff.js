@@ -15,6 +15,7 @@ import TablePagination from '@material-ui/core/TablePagination';
 
 import DoserAppBar from './DoserAppBar';
 import EditAutoTopOff from './EditAutoTopOff';
+import { Card, CardContent, CardHeader, CardMedia } from '@material-ui/core';
 
 const useStyles = makeStyles((theme) => ({
     grid: {
@@ -45,33 +46,37 @@ function AutoTopOff() {
                     </Grid>
 
                     <Grid item xs={12}>
-                        <Paper>
+                        <Card>
+                            <CardHeader title="History" />
+                            <CardContent>
+                                <VictoryBar />
+                            </CardContent>
 
-                            <VictoryBar />
-
-                            <TableContainer>
-                                <Table>
-                                    <TableHead>
-                                        <TableRow>
-                                            <TableCell>Time</TableCell>
-                                            <TableCell>Dose</TableCell>
-                                        </TableRow>
-                                    </TableHead>
-                                    <TableBody>
-                                        <TableRow>
-                                            <TableCell>Today</TableCell>
-                                            <TableCell>124mL</TableCell>
-                                        </TableRow>
-                                    </TableBody>
-                                    {/* <TablePagination
+                            <CardContent>
+                                <TableContainer>
+                                    <Table>
+                                        <TableHead>
+                                            <TableRow>
+                                                <TableCell>Time</TableCell>
+                                                <TableCell>Dose</TableCell>
+                                            </TableRow>
+                                        </TableHead>
+                                        <TableBody>
+                                            <TableRow>
+                                                <TableCell>Today</TableCell>
+                                                <TableCell>124mL</TableCell>
+                                            </TableRow>
+                                        </TableBody>
+                                        {/* <TablePagination
                                             rowsPerPageOptions={[10, 50]}
                                             count={30}
                                             rowsPerPage={10}
                                             page={1}
                                         /> */}
-                                </Table>
-                            </TableContainer>
-                        </Paper>
+                                    </Table>
+                                </TableContainer>
+                            </CardContent>
+                        </Card>
                     </Grid>
                 </Grid>
             </Box>
