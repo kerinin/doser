@@ -38,9 +38,12 @@ function AutoTopOff() {
         <React.Fragment>
             <DoserAppBar />
             <Box m={2}>
-                <EditAutoTopOff />
 
                 <Grid container spacing={2} className={classes.grid}>
+                    <Grid item xs={12}>
+                        <EditAutoTopOff />
+                    </Grid>
+
                     <Grid item xs={12}>
                         <Paper>
 

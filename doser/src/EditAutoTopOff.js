@@ -11,7 +11,11 @@ import MenuItem from '@material-ui/core/MenuItem';
 import Input from '@material-ui/core/Input';
 import InputLabel from '@material-ui/core/InputLabel';
 import Chip from '@material-ui/core/Chip';
+import Card from '@material-ui/core/Card';
+import IconAvatar from './IconAvatar';
+import { CardActions, CardContent, CardHeader } from '@material-ui/core';
 
+import VerticalAlignTopIcon from '@material-ui/icons/VerticalAlignTop';
 import AddCircleIcon from '@material-ui/icons/AddCircle';
 
 const useStyles = makeStyles((theme) => ({
@@ -38,8 +42,9 @@ function EditAutoTopOff() {
     };
 
     return (
-        <Paper>
-            <Box m={2}>
+        <Card>
+            <CardHeader title="Settings" />
+            <CardContent>
                 <Grid container spacing={2} className={classes.grid}>
                     <Grid item xs={4}>
                         <InputLabel>Sensors</InputLabel>
@@ -65,13 +70,13 @@ function EditAutoTopOff() {
                         <Input id="input-interval" />
                         <FormHelperText>Interval in minutes</FormHelperText>
                     </Grid>
-                    <Grid item xs={12}>
-                        <Button color="primary">Cancel</Button>
-                        <Button variant="contained" color="primary">Save</Button>
-                    </Grid>
                 </Grid>
-            </Box>
-        </Paper>
+            </CardContent>
+            <CardActions>
+                <Button color="primary">Cancel</Button>
+                <Button variant="contained" color="primary">Save</Button>
+            </CardActions>
+        </Card>
     )
 }
 
