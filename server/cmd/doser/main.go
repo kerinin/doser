@@ -17,6 +17,7 @@ import (
 	"github.com/kerinin/doser/service/controller"
 	"github.com/kerinin/doser/service/graph"
 	"github.com/kerinin/doser/service/graph/generated"
+	"github.com/rs/cors"
 	"github.com/sirupsen/logrus"
 )
 
@@ -61,11 +62,15 @@ func main() {
 	graphqlSrv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{
 		Resolvers: graph.NewResolver(db, firmatasController, atoController, awcController),
 	}))
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", graphqlSrv)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", playground.Handler("GraphQL playground", "/query"))
+	mux.HandleFunc("/query", graphqlSrv.ServeHTTP)
+	handler := cors.Default().Handler(mux)
+
 	srv := &http.Server{
 		Addr:    ":" + *port,
-		Handler: http.DefaultServeMux,
+		Handler: handler,
 	}
 
 	wg.Add(2)

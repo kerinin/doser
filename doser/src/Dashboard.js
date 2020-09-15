@@ -21,7 +21,6 @@ function Dashboard() {
     return (
         <React.Fragment>
             <DoserAppBar />
-
             <Box m={2}>
                 <Grid container spacing={2} className={classes.grid}>
                     <Grid item xs={6}>

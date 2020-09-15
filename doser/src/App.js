@@ -9,6 +9,7 @@ import CssBaseline from '@material-ui/core/CssBaseline';
 import { unstable_createMuiStrictModeTheme, ThemeProvider } from '@material-ui/core/styles';
 import purple from '@material-ui/core/colors/purple';
 import yellow from '@material-ui/core/colors/yellow';
+import { GraphQLClient, ClientContext } from 'graphql-hooks'
 
 import Dashboard from './Dashboard';
 import AutoTopOff from './AutoTopOff';
@@ -24,9 +25,13 @@ const theme = unstable_createMuiStrictModeTheme({
   },
 });
 
+const client = new GraphQLClient({
+  url: 'http://localhost:8080/query'
+})
+
 function App() {
   return (
-    <React.Fragment>
+    <ClientContext.Provider value={client}>
       <CssBaseline />
       <ThemeProvider theme={theme}>
         <Router>
@@ -40,7 +45,7 @@ function App() {
           </Switch>
         </Router>
       </ThemeProvider>
-    </React.Fragment>
+    </ClientContext.Provider >
   );
 }
 
