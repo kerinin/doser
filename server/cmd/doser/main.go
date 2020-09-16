@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
+	_ "net/http/pprof"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
