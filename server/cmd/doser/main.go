@@ -78,6 +78,9 @@ func main() {
 	go atoController.Run(ctx, wg)
 	go awcController.Run(ctx, wg)
 	go func() {
+		log.Println(http.ListenAndServe(":6060", nil))
+	}()
+	go func() {
 		log.Fatal(srv.ListenAndServe())
 	}()
 	go func() {
