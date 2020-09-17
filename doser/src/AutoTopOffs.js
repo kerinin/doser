@@ -97,7 +97,9 @@ function AutoTopOffs() {
             <CardHeader avatar={<IconAvatar><VerticalAlignTopIcon /></IconAvatar>} title="Auto Top-Off" />
             <Content />
             <CardActions>
-                <Button startIcon={<AddCircleIcon />}>Add ATO</Button>
+                <Link component={RouterLink} to="/ato/create">
+                    <Button startIcon={<AddCircleIcon />}>Add ATO</Button>
+                </Link>
             </CardActions>
         </Card >
     )

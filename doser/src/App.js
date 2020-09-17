@@ -1,4 +1,5 @@
 import React from 'react';
+import { makeStyles } from '@material-ui/core/styles';
 import {
   BrowserRouter as Router,
   Switch,
@@ -13,6 +14,7 @@ import { GraphQLClient, ClientContext } from 'graphql-hooks'
 
 import Dashboard from './Dashboard';
 import AutoTopOff from './AutoTopOff';
+import CreateAutoTopOff from './CreateAutoTopOff';
 
 const theme = unstable_createMuiStrictModeTheme({
   palette: {
@@ -36,6 +38,9 @@ function App() {
       <ThemeProvider theme={theme}>
         <Router>
           <Switch>
+            <Route path="/ato/create">
+              <CreateAutoTopOff />
+            </Route>
             <Route path="/ato/:atoId">
               <AutoTopOff />
             </Route>
