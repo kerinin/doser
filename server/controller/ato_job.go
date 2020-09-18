@@ -65,7 +65,8 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	)
 	log.Printf("ATO job params - deviceID:%d maxSteps:%d speed:%d", j.pump.DeviceID, maxSteps, speed)
 
-	ticker := time.NewTicker(time.Duration(j.ato.FillInterval) * time.Minute)
+	interval := time.Duration(j.ato.FillInterval) * time.Minute
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	// Run first job immediately
@@ -74,7 +75,8 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	for {
 		select {
 		case <-ticker.C:
-			j.runJob(ctx, maxSteps, speed)
+			jobCtx, _ := context.WithTimeout(ctx, interval)
+			j.runJob(jobCtx, maxSteps, speed)
 		case <-ctx.Done():
 			return
 		}
@@ -199,6 +201,8 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 			return
 
 		case <-ctx.Done():
+			log.Printf("Job context cancelled, terminating")
+
 			err = j.firmata.StepperStop(int(j.pump.DeviceID))
 			if err != nil {
 				j.event(UncontrolledPumpKind, "Failure stopping pump %s during shutdown of ATO job: %w", j.pump.ID, err)
