@@ -101,7 +101,9 @@ type AutoTopOff {
   max_fill_volume: Float
 
   events: [AtoEvent!]
-  rate: [AtoRate!]
+  # Window specifies the number of seconds over which to compute rates. 
+  # Defaults to 3600 (1 hour)
+  rate(window: Float): [AtoRate!]
 }
 
 type AtoRate {

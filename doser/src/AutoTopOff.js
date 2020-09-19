@@ -264,7 +264,7 @@ function RateChart({ ato }) {
   const victoryTheme = useVictoryTheme();
 
   return (
-    <VictoryChart theme={victoryTheme} minDomain={{ y: -4000 }}>
+    <VictoryChart theme={victoryTheme} minDomain={{ y: 0 }}>
       <VictoryLine
         interpolation="stepBefore"
         data={ato.rate.map(({ timestamp, rate }) => ({
@@ -297,7 +297,13 @@ function VolumeChart({ ato }) {
 
 function EventsTable({ ato }) {
   const columns = [
-    { field: "timestamp", headerName: "Time", width: 140 },
+    {
+      field: "timestamp",
+      headerName: "Time",
+      width: 250,
+      type: "datetime",
+      valueFormatter: ({ value }) => new Date(value * 1000).toISOString(),
+    },
     { field: "kind", headerName: "Event", width: 140 },
     { field: "data", headerName: "Message", width: 400 },
   ];
@@ -309,23 +315,6 @@ function EventsTable({ ato }) {
       </div>
     </React.Fragment>
   );
-}
-
-function EventsTableRows({ ato }) {
-  if (!ato.events)
-    return (
-      <TableRow>
-        <TableCell colSpan={3}>No Events</TableCell>
-      </TableRow>
-    );
-
-  return ato.events.map(({ id, timestamp, kind, data }) => (
-    <TableRow key={id}>
-      <TableCell>{timestamp}</TableCell>
-      <TableCell>{kind}</TableCell>
-      <TableCell>{data}</TableCell>
-    </TableRow>
-  ));
 }
 
 export default AutoTopOff;

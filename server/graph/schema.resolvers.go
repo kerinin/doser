@@ -48,7 +48,7 @@ func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff)
 	return events, nil
 }
 
-func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff) ([]*model.AtoRate, error) {
+func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff, window *float64) ([]*model.AtoRate, error) {
 	pump := &models.Pump{ID: obj.PumpID}
 	doses, err := pump.Doses(qm.OrderBy(models.DoseColumns.Timestamp)).All(ctx, r.db)
 	if err != nil {
@@ -60,11 +60,14 @@ func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff) (
 	}
 
 	var (
-		window       = 24 * time.Hour
-		windowVolume = 0.0
-		cursor       = 0
-		rates        = make([]*model.AtoRate, 0, len(doses))
+		windowDuration = 24 * time.Hour
+		windowVolume   = 0.0
+		cursor         = 0
+		rates          = make([]*model.AtoRate, 0, len(doses))
 	)
+	if window != nil {
+		windowDuration = time.Duration(*window) * time.Second
+	}
 
 	for i := 0; i < len(doses); i++ {
 		if doses[i].Volume < 0 {
@@ -72,7 +75,7 @@ func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff) (
 		}
 
 		windowVolume += doses[i].Volume
-		for time.Unix(doses[i].Timestamp, 0).Sub(time.Unix(doses[cursor].Timestamp, 0)) > window {
+		for time.Unix(doses[i].Timestamp, 0).Sub(time.Unix(doses[cursor].Timestamp, 0)) > windowDuration {
 			if doses[cursor].Volume > 0 {
 				windowVolume -= doses[cursor].Volume
 			}
