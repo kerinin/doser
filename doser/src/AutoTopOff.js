@@ -19,6 +19,7 @@ import TableRow from "@material-ui/core/TableRow";
 import { useTheme } from "@material-ui/core/styles";
 import { useQuery } from "graphql-hooks";
 import { useMutation } from "graphql-hooks";
+import { DataGrid } from "@material-ui/data-grid";
 
 import DoserAppBar from "./DoserAppBar";
 import EditAutoTopOff from "./EditAutoTopOff";
@@ -294,21 +295,18 @@ function VolumeChart({ ato }) {
 }
 
 function EventsTable({ ato }) {
+  const columns = [
+    { field: "timestamp", headerName: "Time", width: 140 },
+    { field: "kind", headerName: "Event", width: 140 },
+    { field: "data", headerName: "Message", width: 400 },
+  ];
+
   return (
-    <TableContainer>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Time</TableCell>
-            <TableCell>Event</TableCell>
-            <TableCell>Message</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <EventsTableRows ato={ato} />
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <React.Fragment>
+      <div style={{ height: 400, width: "100%" }}>
+        <DataGrid rows={ato.events} columns={columns} pageSize={10} />
+      </div>
+    </React.Fragment>
   );
 }
 
