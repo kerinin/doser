@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kerinin/doser/service/controller"
@@ -16,6 +17,7 @@ import (
 	"github.com/kerinin/doser/service/models"
 	null "github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"gobot.io/x/gobot/platforms/raspi"
 )
 
@@ -48,26 +50,36 @@ func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff)
 
 func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff) ([]*model.AtoRate, error) {
 	pump := &models.Pump{ID: obj.PumpID}
-	doses, err := pump.Doses().All(ctx, r.db)
+	doses, err := pump.Doses(qm.OrderBy(models.DoseColumns.Timestamp)).All(ctx, r.db)
 	if err != nil {
 		return nil, fmt.Errorf("getting dose history: %w", err)
 	}
 
-	if len(doses) < 2 {
+	if len(doses) < 1 {
 		return nil, nil
 	}
 
-	rates := make([]*model.AtoRate, 0, len(doses)-1)
-	for i := 1; i < len(doses); i++ {
-		if doses[i].Timestamp == doses[i-1].Timestamp {
-			continue
+	var (
+		window       = 24 * time.Hour
+		windowVolume = 0.0
+		cursor       = 0
+		rates        = make([]*model.AtoRate, 0, len(doses))
+	)
+
+	for i := 0; i < len(doses); i++ {
+		windowVolume += doses[i].Volume
+		for time.Unix(doses[i].Timestamp, 0).Sub(time.Unix(doses[cursor].Timestamp, 0)) > window {
+			windowVolume -= doses[cursor].Volume
+			cursor++
 		}
 
-		rate := &model.AtoRate{
-			Timestamp: int(doses[i].Timestamp),
-			Rate:      doses[i].Volume * 60 * 60 / float64(doses[i].Timestamp-doses[i-1].Timestamp),
+		if cursor > 0 {
+			rate := &model.AtoRate{
+				Timestamp: int(doses[i].Timestamp),
+				Rate:      windowVolume,
+			}
+			rates = append(rates, rate)
 		}
-		rates = append(rates, rate)
 	}
 
 	return rates, nil
@@ -344,7 +356,7 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 
 	err = m.SetWaterLevelSensors(ctx, tx, false, waterLevelSensors...)
 	if err != nil {
-		return nil, fmt.Errorf("associating water level sensor: %w")
+		return nil, fmt.Errorf("associating water level sensor: %w", err)
 	}
 
 	r.atoController.Reset()
@@ -389,7 +401,7 @@ func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pump
 
 	err = m.SetWaterLevelSensors(ctx, tx, false, waterLevelSensors...)
 	if err != nil {
-		return nil, fmt.Errorf("associating water level sensor: %w")
+		return nil, fmt.Errorf("associating water level sensor: %w", err)
 	}
 
 	r.atoController.Reset()
