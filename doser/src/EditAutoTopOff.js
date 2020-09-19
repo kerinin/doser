@@ -177,7 +177,9 @@ function EditAutoTopOff() {
       <CardHeader title="Settings" />
       <Content />
       <CardActions>
-        <Button color="primary">Cancel</Button>
+        <Button color="primary" onClick={api.cancel}>
+          Cancel
+        </Button>
         <Button variant="contained" color="primary" onClick={api.submit}>
           Save
         </Button>

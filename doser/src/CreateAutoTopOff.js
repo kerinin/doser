@@ -40,7 +40,7 @@ function CreateAutoTopOff() {
   const [fillInterval, setFillInterval] = React.useState(10);
   const [maxFillVolume, setMaxFillVolume] = React.useState(1000);
 
-  const [createAutoTopOff, { data, loading, error }] = useMutation(CREATE);
+  const [createAutoTopOff, { loading, error }] = useMutation(CREATE);
 
   function addSensor(id) {
     setSensors(sensors.concat(id));
@@ -57,6 +57,8 @@ function CreateAutoTopOff() {
         fill_interval: fillInterval,
         max_fill_volume: maxFillVolume,
       },
+    }).then(({ data, error }) => {
+      if (!error) history.push(`/ato/${data.createAutoTopOff.id}`);
     });
   }
 
@@ -76,10 +78,6 @@ function CreateAutoTopOff() {
     loading,
     error,
   };
-
-  if (data) {
-    history.push(`/ato/${data.createAutoTopOff.id}`);
-  }
 
   return (
     <EditAutoTopOffApi.Provider value={api}>

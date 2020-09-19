@@ -16,11 +16,19 @@ import TableContainer from "@material-ui/core/TableContainer";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import { useTheme } from "@material-ui/core/styles";
+import { useQuery } from "graphql-hooks";
+import { useMutation } from "graphql-hooks";
 
 import DoserAppBar from "./DoserAppBar";
 import EditAutoTopOff from "./EditAutoTopOff";
 import { Api as EditAutoTopOffApi } from "./EditAutoTopOff";
-import { Card, CardContent, CardHeader } from "@material-ui/core";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  LinearProgress,
+  Typography,
+} from "@material-ui/core";
 
 const useStyles = makeStyles((theme) => ({
   grid: {
@@ -31,15 +39,44 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-function AutoTopOff() {
+const QUERY = `query {
+    auto_top_off {
+        id
+        pump {
+          id
+        }
+        level_sensors {
+          id
+        }
+        fill_rate
+        fill_interval
+        max_fill_volume
+    }
+}`;
+
+const EDIT = `mutation EditAutoTopOff($id: ID!, $pump_id: ID!, $level_sensors: [ID!]!, $fill_rate: Float!, $fill_interval: Int!, $max_fill_volume: Float!) {
+    updateAutoTopOff(
+        id: $id,
+        pump_id: $pump_id,
+        level_sensors: $level_sensors,
+        fill_rate: $fill_rate,
+        fill_interval: $fill_interval,
+        max_fill_volume: $max_fill_volume,
+    ) {
+        id
+    }
+}`;
+function Content({ ato, reload }) {
+  const [editAutoTopOff, { data, loading, error }] = useMutation(EDIT);
+
   // TODO: Fill with actual data!
-  const [pump, setPump] = React.useState("");
-  const [sensors, setSensors] = React.useState([]);
-  const [fillRate, setFillRate] = React.useState(100);
-  const [fillInterval, setFillInterval] = React.useState(10);
-  const [maxFillVolume, setMaxFillVolume] = React.useState(1000);
-  const loading = false;
-  const error = false;
+  const [pump, setPump] = React.useState(ato.pump.id);
+  const [sensors, setSensors] = React.useState(
+    ato.level_sensors.map((s) => s.id)
+  );
+  const [fillRate, setFillRate] = React.useState(ato.fill_rate);
+  const [fillInterval, setFillInterval] = React.useState(ato.fill_interval);
+  const [maxFillVolume, setMaxFillVolume] = React.useState(ato.max_fill_volume);
 
   function addSensor(id) {
     setSensors(sensors.concat(id));
@@ -47,15 +84,25 @@ function AutoTopOff() {
   function removeSensor(id) {
     setSensors(sensors.filter((item) => item !== id));
   }
+  function cancel() {
+    setPump(ato.pump.id);
+    setSensors(ato.level_sensors.map((s) => s.id));
+    setFillRate(ato.fill_rate);
+    setFillInterval(ato.fill_interval);
+    setMaxFillVolume(ato.max_fill_volume);
+  }
   function submit() {
-    console.log({
+    editAutoTopOff({
       variables: {
+        id: ato.id,
         pump_id: pump,
-        sensors: sensors,
+        level_sensors: sensors,
         fill_rate: fillRate,
         fill_interval: fillInterval,
         max_fill_volume: maxFillVolume,
       },
+    }).then(({ error }) => {
+      if (!error) reload();
     });
   }
 
@@ -71,13 +118,13 @@ function AutoTopOff() {
     setFillInterval,
     maxFillVolume,
     setMaxFillVolume,
+    cancel,
     submit,
     loading,
     error,
   };
 
   const theme = useTheme();
-  const classes = useStyles();
 
   const victoryTheme = {
     ...VictoryTheme.material,
@@ -102,76 +149,101 @@ function AutoTopOff() {
 
   return (
     <React.Fragment>
-      <DoserAppBar />
-      <Box m={2}>
-        <Grid container spacing={2} className={classes.grid}>
-          <Grid item xs={12}>
-            <EditAutoTopOffApi.Provider value={api}>
-              <EditAutoTopOff />
-            </EditAutoTopOffApi.Provider>
-          </Grid>
+      <Grid item xs={12}>
+        <EditAutoTopOffApi.Provider value={api}>
+          <EditAutoTopOff />
+        </EditAutoTopOffApi.Provider>
+      </Grid>
 
-          <Grid item xs={12}>
-            <Card>
-              <CardHeader title="History" />
-              <CardContent>
-                <VictoryChart theme={victoryTheme}>
-                  <VictoryArea
-                    interpolation="stepAfter"
-                    minDomain={{ y: 0 }}
-                    data={[
-                      { x: 1, y: 19000 },
-                      { x: 2, y: 0 },
-                      { x: 3, y: 16500 },
-                      { x: 4, y: 0 },
-                    ]}
-                    style={{
-                      data: {
-                        fill: theme.palette.secondary.main,
-                      },
-                    }}
-                  />
-                  <VictoryLine
-                    interpolation="natural"
-                    minDomain={{ y: 0 }}
-                    data={[
-                      { x: 1, y: 13000 },
-                      { x: 2, y: 16500 },
-                      { x: 3, y: 14250 },
-                      { x: 4, y: 19000 },
-                    ]}
-                  />
-                  <VictoryAxis></VictoryAxis>
-                  <VictoryAxis dependentAxis></VictoryAxis>
-                </VictoryChart>
-              </CardContent>
+      <Grid item xs={12}>
+        <Card>
+          <CardHeader title="History" />
+          <CardContent>
+            <VictoryChart theme={victoryTheme}>
+              <VictoryArea
+                interpolation="stepAfter"
+                minDomain={{ y: 0 }}
+                data={[
+                  { x: 1, y: 19000 },
+                  { x: 2, y: 0 },
+                  { x: 3, y: 16500 },
+                  { x: 4, y: 0 },
+                ]}
+                style={{
+                  data: {
+                    fill: theme.palette.secondary.main,
+                  },
+                }}
+              />
+              <VictoryLine
+                interpolation="natural"
+                minDomain={{ y: 0 }}
+                data={[
+                  { x: 1, y: 13000 },
+                  { x: 2, y: 16500 },
+                  { x: 3, y: 14250 },
+                  { x: 4, y: 19000 },
+                ]}
+              />
+              <VictoryAxis></VictoryAxis>
+              <VictoryAxis dependentAxis></VictoryAxis>
+            </VictoryChart>
+          </CardContent>
 
-              <CardContent>
-                <TableContainer>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Time</TableCell>
-                        <TableCell>Dose</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>Today</TableCell>
-                        <TableCell>124mL</TableCell>
-                      </TableRow>
-                    </TableBody>
-                    {/* <TablePagination
+          <CardContent>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Time</TableCell>
+                    <TableCell>Dose</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>Today</TableCell>
+                    <TableCell>124mL</TableCell>
+                  </TableRow>
+                </TableBody>
+                {/* <TablePagination
                                             rowsPerPageOptions={[10, 50]}
                                             count={30}
                                             rowsPerPage={10}
                                             page={1}
                                         /> */}
-                  </Table>
-                </TableContainer>
-              </CardContent>
-            </Card>
-          </Grid>
+              </Table>
+            </TableContainer>
+          </CardContent>
+        </Card>
+      </Grid>
+    </React.Fragment>
+  );
+}
+
+function AutoTopOff() {
+  const { loading, error, data, refetch } = useQuery(QUERY, {});
+  const classes = useStyles();
+
+  if (loading)
+    return (
+      <Grid item xs={12}>
+        <LinearProgress />
+      </Grid>
+    );
+
+  if (error)
+    return (
+      <Grid item xs={12}>
+        <Typography>Failed to load ATO</Typography> />
+      </Grid>
+    );
+
+  return (
+    <React.Fragment>
+      <DoserAppBar />
+      <Box m={2}>
+        <Grid container spacing={2} className={classes.grid}>
+          <Content ato={data.auto_top_off[0]} reload={refetch} />
         </Grid>
       </Box>
     </React.Fragment>
