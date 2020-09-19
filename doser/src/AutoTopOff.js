@@ -6,6 +6,7 @@ import {
   VictoryArea,
   VictoryAxis,
   VictoryChart,
+  VictoryLabel,
   VictoryLine,
   VictoryScatter,
   VictoryTheme,
@@ -89,7 +90,7 @@ const QUERY = `query GetAutoTopOff($id: ID!) {
           kind
           data
         }
-        rate {
+        rate(window: 3600) {
           timestamp
           rate
         }
@@ -264,7 +265,11 @@ function RateChart({ ato }) {
   const victoryTheme = useVictoryTheme();
 
   return (
-    <VictoryChart theme={victoryTheme} minDomain={{ y: 0 }}>
+    <VictoryChart
+      theme={victoryTheme}
+      minDomain={{ y: 0 }}
+      domainPadding={{ y: [20, 20] }}
+    >
       <VictoryLine
         interpolation="stepBefore"
         data={ato.rate.map(({ timestamp, rate }) => ({
@@ -272,8 +277,15 @@ function RateChart({ ato }) {
           y: rate,
         }))}
       />
-      <VictoryAxis label="days ago"></VictoryAxis>
-      <VictoryAxis dependentAxis label="Rate (mL/h)"></VictoryAxis>
+      <VictoryAxis
+        label="days ago"
+        axisLabelComponent={<VictoryLabel dy={20} />}
+      />
+      <VictoryAxis
+        dependentAxis
+        label="Rate (mL/h)"
+        axisLabelComponent={<VictoryLabel dy={30} />}
+      />
     </VictoryChart>
   );
 }

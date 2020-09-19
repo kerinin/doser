@@ -103,7 +103,7 @@ type AutoTopOff {
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
   # Defaults to 3600 (1 hour)
-  rate(window: Float): [AtoRate!]
+  rate(window: Int): [AtoRate!]
 }
 
 type AtoRate {

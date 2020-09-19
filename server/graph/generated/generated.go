@@ -72,7 +72,7 @@ type ComplexityRoot struct {
 		LevelSensors  func(childComplexity int) int
 		MaxFillVolume func(childComplexity int) int
 		Pump          func(childComplexity int) int
-		Rate          func(childComplexity int, window *float64) int
+		Rate          func(childComplexity int, window *int) int
 	}
 
 	AutoWaterChange struct {
@@ -174,7 +174,7 @@ type AutoTopOffResolver interface {
 	LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error)
 
 	Events(ctx context.Context, obj *models.AutoTopOff) ([]*models.AtoEvent, error)
-	Rate(ctx context.Context, obj *models.AutoTopOff, window *float64) ([]*model.AtoRate, error)
+	Rate(ctx context.Context, obj *models.AutoTopOff, window *int) ([]*model.AtoRate, error)
 }
 type AutoWaterChangeResolver interface {
 	FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
@@ -354,7 +354,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.AutoTopOff.Rate(childComplexity, args["window"].(*float64)), true
+		return e.complexity.AutoTopOff.Rate(childComplexity, args["window"].(*int)), true
 
 	case "AutoWaterChange.events":
 		if e.complexity.AutoWaterChange.Events == nil {
@@ -1035,7 +1035,7 @@ type AutoTopOff {
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
   # Defaults to 3600 (1 hour)
-  rate(window: Float): [AtoRate!]
+  rate(window: Int): [AtoRate!]
 }
 
 type AtoRate {
@@ -1125,10 +1125,10 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 func (ec *executionContext) field_AutoTopOff_rate_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 *float64
+	var arg0 *int
 	if tmp, ok := rawArgs["window"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("window"))
-		arg0, err = ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
+		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2226,7 +2226,7 @@ func (ec *executionContext) _AutoTopOff_rate(ctx context.Context, field graphql.
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.AutoTopOff().Rate(rctx, obj, args["window"].(*float64))
+		return ec.resolvers.AutoTopOff().Rate(rctx, obj, args["window"].(*int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)

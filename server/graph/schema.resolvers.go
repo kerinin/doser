@@ -8,7 +8,6 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/kerinin/doser/service/controller"
@@ -48,7 +47,7 @@ func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff)
 	return events, nil
 }
 
-func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff, window *float64) ([]*model.AtoRate, error) {
+func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff, window *int) ([]*model.AtoRate, error) {
 	pump := &models.Pump{ID: obj.PumpID}
 	doses, err := pump.Doses(qm.OrderBy(models.DoseColumns.Timestamp)).All(ctx, r.db)
 	if err != nil {
@@ -60,35 +59,42 @@ func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff, w
 	}
 
 	var (
-		windowDuration = 24 * time.Hour
-		windowVolume   = 0.0
+		windowDuration = int64(60 * 60)
 		cursor         = 0
-		rates          = make([]*model.AtoRate, 0, len(doses))
 	)
 	if window != nil {
-		windowDuration = time.Duration(*window) * time.Second
+		windowDuration = int64(*window)
 	}
+	var (
+		rates     = make([]*model.AtoRate, 0, (doses[len(doses)-1].Timestamp-doses[0].Timestamp)/windowDuration)
+		startTime = (doses[0].Timestamp / int64(windowDuration)) * int64(windowDuration)
+		endTime   = doses[len(doses)-1].Timestamp
+	)
 
-	for i := 0; i < len(doses); i++ {
-		if doses[i].Volume < 0 {
-			continue
-		}
+	// Iterate over non-overlapping time windows
+	for windowStart := startTime; windowStart < endTime; windowStart += windowDuration {
+		var (
+			volume    = 0.0
+			windowEnd = windowStart + windowDuration
+		)
 
-		windowVolume += doses[i].Volume
-		for time.Unix(doses[i].Timestamp, 0).Sub(time.Unix(doses[cursor].Timestamp, 0)) > windowDuration {
-			if doses[cursor].Volume > 0 {
-				windowVolume -= doses[cursor].Volume
-			}
+		// Advance the cursor to the start of the current window
+		for doses[cursor].Timestamp <= windowStart {
 			cursor++
 		}
-
-		if cursor > 0 {
-			rate := &model.AtoRate{
-				Timestamp: int(doses[i].Timestamp),
-				Rate:      windowVolume * float64(time.Hour/windowDuration),
+		// Read all the doses in the window
+		for i := cursor; doses[i].Timestamp <= windowEnd; i++ {
+			if doses[i].Volume < 0 {
+				continue
 			}
-			rates = append(rates, rate)
+			volume += doses[i].Volume
 		}
+
+		rate := &model.AtoRate{
+			Timestamp: int(windowEnd),
+			Rate:      volume * float64(60*60) / float64(windowDuration),
+		}
+		rates = append(rates, rate)
 	}
 
 	return rates, nil
