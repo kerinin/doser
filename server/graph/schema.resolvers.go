@@ -85,7 +85,7 @@ func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff, w
 		if cursor > 0 {
 			rate := &model.AtoRate{
 				Timestamp: int(doses[i].Timestamp),
-				Rate:      windowVolume,
+				Rate:      windowVolume * float64(time.Hour/windowDuration),
 			}
 			rates = append(rates, rate)
 		}
