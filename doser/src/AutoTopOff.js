@@ -264,7 +264,7 @@ function RateChart({ ato }) {
   const victoryTheme = useVictoryTheme();
 
   return (
-    <VictoryChart theme={victoryTheme} minDomain={{ y: 0 }}>
+    <VictoryChart theme={victoryTheme} minDomain={{ y: -4000 }}>
       <VictoryLine
         interpolation="stepBefore"
         data={ato.rate.map(({ timestamp, rate }) => ({
