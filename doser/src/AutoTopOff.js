@@ -7,6 +7,7 @@ import {
   VictoryAxis,
   VictoryChart,
   VictoryLine,
+  VictoryScatter,
   VictoryTheme,
 } from "victory";
 import Table from "@material-ui/core/Table";
@@ -51,6 +52,10 @@ const QUERY = `query GetAutoTopOff($id: ID!) {
           timestamp
           kind
           data
+        }
+        rate {
+          timestamp
+          rate
         }
     }
 }`;
@@ -170,6 +175,32 @@ function Content({ ato, reload }) {
     error,
   };
 
+  return (
+    <React.Fragment>
+      <Grid item xs={12}>
+        <EditAutoTopOffApi.Provider value={api}>
+          <EditAutoTopOff />
+        </EditAutoTopOffApi.Provider>
+      </Grid>
+
+      <Grid item xs={12}>
+        <Card>
+          <CardHeader title="History" />
+          <CardContent>
+            <RateChart ato={ato} />
+          </CardContent>
+
+          <CardContent>
+            <EventsTable ato={ato} />
+          </CardContent>
+        </Card>
+      </Grid>
+    </React.Fragment>
+  );
+}
+
+function RateChart({ ato }) {
+  console.log(ato);
   const theme = useTheme();
 
   const victoryTheme = {
@@ -193,55 +224,19 @@ function Content({ ato, reload }) {
     },
   };
 
+  if (!ato.rate) return <></>;
+
   return (
-    <React.Fragment>
-      <Grid item xs={12}>
-        <EditAutoTopOffApi.Provider value={api}>
-          <EditAutoTopOff />
-        </EditAutoTopOffApi.Provider>
-      </Grid>
-
-      <Grid item xs={12}>
-        <Card>
-          <CardHeader title="History" />
-          <CardContent>
-            <VictoryChart theme={victoryTheme}>
-              <VictoryArea
-                interpolation="stepAfter"
-                minDomain={{ y: 0 }}
-                data={[
-                  { x: 1, y: 19000 },
-                  { x: 2, y: 0 },
-                  { x: 3, y: 16500 },
-                  { x: 4, y: 0 },
-                ]}
-                style={{
-                  data: {
-                    fill: theme.palette.secondary.main,
-                  },
-                }}
-              />
-              <VictoryLine
-                interpolation="natural"
-                minDomain={{ y: 0 }}
-                data={[
-                  { x: 1, y: 13000 },
-                  { x: 2, y: 16500 },
-                  { x: 3, y: 14250 },
-                  { x: 4, y: 19000 },
-                ]}
-              />
-              <VictoryAxis></VictoryAxis>
-              <VictoryAxis dependentAxis></VictoryAxis>
-            </VictoryChart>
-          </CardContent>
-
-          <CardContent>
-            <EventsTable ato={ato} />
-          </CardContent>
-        </Card>
-      </Grid>
-    </React.Fragment>
+    <VictoryChart theme={victoryTheme} minDomain={{ y: 0 }}>
+      <VictoryScatter
+        data={ato.rate.map(({ timestamp, rate }) => ({
+          x: (timestamp - Date.now() / 1000) / 60 / 60 / 24,
+          y: rate,
+        }))}
+      />
+      <VictoryAxis label="days ago"></VictoryAxis>
+      <VictoryAxis dependentAxis label="Rate (mL/h)"></VictoryAxis>
+    </VictoryChart>
   );
 }
 
@@ -272,8 +267,8 @@ function EventsTableRows({ ato }) {
       </TableRow>
     );
 
-  return ato.events.map(({ timestamp, kind, data }) => (
-    <TableRow>
+  return ato.events.map(({ id, timestamp, kind, data }) => (
+    <TableRow key={id}>
       <TableCell>{timestamp}</TableCell>
       <TableCell>{kind}</TableCell>
       <TableCell>{data}</TableCell>

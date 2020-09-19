@@ -25,7 +25,7 @@ const theme = unstable_createMuiStrictModeTheme({
 });
 
 const client = new GraphQLClient({
-  url: "http://localhost:8080/query",
+  url: "http://raspberrypi.local:8080/query",
 });
 
 function App() {
