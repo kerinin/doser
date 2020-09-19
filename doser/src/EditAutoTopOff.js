@@ -1,113 +1,190 @@
-import React from 'react';
-import { createContext, useContext } from 'react';
-import { makeStyles } from '@material-ui/core/styles';
-import Grid from '@material-ui/core/Grid';
-import Button from '@material-ui/core/Button';
-import IconButton from '@material-ui/core/IconButton';
-import FormHelperText from '@material-ui/core/FormHelperText';
-import Menu from '@material-ui/core/Menu';
-import MenuItem from '@material-ui/core/MenuItem';
-import Input from '@material-ui/core/Input';
-import InputLabel from '@material-ui/core/InputLabel';
-import Chip from '@material-ui/core/Chip';
-import Card from '@material-ui/core/Card';
-import { CardActions, CardContent, CardHeader } from '@material-ui/core';
-import { useQuery } from 'graphql-hooks'
-import { Avatar, LinearProgress, ListItemAvatar, Typography } from '@material-ui/core';
-
-import AddCircleIcon from '@material-ui/icons/AddCircle';
+import React from "react";
+import { createContext, useContext } from "react";
+import { makeStyles } from "@material-ui/core/styles";
+import Grid from "@material-ui/core/Grid";
+import Button from "@material-ui/core/Button";
+import FormControl from "@material-ui/core/FormControl";
+import MenuItem from "@material-ui/core/MenuItem";
+import Select from "@material-ui/core/Select";
+import InputLabel from "@material-ui/core/InputLabel";
+import Chip from "@material-ui/core/Chip";
+import TextField from "@material-ui/core/TextField";
+import Card from "@material-ui/core/Card";
+import {
+  CardActions,
+  CardContent,
+  CardHeader,
+  Checkbox,
+  CircularProgress,
+  FormControlLabel,
+  FormGroup,
+  FormLabel,
+} from "@material-ui/core";
+import { useQuery } from "graphql-hooks";
+import { LinearProgress, Typography } from "@material-ui/core";
 
 const QUERY = `query {
     water_level_sensors {
         id
         kind
     }
-}`
+    pumps {
+        id
+    }
+}`;
 
 const useStyles = makeStyles((theme) => ({
-    grid: {
-        flexGrow: 1,
+  grid: {
+    flexGrow: 1,
+  },
+  form: {
+    "& .MuiTextField-root": {
+      margin: theme.spacing(1),
     },
+  },
+  formControl: {
+    margin: theme.spacing(1),
+    minWidth: 120,
+  },
+  chip: {
+    margin: theme.spacing(1),
+  },
 }));
 
 export const Api = createContext(null);
 
-function Content({ sensors }) {
-    const [anchorEl, setAnchorEl] = React.useState(null);
-    const { loading, error, data } = useQuery(QUERY, {})
-    const classes = useStyles();
-    const api = useContext(Api);
+function Content() {
+  const { loading, error, data } = useQuery(QUERY, {});
+  const classes = useStyles();
+  const api = useContext(Api);
 
-    const handleClick = (event) => {
-        setAnchorEl(event.currentTarget);
-    };
+  const handleSelectSensor = (id) => {
+    api.addSensor(id);
+  };
 
-    const handleSelectSensor = (id) => {
-        api.addSensor(id);
-        setAnchorEl(null);
-    };
-
-    const handleClose = (id) => {
-        setAnchorEl(null);
-    };
-
-    const handleDelete = (id) => {
-        api.removeSensor(id)
-    };
-
-    if (loading) return (
-        <CardContent><LinearProgress /></CardContent>
-    )
-    if (error) return (
-        <CardContent>Failed to load water level sensors</CardContent>
-    )
-    if (data.water_level_sensors == null) return (
-        <CardContent>No water level sensors defined - create one first</CardContent>
-    )
-
+  if (loading)
     return (
-        <CardContent>
-            <Grid container spacing={2} className={classes.grid}>
-                <Grid item xs={4}>
-                    <InputLabel>Sensors</InputLabel>
-                    {sensors.map((sensor, idx) => <Chip key={idx} label={sensor} onDelete={() => handleDelete(sensor)} />)}
-                    <IconButton onClick={handleClick} ><AddCircleIcon /></IconButton>
-                    <Menu
-                        id="add-sensor-menu"
-                        anchorEl={anchorEl}
-                        keepMounted
-                        open={Boolean(anchorEl)}
-                        onClose={handleClose}
-                    >
-                        {data.water_level_sensors.map((s) => <MenuItem key={s.id} onClick={(e) => handleSelectSensor(s.id)}>{s.id}</MenuItem>)}
-                    </Menu>
-                </Grid>
-                <Grid item xs={4}>
-                    <InputLabel>Fill Rate</InputLabel>
-                    <Input id="input-rate" />
-                    <FormHelperText>Rate in mL/min</FormHelperText>
-                </Grid>
-                <Grid item xs={4}>
-                    <InputLabel>Fill Interval</InputLabel>
-                    <Input id="input-interval" />
-                    <FormHelperText>Interval in minutes</FormHelperText>
-                </Grid>
-            </Grid>
-        </CardContent>
-    )
+      <CardContent>
+        <LinearProgress />
+      </CardContent>
+    );
+  if (error)
+    return <CardContent>Failed to load water level sensors</CardContent>;
+  if (data.water_level_sensors == null)
+    return (
+      <CardContent>
+        No water level sensors defined - create one first
+      </CardContent>
+    );
+
+  return (
+    <CardContent>
+      <Grid container spacing={2} className={classes.grid}>
+        <Grid item xs={12}>
+          <FormControl className={classes.formControl}>
+            <FormGroup>
+              <FormLabel>Sensors</FormLabel>
+              {data.water_level_sensors.map((sensor, idx) => (
+                <FormControlLabel
+                  key={idx}
+                  control={
+                    <Checkbox
+                      color="primary"
+                      checked={api.sensors.includes(sensor.id)}
+                      onClick={(e) => handleSelectSensor(sensor.id)}
+                    />
+                  }
+                  label={
+                    <>
+                      <Typography variant="body1">{sensor.id}</Typography>
+                      <Chip
+                        label={sensor.kind}
+                        color={sensor.kind === "HIGH" ? "default" : "secondary"}
+                        className={classes.chip}
+                      />
+                    </>
+                  }
+                />
+              ))}
+            </FormGroup>
+          </FormControl>
+        </Grid>
+        <Grid item xs={12}>
+          <FormControl className={classes.formControl}>
+            <InputLabel>Pump</InputLabel>
+            <Select
+              labelId="input-pump-label"
+              id="input-pump"
+              value={api.pump}
+              onChange={(e) => api.setPump(e.target.value)}
+            >
+              {data.pumps.map((s) => (
+                <MenuItem key={s.id} value={s.id}>
+                  {s.id}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl className={classes.formControl}>
+            <TextField
+              id="input-rate"
+              label="Fill Rate"
+              helperText="Rate in mL/min"
+              value={api.fillRate}
+              onChange={(e) => api.setFillRate(e.target.value)}
+            />
+          </FormControl>
+          <FormControl className={classes.formControl}>
+            <TextField
+              id="input-interval"
+              label="Fill Interval"
+              helperText="Rate in minutes"
+              value={api.fillInterval}
+              onChange={(e) => api.setFillInterval(e.target.value)}
+            />
+          </FormControl>
+          <FormControl className={classes.formControl}>
+            <TextField
+              id="input-max-fill-volume"
+              label="Max Fill Volume"
+              helperText="Volume in mL"
+              value={api.maxFillVolume}
+              onChange={(e) => api.setMaxFillVolume(e.target.value)}
+            />
+          </FormControl>
+        </Grid>
+      </Grid>
+    </CardContent>
+  );
 }
 
-function EditAutoTopOff({ sensors }) {
-    return (
-        <Card>
-            <CardHeader title="Settings" />
-            <Content sensors={sensors} addSensor />
-            <CardActions>
-                <Button color="primary">Cancel</Button>
-                <Button variant="contained" color="primary">Save</Button>
-            </CardActions>
-        </Card>
-    )
+function SubmitStatus() {
+  const api = useContext(Api);
+
+  if (api.loading) return <CircularProgress />;
+  if (api.error) {
+    console.log(api.error);
+    return <Typography>Error submitting</Typography>;
+  }
+  return <></>;
+}
+
+function EditAutoTopOff() {
+  const api = useContext(Api);
+
+  return (
+    <Card>
+      <CardHeader title="Settings" />
+      <Content />
+      <CardActions>
+        <Button color="primary">Cancel</Button>
+        <Button variant="contained" color="primary" onClick={api.submit}>
+          Save
+        </Button>
+        <SubmitStatus />
+      </CardActions>
+    </Card>
+  );
 }
 
 export default EditAutoTopOff;

@@ -1,20 +1,17 @@
-import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import React from "react";
+import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import CssBaseline from "@material-ui/core/CssBaseline";
 import {
-  BrowserRouter as Router,
-  Switch,
-  Route,
-  Link
-} from "react-router-dom";
-import CssBaseline from '@material-ui/core/CssBaseline';
-import { unstable_createMuiStrictModeTheme, ThemeProvider } from '@material-ui/core/styles';
-import purple from '@material-ui/core/colors/purple';
-import yellow from '@material-ui/core/colors/yellow';
-import { GraphQLClient, ClientContext } from 'graphql-hooks'
+  unstable_createMuiStrictModeTheme,
+  ThemeProvider,
+} from "@material-ui/core/styles";
+import purple from "@material-ui/core/colors/purple";
+import yellow from "@material-ui/core/colors/yellow";
+import { GraphQLClient, ClientContext } from "graphql-hooks";
 
-import Dashboard from './Dashboard';
-import AutoTopOff from './AutoTopOff';
-import CreateAutoTopOff from './CreateAutoTopOff';
+import Dashboard from "./Dashboard";
+import AutoTopOff from "./AutoTopOff";
+import CreateAutoTopOff from "./CreateAutoTopOff";
 
 const theme = unstable_createMuiStrictModeTheme({
   palette: {
@@ -28,8 +25,8 @@ const theme = unstable_createMuiStrictModeTheme({
 });
 
 const client = new GraphQLClient({
-  url: 'http://localhost:8080/query'
-})
+  url: "http://localhost:8080/query",
+});
 
 function App() {
   return (
@@ -50,7 +47,7 @@ function App() {
           </Switch>
         </Router>
       </ThemeProvider>
-    </ClientContext.Provider >
+    </ClientContext.Provider>
   );
 }
 
