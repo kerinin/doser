@@ -83,7 +83,7 @@ func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff, w
 			cursor++
 		}
 		// Read all the doses in the window
-		for i := cursor; doses[i].Timestamp <= windowEnd && i < len(doses); i++ {
+		for i := cursor; i < len(doses) && doses[i].Timestamp <= windowEnd; i++ {
 			if doses[i].Volume < 0 {
 				continue
 			}
