@@ -9,7 +9,8 @@ type Query {
   firmatas: [Firmata!]
   pumps: [Pump!]
   water_level_sensors: [WaterLevelSensor!]
-  auto_top_off: [AutoTopOff!]
+  auto_top_offs: [AutoTopOff!]
+  auto_top_off(id: ID!): AutoTopOff
   auto_water_changes: [AutoWaterChange!]
   dosers: [Doser!]
 }

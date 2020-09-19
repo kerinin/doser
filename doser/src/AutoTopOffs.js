@@ -14,7 +14,7 @@ import { Link as RouterLink } from "react-router-dom";
 import Link from "@material-ui/core/Link";
 import { useQuery } from "graphql-hooks";
 import { useMutation } from "graphql-hooks";
-import { Avatar, LinearProgress, ListItemAvatar } from "@material-ui/core";
+import { Avatar, ListItemAvatar } from "@material-ui/core";
 
 import VerticalAlignTopIcon from "@material-ui/icons/VerticalAlignTop";
 import DeleteIcon from "@material-ui/icons/Delete";
@@ -23,7 +23,7 @@ import AddCircleIcon from "@material-ui/icons/AddCircle";
 import IconAvatar from "./IconAvatar";
 
 const DASHBOARD_QUERY = `query {
-    auto_top_off {
+    auto_top_offs {
         id
     }
 }`;
@@ -55,20 +55,15 @@ function Content() {
   const { loading, error, data, refetch } = useQuery(DASHBOARD_QUERY, {});
   const [deleteAutoTopOff] = useMutation(DELETE_MUTATION);
 
-  if (loading)
-    return (
-      <CardContent>
-        <LinearProgress />
-      </CardContent>
-    );
+  if (loading) return <CardContent />;
   if (error) return <CardContent>Failed to load ATO's</CardContent>;
 
-  if (data.auto_top_off == null) return <></>;
+  if (data.auto_top_offs == null) return <></>;
 
   return (
     <CardContent>
       <List>
-        {data.auto_top_off.map(({ id }) => (
+        {data.auto_top_offs.map(({ id }) => (
           <Item
             id={id}
             key={id}

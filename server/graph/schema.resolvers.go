@@ -614,13 +614,25 @@ func (r *queryResolver) WaterLevelSensors(ctx context.Context) ([]*models.WaterL
 	return ms, nil
 }
 
-func (r *queryResolver) AutoTopOff(ctx context.Context) ([]*models.AutoTopOff, error) {
+func (r *queryResolver) AutoTopOffs(ctx context.Context) ([]*models.AutoTopOff, error) {
 	ms, err := models.AutoTopOffs().All(ctx, r.db)
 	if err != nil {
 		return nil, fmt.Errorf("getting ATOs: %w", err)
 	}
 
 	return ms, nil
+}
+
+func (r *queryResolver) AutoTopOff(ctx context.Context, id string) (*models.AutoTopOff, error) {
+	m, err := models.FindAutoTopOff(ctx, r.db, id)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getting ATO: %w", err)
+	}
+
+	return m, nil
 }
 
 func (r *queryResolver) AutoWaterChanges(ctx context.Context) ([]*models.AutoWaterChange, error) {

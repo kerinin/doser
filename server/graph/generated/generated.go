@@ -145,7 +145,8 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		AutoTopOff        func(childComplexity int) int
+		AutoTopOff        func(childComplexity int, id string) int
+		AutoTopOffs       func(childComplexity int) int
 		AutoWaterChanges  func(childComplexity int) int
 		Dosers            func(childComplexity int) int
 		Firmatas          func(childComplexity int) int
@@ -224,7 +225,8 @@ type QueryResolver interface {
 	Firmatas(ctx context.Context) ([]*models.Firmata, error)
 	Pumps(ctx context.Context) ([]*models.Pump, error)
 	WaterLevelSensors(ctx context.Context) ([]*models.WaterLevelSensor, error)
-	AutoTopOff(ctx context.Context) ([]*models.AutoTopOff, error)
+	AutoTopOffs(ctx context.Context) ([]*models.AutoTopOff, error)
+	AutoTopOff(ctx context.Context, id string) (*models.AutoTopOff, error)
 	AutoWaterChanges(ctx context.Context) ([]*models.AutoWaterChange, error)
 	Dosers(ctx context.Context) ([]*models.Doser, error)
 }
@@ -754,7 +756,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			break
 		}
 
-		return e.complexity.Query.AutoTopOff(childComplexity), true
+		args, err := ec.field_Query_auto_top_off_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.AutoTopOff(childComplexity, args["id"].(string)), true
+
+	case "Query.auto_top_offs":
+		if e.complexity.Query.AutoTopOffs == nil {
+			break
+		}
+
+		return e.complexity.Query.AutoTopOffs(childComplexity), true
 
 	case "Query.auto_water_changes":
 		if e.complexity.Query.AutoWaterChanges == nil {
@@ -922,7 +936,8 @@ type Query {
   firmatas: [Firmata!]
   pumps: [Pump!]
   water_level_sensors: [WaterLevelSensor!]
-  auto_top_off: [AutoTopOff!]
+  auto_top_offs: [AutoTopOff!]
+  auto_top_off(id: ID!): AutoTopOff
   auto_water_changes: [AutoWaterChange!]
   dosers: [Doser!]
 }
@@ -1673,6 +1688,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_auto_top_off_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -3899,7 +3929,7 @@ func (ec *executionContext) _Query_water_level_sensors(ctx context.Context, fiel
 	return ec.marshalOWaterLevelSensor2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐWaterLevelSensorᚄ(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) _Query_auto_top_off(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+func (ec *executionContext) _Query_auto_top_offs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
 			ec.Error(ctx, ec.Recover(ctx, r))
@@ -3916,7 +3946,7 @@ func (ec *executionContext) _Query_auto_top_off(ctx context.Context, field graph
 	ctx = graphql.WithFieldContext(ctx, fc)
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().AutoTopOff(rctx)
+		return ec.resolvers.Query().AutoTopOffs(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3928,6 +3958,44 @@ func (ec *executionContext) _Query_auto_top_off(ctx context.Context, field graph
 	res := resTmp.([]*models.AutoTopOff)
 	fc.Result = res
 	return ec.marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOffᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Query_auto_top_off(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_auto_top_off_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().AutoTopOff(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*models.AutoTopOff)
+	fc.Result = res
+	return ec.marshalOAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Query_auto_water_changes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -6138,6 +6206,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				res = ec._Query_water_level_sensors(ctx, field)
 				return res
 			})
+		case "auto_top_offs":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_auto_top_offs(ctx, field)
+				return res
+			})
 		case "auto_top_off":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -7238,6 +7317,13 @@ func (ec *executionContext) marshalOAutoTopOff2ᚕᚖgithubᚗcomᚋkerininᚋdo
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalOAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx context.Context, sel ast.SelectionSet, v *models.AutoTopOff) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._AutoTopOff(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChangeᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.AutoWaterChange) graphql.Marshaler {

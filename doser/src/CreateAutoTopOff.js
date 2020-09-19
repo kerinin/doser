@@ -40,13 +40,16 @@ function CreateAutoTopOff() {
   const [fillInterval, setFillInterval] = React.useState(10);
   const [maxFillVolume, setMaxFillVolume] = React.useState(1000);
 
-  const [createAutoTopOff, { loading, error }] = useMutation(CREATE);
+  const [createAutoTopOff, { error }] = useMutation(CREATE);
 
   function addSensor(id) {
     setSensors(sensors.concat(id));
   }
   function removeSensor(id) {
     setSensors(sensors.filter((item) => item !== id));
+  }
+  function cancel() {
+    history.push("/");
   }
   function submit() {
     createAutoTopOff({
@@ -74,8 +77,8 @@ function CreateAutoTopOff() {
     setFillInterval,
     maxFillVolume,
     setMaxFillVolume,
+    cancel,
     submit,
-    loading,
     error,
   };
 

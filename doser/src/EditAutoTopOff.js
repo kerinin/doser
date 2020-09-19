@@ -15,13 +15,12 @@ import {
   CardContent,
   CardHeader,
   Checkbox,
-  CircularProgress,
   FormControlLabel,
   FormGroup,
   FormLabel,
 } from "@material-ui/core";
 import { useQuery } from "graphql-hooks";
-import { LinearProgress, Typography } from "@material-ui/core";
+import { Typography } from "@material-ui/core";
 
 const QUERY = `query {
     water_level_sensors {
@@ -62,14 +61,10 @@ function Content() {
     api.addSensor(id);
   };
 
-  if (loading)
-    return (
-      <CardContent>
-        <LinearProgress />
-      </CardContent>
-    );
+  if (loading) return <CardContent />;
   if (error)
     return <CardContent>Failed to load water level sensors</CardContent>;
+
   if (data.water_level_sensors == null)
     return (
       <CardContent>
@@ -161,7 +156,6 @@ function Content() {
 function SubmitStatus() {
   const api = useContext(Api);
 
-  if (api.loading) return <CircularProgress />;
   if (api.error) {
     console.log(api.error);
     return <Typography>Error submitting</Typography>;

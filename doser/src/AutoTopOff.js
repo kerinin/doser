@@ -22,13 +22,8 @@ import { useMutation } from "graphql-hooks";
 import DoserAppBar from "./DoserAppBar";
 import EditAutoTopOff from "./EditAutoTopOff";
 import { Api as EditAutoTopOffApi } from "./EditAutoTopOff";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  LinearProgress,
-  Typography,
-} from "@material-ui/core";
+import { Card, CardContent, CardHeader, Typography } from "@material-ui/core";
+import { useParams } from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
   grid: {
@@ -39,8 +34,8 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const QUERY = `query {
-    auto_top_off {
+const QUERY = `query GetAutoTopOff($id: ID!) {
+    auto_top_off(id: $id) {
         id
         pump {
           id
@@ -67,7 +62,7 @@ const EDIT = `mutation EditAutoTopOff($id: ID!, $pump_id: ID!, $level_sensors: [
     }
 }`;
 function Content({ ato, reload }) {
-  const [editAutoTopOff, { data, loading, error }] = useMutation(EDIT);
+  const [editAutoTopOff, { error }] = useMutation(EDIT);
 
   // TODO: Fill with actual data!
   const [pump, setPump] = React.useState(ato.pump.id);
@@ -120,7 +115,6 @@ function Content({ ato, reload }) {
     setMaxFillVolume,
     cancel,
     submit,
-    loading,
     error,
   };
 
@@ -205,12 +199,6 @@ function Content({ ato, reload }) {
                     <TableCell>124mL</TableCell>
                   </TableRow>
                 </TableBody>
-                {/* <TablePagination
-                                            rowsPerPageOptions={[10, 50]}
-                                            count={30}
-                                            rowsPerPage={10}
-                                            page={1}
-                                        /> */}
               </Table>
             </TableContainer>
           </CardContent>
@@ -220,17 +208,19 @@ function Content({ ato, reload }) {
   );
 }
 
-function AutoTopOff() {
-  const { loading, error, data, refetch } = useQuery(QUERY, {});
+function AutoTopOff({ id }) {
+  const { atoId } = useParams();
+  const { loading, error, data, refetch } = useQuery(QUERY, {
+    variables: { id: atoId },
+  });
   const classes = useStyles();
 
   if (loading)
     return (
-      <Grid item xs={12}>
-        <LinearProgress />
-      </Grid>
+      <React.Fragment>
+        <DoserAppBar />
+      </React.Fragment>
     );
-
   if (error)
     return (
       <Grid item xs={12}>
@@ -238,12 +228,25 @@ function AutoTopOff() {
       </Grid>
     );
 
+  if (!data.auto_top_off)
+    return (
+      <React.Fragment>
+        <DoserAppBar />
+        <Box m={2}>
+          <Typography variant="h6">Not Found</Typography>
+          <Typography variant="body">
+            '{atoId}' is not a recognized ATO
+          </Typography>
+        </Box>
+      </React.Fragment>
+    );
+
   return (
     <React.Fragment>
       <DoserAppBar />
       <Box m={2}>
         <Grid container spacing={2} className={classes.grid}>
-          <Content ato={data.auto_top_off[0]} reload={refetch} />
+          <Content ato={data.auto_top_off} reload={refetch} />
         </Grid>
       </Box>
     </React.Fragment>
