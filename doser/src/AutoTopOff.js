@@ -23,7 +23,14 @@ import { useMutation } from "graphql-hooks";
 import DoserAppBar from "./DoserAppBar";
 import EditAutoTopOff from "./EditAutoTopOff";
 import { Api as EditAutoTopOffApi } from "./EditAutoTopOff";
-import { Card, CardContent, CardHeader, Typography } from "@material-ui/core";
+import {
+  ButtonGroup,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+} from "@material-ui/core";
 import { useParams } from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
@@ -35,11 +42,39 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+function useVictoryTheme() {
+  const theme = useTheme();
+  return {
+    ...VictoryTheme.material,
+    chart: {
+      ...VictoryTheme.material.chart,
+      width: 800,
+      height: 400,
+    },
+
+    line: {
+      ...VictoryTheme.material.line,
+      style: {
+        ...VictoryTheme.material.line.style,
+        data: {
+          ...VictoryTheme.material.line.style.data,
+          stroke: theme.palette.primary.main,
+          strokeWidth: 4,
+        },
+      },
+    },
+  };
+}
+
 const QUERY = `query GetAutoTopOff($id: ID!) {
     auto_top_off(id: $id) {
         id
         pump {
           id
+          history {
+            timestamp
+            volume
+          }
         }
         level_sensors {
           id
@@ -121,7 +156,7 @@ function AutoTopOff({ id }) {
 function Content({ ato, reload }) {
   const [editAutoTopOff, { error }] = useMutation(EDIT);
 
-  // TODO: Fill with actual data!
+  const [mode, setMode] = React.useState("volume");
   const [pump, setPump] = React.useState(ato.pump.id);
   const [sensors, setSensors] = React.useState(
     ato.level_sensors.map((s) => s.id)
@@ -187,7 +222,23 @@ function Content({ ato, reload }) {
         <Card>
           <CardHeader title="History" />
           <CardContent>
-            <RateChart ato={ato} />
+            <Box align="center">
+              <ButtonGroup variant="contained">
+                <Button
+                  color={mode == "volume" ? "primary" : "default"}
+                  onClick={() => setMode("volume")}
+                >
+                  Volume
+                </Button>
+                <Button
+                  color={mode == "rate" ? "primary" : "default"}
+                  onClick={() => setMode("rate")}
+                >
+                  Rate
+                </Button>
+              </ButtonGroup>
+            </Box>
+            <Chart ato={ato} mode={mode} />
           </CardContent>
 
           <CardContent>
@@ -199,32 +250,17 @@ function Content({ ato, reload }) {
   );
 }
 
-function RateChart({ ato }) {
+function Chart({ ato, mode }) {
   console.log(ato);
-  const theme = useTheme();
-
-  const victoryTheme = {
-    ...VictoryTheme.material,
-    chart: {
-      ...VictoryTheme.material.chart,
-      width: 800,
-      height: 400,
-    },
-
-    line: {
-      ...VictoryTheme.material.line,
-      style: {
-        ...VictoryTheme.material.line.style,
-        data: {
-          ...VictoryTheme.material.line.style.data,
-          stroke: theme.palette.primary.main,
-          strokeWidth: 4,
-        },
-      },
-    },
-  };
 
   if (!ato.rate) return <></>;
+
+  if (mode == "volume") return <VolumeChart ato={ato} />;
+  return <RateChart ato={ato} />;
+}
+
+function RateChart({ ato }) {
+  const victoryTheme = useVictoryTheme();
 
   return (
     <VictoryChart theme={victoryTheme} minDomain={{ y: 0 }}>
@@ -236,6 +272,23 @@ function RateChart({ ato }) {
       />
       <VictoryAxis label="days ago"></VictoryAxis>
       <VictoryAxis dependentAxis label="Rate (mL/h)"></VictoryAxis>
+    </VictoryChart>
+  );
+}
+
+function VolumeChart({ ato }) {
+  const victoryTheme = useVictoryTheme();
+
+  return (
+    <VictoryChart theme={victoryTheme} minDomain={{ y: 0 }}>
+      <VictoryScatter
+        data={ato.pump.history.map(({ timestamp, volume }) => ({
+          x: (timestamp - Date.now() / 1000) / 60 / 60 / 24,
+          y: volume,
+        }))}
+      />
+      <VictoryAxis label="days ago"></VictoryAxis>
+      <VictoryAxis dependentAxis label="Volume mL"></VictoryAxis>
     </VictoryChart>
   );
 }
