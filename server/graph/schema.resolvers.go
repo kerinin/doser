@@ -67,6 +67,10 @@ func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff) (
 	)
 
 	for i := 0; i < len(doses); i++ {
+		if doses[i].Volume < 0 {
+			continue
+		}
+
 		windowVolume += doses[i].Volume
 		for time.Unix(doses[i].Timestamp, 0).Sub(time.Unix(doses[cursor].Timestamp, 0)) > window {
 			windowVolume -= doses[cursor].Volume

@@ -157,7 +157,7 @@ function AutoTopOff({ id }) {
 function Content({ ato, reload }) {
   const [editAutoTopOff, { error }] = useMutation(EDIT);
 
-  const [mode, setMode] = React.useState("volume");
+  const [mode, setMode] = React.useState("rate");
   const [pump, setPump] = React.useState(ato.pump.id);
   const [sensors, setSensors] = React.useState(
     ato.level_sensors.map((s) => s.id)
@@ -226,16 +226,16 @@ function Content({ ato, reload }) {
             <Box align="center">
               <ButtonGroup variant="contained">
                 <Button
-                  color={mode == "volume" ? "primary" : "default"}
-                  onClick={() => setMode("volume")}
-                >
-                  Volume
-                </Button>
-                <Button
                   color={mode == "rate" ? "primary" : "default"}
                   onClick={() => setMode("rate")}
                 >
                   Rate
+                </Button>
+                <Button
+                  color={mode == "volume" ? "primary" : "default"}
+                  onClick={() => setMode("volume")}
+                >
+                  Volume
                 </Button>
               </ButtonGroup>
             </Box>
@@ -265,7 +265,8 @@ function RateChart({ ato }) {
 
   return (
     <VictoryChart theme={victoryTheme} minDomain={{ y: 0 }}>
-      <VictoryScatter
+      <VictoryLine
+        interpolation="stepBefore"
         data={ato.rate.map(({ timestamp, rate }) => ({
           x: (timestamp - Date.now() / 1000) / 60 / 60 / 24,
           y: rate,
