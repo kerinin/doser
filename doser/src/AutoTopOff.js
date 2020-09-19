@@ -46,6 +46,12 @@ const QUERY = `query GetAutoTopOff($id: ID!) {
         fill_rate
         fill_interval
         max_fill_volume
+        events {
+          id
+          timestamp
+          kind
+          data
+        }
     }
 }`;
 
@@ -61,6 +67,52 @@ const EDIT = `mutation EditAutoTopOff($id: ID!, $pump_id: ID!, $level_sensors: [
         id
     }
 }`;
+
+function AutoTopOff({ id }) {
+  const { atoId } = useParams();
+  const { loading, error, data, refetch } = useQuery(QUERY, {
+    variables: { id: atoId },
+  });
+  const classes = useStyles();
+
+  if (loading)
+    return (
+      <React.Fragment>
+        <DoserAppBar />
+      </React.Fragment>
+    );
+  if (error)
+    return (
+      <Grid item xs={12}>
+        <Typography>Failed to load ATO</Typography> />
+      </Grid>
+    );
+
+  if (!data.auto_top_off)
+    return (
+      <React.Fragment>
+        <DoserAppBar />
+        <Box m={2}>
+          <Typography variant="h6">Not Found</Typography>
+          <Typography variant="body">
+            '{atoId}' is not a recognized ATO
+          </Typography>
+        </Box>
+      </React.Fragment>
+    );
+
+  return (
+    <React.Fragment>
+      <DoserAppBar />
+      <Box m={2}>
+        <Grid container spacing={2} className={classes.grid}>
+          <Content ato={data.auto_top_off} reload={refetch} />
+        </Grid>
+      </Box>
+    </React.Fragment>
+  );
+}
+
 function Content({ ato, reload }) {
   const [editAutoTopOff, { error }] = useMutation(EDIT);
 
@@ -185,22 +237,7 @@ function Content({ ato, reload }) {
           </CardContent>
 
           <CardContent>
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Time</TableCell>
-                    <TableCell>Dose</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>Today</TableCell>
-                    <TableCell>124mL</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <EventsTable ato={ato} />
           </CardContent>
         </Card>
       </Grid>
@@ -208,49 +245,40 @@ function Content({ ato, reload }) {
   );
 }
 
-function AutoTopOff({ id }) {
-  const { atoId } = useParams();
-  const { loading, error, data, refetch } = useQuery(QUERY, {
-    variables: { id: atoId },
-  });
-  const classes = useStyles();
-
-  if (loading)
-    return (
-      <React.Fragment>
-        <DoserAppBar />
-      </React.Fragment>
-    );
-  if (error)
-    return (
-      <Grid item xs={12}>
-        <Typography>Failed to load ATO</Typography> />
-      </Grid>
-    );
-
-  if (!data.auto_top_off)
-    return (
-      <React.Fragment>
-        <DoserAppBar />
-        <Box m={2}>
-          <Typography variant="h6">Not Found</Typography>
-          <Typography variant="body">
-            '{atoId}' is not a recognized ATO
-          </Typography>
-        </Box>
-      </React.Fragment>
-    );
-
+function EventsTable({ ato }) {
   return (
-    <React.Fragment>
-      <DoserAppBar />
-      <Box m={2}>
-        <Grid container spacing={2} className={classes.grid}>
-          <Content ato={data.auto_top_off} reload={refetch} />
-        </Grid>
-      </Box>
-    </React.Fragment>
+    <TableContainer>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Time</TableCell>
+            <TableCell>Event</TableCell>
+            <TableCell>Message</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          <EventsTableRows ato={ato} />
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
+}
+
+function EventsTableRows({ ato }) {
+  if (!ato.events)
+    return (
+      <TableRow>
+        <TableCell colSpan={3}>No Events</TableCell>
+      </TableRow>
+    );
+
+  return ato.events.map(({ timestamp, kind, data }) => (
+    <TableRow>
+      <TableCell>{timestamp}</TableCell>
+      <TableCell>{kind}</TableCell>
+      <TableCell>{data}</TableCell>
+    </TableRow>
+  ));
 }
 
 export default AutoTopOff;
