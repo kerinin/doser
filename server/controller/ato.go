@@ -48,9 +48,6 @@ func (c *ATO) Run(ctx context.Context, wg *sync.WaitGroup) {
 			for _, job := range jobs {
 				job.cancelFunc()
 			}
-			for _, job := range jobs {
-				job.wg.Wait()
-			}
 
 			// NOTE: It's possible the new job is trying to talk to arduino at
 			// the same time the old job is trying to shut down...

@@ -36,7 +36,6 @@ function DoserAppBar() {
           Dozer
         </Link>
 
-        <Switch />
         <IconButton>
           <SettingsIcon />
         </IconButton>

@@ -25,14 +25,28 @@ import IconAvatar from "./IconAvatar";
 const DASHBOARD_QUERY = `query {
     auto_top_offs {
         id
+        enabled
     }
+}`;
+
+const SET_ENABLED = `mutation SetEnabled($id: ID!, $enabled: Boolean!) {
+  setAutoTopOffEnabled(id: $id, enabled: $enabled)
 }`;
 
 const DELETE_MUTATION = `mutation DeleteAutoTopOff($id: ID!) {
     deleteAutoTopOff(id: $id)
 }`;
 
-function Item({ id, onDelete }) {
+function Item({ id, enabled, onDelete, refresh }) {
+  const [setEnabled] = useMutation(SET_ENABLED);
+
+  function toggleEnabled() {
+    setEnabled({ variables: { id: id, enabled: !enabled } }).then(() => {
+      console.log("refreshing");
+      refresh();
+    });
+  }
+
   return (
     <ListItem button component={RouterLink} to={`/ato/${id}`}>
       <ListItemAvatar>
@@ -42,7 +56,7 @@ function Item({ id, onDelete }) {
         />
       </ListItemAvatar>
       <ListItemSecondaryAction>
-        <Switch checked={true} />
+        <Switch checked={enabled} onClick={() => toggleEnabled()} />
         <IconButton edge="end" onClick={onDelete}>
           <DeleteIcon />
         </IconButton>
@@ -63,14 +77,16 @@ function Content() {
   return (
     <CardContent>
       <List>
-        {data.auto_top_offs.map(({ id }) => (
+        {data.auto_top_offs.map(({ id, enabled }) => (
           <Item
             id={id}
             key={id}
+            enabled={enabled}
             onDelete={() => {
               deleteAutoTopOff({ variables: { id: id } });
               refetch();
             }}
+            refresh={refetch}
           />
         ))}
       </List>
