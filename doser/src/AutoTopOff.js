@@ -3,13 +3,17 @@ import { makeStyles } from "@material-ui/core/styles";
 import Grid from "@material-ui/core/Grid";
 import Box from "@material-ui/core/Box";
 import {
+  Point,
   VictoryArea,
   VictoryAxis,
   VictoryChart,
   VictoryLabel,
   VictoryLine,
+  VictoryPortal,
   VictoryScatter,
   VictoryTheme,
+  VictoryTooltip,
+  VictoryVoronoiContainer,
 } from "victory";
 import Table from "@material-ui/core/Table";
 import TableBody from "@material-ui/core/TableBody";
@@ -65,6 +69,17 @@ function useVictoryTheme() {
         },
       },
     },
+
+    scatter: {
+      ...VictoryTheme.material.scatter,
+      style: {
+        ...VictoryTheme.material.scatter.style,
+        data: {
+          ...VictoryTheme.material.scatter.style.data,
+          fill: theme.palette.secondary.main,
+        },
+      },
+    },
   };
 }
 
@@ -90,7 +105,7 @@ const QUERY = `query GetAutoTopOff($id: ID!) {
           kind
           data
         }
-        rate(window: 3600) {
+        rate(window: 21600) {
           timestamp
           rate
         }
@@ -158,7 +173,6 @@ function AutoTopOff({ id }) {
 function Content({ ato, reload }) {
   const [editAutoTopOff, { error }] = useMutation(EDIT);
 
-  const [mode, setMode] = React.useState("rate");
   const [pump, setPump] = React.useState(ato.pump.id);
   const [sensors, setSensors] = React.useState(
     ato.level_sensors.map((s) => s.id)
@@ -224,27 +238,7 @@ function Content({ ato, reload }) {
         <Card>
           <CardHeader title="History" />
           <CardContent>
-            <Box align="center">
-              <ButtonGroup variant="contained">
-                <Button
-                  color={mode == "rate" ? "primary" : "default"}
-                  onClick={() => setMode("rate")}
-                >
-                  Rate
-                </Button>
-                <Button
-                  color={mode == "volume" ? "primary" : "default"}
-                  onClick={() => setMode("volume")}
-                >
-                  Volume
-                </Button>
-              </ButtonGroup>
-            </Box>
-            <Chart ato={ato} mode={mode} />
-          </CardContent>
-
-          <CardContent>
-            <EventsTable ato={ato} />
+            <Chart ato={ato} />
           </CardContent>
         </Card>
       </Grid>
@@ -252,16 +246,7 @@ function Content({ ato, reload }) {
   );
 }
 
-function Chart({ ato, mode }) {
-  console.log(ato);
-
-  if (!ato.rate) return <></>;
-
-  if (mode == "volume") return <VolumeChart ato={ato} />;
-  return <RateChart ato={ato} />;
-}
-
-function RateChart({ ato }) {
+function Chart({ ato }) {
   const victoryTheme = useVictoryTheme();
 
   return (
@@ -269,9 +254,18 @@ function RateChart({ ato }) {
       theme={victoryTheme}
       minDomain={{ y: 0 }}
       domainPadding={{ y: [20, 20] }}
+      containerComponent={<VictoryVoronoiContainer />}
     >
+      <VictoryScatter
+        labelComponent={<VictoryTooltip />}
+        data={ato.pump.history.map(({ timestamp, volume }) => ({
+          x: (timestamp - Date.now() / 1000) / 60 / 60 / 24,
+          y: volume,
+          label: `${new Date(timestamp * 1000).toISOString()}: ${volume}mL`,
+        }))}
+      />
       <VictoryLine
-        interpolation="stepBefore"
+        interpolation="bundle"
         data={ato.rate.map(({ timestamp, rate }) => ({
           x: (timestamp - Date.now() / 1000) / 60 / 60 / 24,
           y: rate,
@@ -290,23 +284,6 @@ function RateChart({ ato }) {
   );
 }
 
-function VolumeChart({ ato }) {
-  const victoryTheme = useVictoryTheme();
-
-  return (
-    <VictoryChart theme={victoryTheme} minDomain={{ y: 0 }}>
-      <VictoryScatter
-        data={ato.pump.history.map(({ timestamp, volume }) => ({
-          x: (timestamp - Date.now() / 1000) / 60 / 60 / 24,
-          y: volume,
-        }))}
-      />
-      <VictoryAxis label="days ago"></VictoryAxis>
-      <VictoryAxis dependentAxis label="Volume mL"></VictoryAxis>
-    </VictoryChart>
-  );
-}
-
 function EventsTable({ ato }) {
   const columns = [
     {
@@ -316,14 +293,13 @@ function EventsTable({ ato }) {
       type: "datetime",
       valueFormatter: ({ value }) => new Date(value * 1000).toISOString(),
     },
-    { field: "kind", headerName: "Event", width: 140 },
-    { field: "data", headerName: "Message", width: 400 },
+    { field: "volume", headerName: "Volume", width: 100 },
   ];
 
   return (
     <React.Fragment>
       <div style={{ height: 400, width: "100%" }}>
-        <DataGrid rows={ato.events} columns={columns} pageSize={10} />
+        <DataGrid rows={ato.pump.history} columns={columns} pageSize={10} />
       </div>
     </React.Fragment>
   );
