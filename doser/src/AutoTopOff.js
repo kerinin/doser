@@ -3,6 +3,7 @@ import { makeStyles } from "@material-ui/core/styles";
 import Grid from "@material-ui/core/Grid";
 import Box from "@material-ui/core/Box";
 import {
+  createContainer,
   Point,
   VictoryArea,
   VictoryAxis,
@@ -248,18 +249,27 @@ function Content({ ato, reload }) {
 
 function Chart({ ato }) {
   const victoryTheme = useVictoryTheme();
+  const VictoryContainer = createContainer("zoom", "voronoi");
 
   return (
     <VictoryChart
       theme={victoryTheme}
       minDomain={{ y: 0 }}
       domainPadding={{ y: [20, 20] }}
-      containerComponent={<VictoryVoronoiContainer />}
+      scale={{ x: "time" }}
+      containerComponent={
+        <VictoryContainer
+          zoomDimension="x"
+          zoomDomain={{
+            x: [new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), Date.now()],
+          }}
+        />
+      }
     >
       <VictoryScatter
         labelComponent={<VictoryTooltip />}
         data={ato.pump.history.map(({ timestamp, volume }) => ({
-          x: (timestamp - Date.now() / 1000) / 60 / 60 / 24,
+          x: new Date(timestamp * 1000),
           y: volume,
           label: `${new Date(timestamp * 1000).toISOString()}: ${volume}mL`,
         }))}
@@ -267,18 +277,15 @@ function Chart({ ato }) {
       <VictoryLine
         interpolation="bundle"
         data={ato.rate.map(({ timestamp, rate }) => ({
-          x: (timestamp - Date.now() / 1000) / 60 / 60 / 24,
+          x: new Date(timestamp * 1000),
           y: rate,
         }))}
       />
-      <VictoryAxis
-        label="days ago"
-        axisLabelComponent={<VictoryLabel dy={20} />}
-      />
+      <VictoryAxis />
       <VictoryAxis
         dependentAxis
         label="Rate (mL/h)"
-        axisLabelComponent={<VictoryLabel dy={30} />}
+        axisLabelComponent={<VictoryLabel dy={-30} />}
       />
     </VictoryChart>
   );

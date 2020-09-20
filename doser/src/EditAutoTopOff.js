@@ -124,7 +124,7 @@ function Content() {
             <TextField
               id="input-rate"
               label="Fill Rate"
-              helperText="Rate in mL/min"
+              helperText="mL/min"
               value={api.fillRate}
               onChange={(e) => api.setFillRate(e.target.value)}
             />
@@ -133,7 +133,7 @@ function Content() {
             <TextField
               id="input-interval"
               label="Fill Interval"
-              helperText="Rate in minutes"
+              helperText="minutes"
               value={api.fillInterval}
               onChange={(e) => api.setFillInterval(e.target.value)}
             />
@@ -142,7 +142,7 @@ function Content() {
             <TextField
               id="input-max-fill-volume"
               label="Max Fill Volume"
-              helperText="Volume in mL"
+              helperText="mL"
               value={api.maxFillVolume}
               onChange={(e) => api.setMaxFillVolume(e.target.value)}
             />
