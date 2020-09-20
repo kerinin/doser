@@ -167,6 +167,14 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					)`,
 				},
 			},
+			&migrate.Migration{
+				Id: "006 enable",
+				Up: []string{
+					`ALTER TABLE auto_top_offs ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1`,
+					`ALTER TABLE auto_water_changes ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1`,
+					`ALTER TABLE dosers ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

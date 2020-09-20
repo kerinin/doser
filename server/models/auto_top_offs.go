@@ -27,6 +27,7 @@ type AutoTopOff struct {
 	FillRate      float64 `boil:"fill_rate" json:"fill_rate" toml:"fill_rate" yaml:"fill_rate"`
 	FillInterval  int64   `boil:"fill_interval" json:"fill_interval" toml:"fill_interval" yaml:"fill_interval"`
 	MaxFillVolume float64 `boil:"max_fill_volume" json:"max_fill_volume" toml:"max_fill_volume" yaml:"max_fill_volume"`
+	Enabled       bool    `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
 
 	R *autoTopOffR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L autoTopOffL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -38,12 +39,14 @@ var AutoTopOffColumns = struct {
 	FillRate      string
 	FillInterval  string
 	MaxFillVolume string
+	Enabled       string
 }{
 	ID:            "id",
 	PumpID:        "pump_id",
 	FillRate:      "fill_rate",
 	FillInterval:  "fill_interval",
 	MaxFillVolume: "max_fill_volume",
+	Enabled:       "enabled",
 }
 
 // Generated where
@@ -77,18 +80,29 @@ func (w whereHelperfloat64) NIN(slice []float64) qm.QueryMod {
 	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
 
+type whereHelperbool struct{ field string }
+
+func (w whereHelperbool) EQ(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperbool) NEQ(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperbool) LT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+
 var AutoTopOffWhere = struct {
 	ID            whereHelperstring
 	PumpID        whereHelperstring
 	FillRate      whereHelperfloat64
 	FillInterval  whereHelperint64
 	MaxFillVolume whereHelperfloat64
+	Enabled       whereHelperbool
 }{
 	ID:            whereHelperstring{field: "\"auto_top_offs\".\"id\""},
 	PumpID:        whereHelperstring{field: "\"auto_top_offs\".\"pump_id\""},
 	FillRate:      whereHelperfloat64{field: "\"auto_top_offs\".\"fill_rate\""},
 	FillInterval:  whereHelperint64{field: "\"auto_top_offs\".\"fill_interval\""},
 	MaxFillVolume: whereHelperfloat64{field: "\"auto_top_offs\".\"max_fill_volume\""},
+	Enabled:       whereHelperbool{field: "\"auto_top_offs\".\"enabled\""},
 }
 
 // AutoTopOffRels is where relationship names are stored.
@@ -118,9 +132,9 @@ func (*autoTopOffR) NewStruct() *autoTopOffR {
 type autoTopOffL struct{}
 
 var (
-	autoTopOffAllColumns            = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume"}
+	autoTopOffAllColumns            = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume", "enabled"}
 	autoTopOffColumnsWithoutDefault = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume"}
-	autoTopOffColumnsWithDefault    = []string{}
+	autoTopOffColumnsWithDefault    = []string{"enabled"}
 	autoTopOffPrimaryKeyColumns     = []string{"id"}
 )
 

@@ -438,6 +438,22 @@ func (r *mutationResolver) DeleteAutoTopOff(ctx context.Context, id string) (boo
 	return rows > 0, nil
 }
 
+func (r *mutationResolver) SetAutoTopOffEnabled(ctx context.Context, id string, enabled bool) (bool, error) {
+	m := &models.AutoTopOff{
+		ID:      id,
+		Enabled: enabled,
+	}
+
+	_, err := m.Update(ctx, r.db, boil.Infer())
+	if err != nil {
+		return false, fmt.Errorf("updating auto top off: %w", err)
+	}
+
+	r.atoController.Reset()
+
+	return enabled, nil
+}
+
 func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64) (*models.AutoWaterChange, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -503,6 +519,22 @@ func (r *mutationResolver) DeleteAutoWaterChange(ctx context.Context, id string)
 	return rows > 0, nil
 }
 
+func (r *mutationResolver) SetAutoWaterChangeEnabled(ctx context.Context, id string, enabled bool) (bool, error) {
+	m := &models.AutoWaterChange{
+		ID:      id,
+		Enabled: enabled,
+	}
+
+	_, err := m.Update(ctx, r.db, boil.Infer())
+	if err != nil {
+		return false, fmt.Errorf("updating auto water change: %w", err)
+	}
+
+	r.awcController.Reset()
+
+	return enabled, nil
+}
+
 func (r *mutationResolver) CreateDoser(ctx context.Context, input model.DoserInput) (*models.Doser, error) {
 	panic(fmt.Errorf("not implemented"))
 }
@@ -515,6 +547,20 @@ func (r *mutationResolver) DeleteDoser(ctx context.Context, id string) (bool, er
 	}
 
 	return rows > 0, nil
+}
+
+func (r *mutationResolver) SetDoserEnabled(ctx context.Context, id string, enabled bool) (bool, error) {
+	m := &models.Doser{
+		ID:      id,
+		Enabled: enabled,
+	}
+
+	_, err := m.Update(ctx, r.db, boil.Infer())
+	if err != nil {
+		return false, fmt.Errorf("updating doser: %w", err)
+	}
+
+	return enabled, nil
 }
 
 func (r *mutationResolver) Pump(ctx context.Context, pumpID string, steps int, speed float64) (bool, error) {

@@ -22,24 +22,29 @@ import (
 
 // Doser is an object representing the database table.
 type Doser struct {
-	ID string `boil:"id" json:"id" toml:"id" yaml:"id"`
+	ID      string `boil:"id" json:"id" toml:"id" yaml:"id"`
+	Enabled bool   `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
 
 	R *doserR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L doserL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var DoserColumns = struct {
-	ID string
+	ID      string
+	Enabled string
 }{
-	ID: "id",
+	ID:      "id",
+	Enabled: "enabled",
 }
 
 // Generated where
 
 var DoserWhere = struct {
-	ID whereHelperstring
+	ID      whereHelperstring
+	Enabled whereHelperbool
 }{
-	ID: whereHelperstring{field: "\"dosers\".\"id\""},
+	ID:      whereHelperstring{field: "\"dosers\".\"id\""},
+	Enabled: whereHelperbool{field: "\"dosers\".\"enabled\""},
 }
 
 // DoserRels is where relationship names are stored.
@@ -63,9 +68,9 @@ func (*doserR) NewStruct() *doserR {
 type doserL struct{}
 
 var (
-	doserAllColumns            = []string{"id"}
+	doserAllColumns            = []string{"id", "enabled"}
 	doserColumnsWithoutDefault = []string{"id"}
-	doserColumnsWithDefault    = []string{}
+	doserColumnsWithDefault    = []string{"enabled"}
 	doserPrimaryKeyColumns     = []string{"id"}
 )
 

@@ -105,7 +105,7 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		}
 	}()
 
-	awcs, err := models.AutoWaterChanges().All(ctx, c.db)
+	awcs, err := models.AutoWaterChanges(models.AutoWaterChangeWhere.Enabled.EQ(true)).All(ctx, c.db)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

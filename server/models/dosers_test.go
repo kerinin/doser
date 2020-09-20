@@ -722,7 +722,7 @@ func testDosersSelect(t *testing.T) {
 }
 
 var (
-	doserDBTypes = map[string]string{`ID`: `UUID`}
+	doserDBTypes = map[string]string{`ID`: `UUID`, `Enabled`: `BOOLEAN`}
 	_            = bytes.MinRead
 )
 

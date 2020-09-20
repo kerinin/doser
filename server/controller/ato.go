@@ -108,7 +108,7 @@ func (c *ATO) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		}
 	}()
 
-	atos, err := models.AutoTopOffs().All(ctx, c.db)
+	atos, err := models.AutoTopOffs(models.AutoTopOffWhere.Enabled.EQ(true)).All(ctx, c.db)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

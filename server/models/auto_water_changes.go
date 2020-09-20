@@ -26,6 +26,7 @@ type AutoWaterChange struct {
 	FreshPumpID  string  `boil:"fresh_pump_id" json:"fresh_pump_id" toml:"fresh_pump_id" yaml:"fresh_pump_id"`
 	WastePumpID  string  `boil:"waste_pump_id" json:"waste_pump_id" toml:"waste_pump_id" yaml:"waste_pump_id"`
 	ExchangeRate float64 `boil:"exchange_rate" json:"exchange_rate" toml:"exchange_rate" yaml:"exchange_rate"`
+	Enabled      bool    `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
 
 	R *autoWaterChangeR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L autoWaterChangeL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -36,11 +37,13 @@ var AutoWaterChangeColumns = struct {
 	FreshPumpID  string
 	WastePumpID  string
 	ExchangeRate string
+	Enabled      string
 }{
 	ID:           "id",
 	FreshPumpID:  "fresh_pump_id",
 	WastePumpID:  "waste_pump_id",
 	ExchangeRate: "exchange_rate",
+	Enabled:      "enabled",
 }
 
 // Generated where
@@ -50,11 +53,13 @@ var AutoWaterChangeWhere = struct {
 	FreshPumpID  whereHelperstring
 	WastePumpID  whereHelperstring
 	ExchangeRate whereHelperfloat64
+	Enabled      whereHelperbool
 }{
 	ID:           whereHelperstring{field: "\"auto_water_changes\".\"id\""},
 	FreshPumpID:  whereHelperstring{field: "\"auto_water_changes\".\"fresh_pump_id\""},
 	WastePumpID:  whereHelperstring{field: "\"auto_water_changes\".\"waste_pump_id\""},
 	ExchangeRate: whereHelperfloat64{field: "\"auto_water_changes\".\"exchange_rate\""},
+	Enabled:      whereHelperbool{field: "\"auto_water_changes\".\"enabled\""},
 }
 
 // AutoWaterChangeRels is where relationship names are stored.
@@ -84,9 +89,9 @@ func (*autoWaterChangeR) NewStruct() *autoWaterChangeR {
 type autoWaterChangeL struct{}
 
 var (
-	autoWaterChangeAllColumns            = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate"}
+	autoWaterChangeAllColumns            = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "enabled"}
 	autoWaterChangeColumnsWithoutDefault = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate"}
-	autoWaterChangeColumnsWithDefault    = []string{}
+	autoWaterChangeColumnsWithDefault    = []string{"enabled"}
 	autoWaterChangePrimaryKeyColumns     = []string{"id"}
 )
 

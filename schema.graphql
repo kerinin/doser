@@ -99,6 +99,7 @@ type AutoTopOff {
   # The maximum volume in mL to fill in a single run.
   # Causes an alert if this volume is exceeded
   max_fill_volume: Float
+  enabled: Boolean!
 
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
@@ -118,6 +119,7 @@ type AutoWaterChange {
   waste_pump: Pump!
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
   exchange_rate: Float!
+  enabled: Boolean!
 
   events: [AwcEvent!]
 }
@@ -125,6 +127,7 @@ type AutoWaterChange {
 type Doser {
   id: ID!
   components: [DoserComponent!]
+  enabled: Boolean!
 }
 
 type DoserComponent {
@@ -164,12 +167,15 @@ type Mutation {
   createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
   updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
   deleteAutoTopOff(id: ID!): Boolean!
+  setAutoTopOffEnabled(id: ID!, enabled: Boolean!): Boolean!
 
   createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!): AutoWaterChange!
   deleteAutoWaterChange(id: ID!): Boolean!
+  setAutoWaterChangeEnabled(id: ID!, enabled: Boolean!): Boolean!
 
   createDoser(input: DoserInput!): Doser!
   deleteDoser(id: ID!): Boolean!
+  setDoserEnabled(id: ID!, enabled: Boolean!): Boolean!
 
   pump(pump_id: ID!, steps: Int!, speed: Float!): Boolean!
 }

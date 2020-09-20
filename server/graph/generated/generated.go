@@ -65,6 +65,7 @@ type ComplexityRoot struct {
 	}
 
 	AutoTopOff struct {
+		Enabled       func(childComplexity int) int
 		Events        func(childComplexity int) int
 		FillInterval  func(childComplexity int) int
 		FillRate      func(childComplexity int) int
@@ -76,6 +77,7 @@ type ComplexityRoot struct {
 	}
 
 	AutoWaterChange struct {
+		Enabled      func(childComplexity int) int
 		Events       func(childComplexity int) int
 		ExchangeRate func(childComplexity int) int
 		FreshPump    func(childComplexity int) int
@@ -98,6 +100,7 @@ type ComplexityRoot struct {
 
 	Doser struct {
 		Components func(childComplexity int) int
+		Enabled    func(childComplexity int) int
 		ID         func(childComplexity int) int
 	}
 
@@ -114,23 +117,26 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		CalibratePump          func(childComplexity int, pumpID string, steps int, volume float64) int
-		CreateAutoTopOff       func(childComplexity int, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) int
-		CreateAutoWaterChange  func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64) int
-		CreateDoser            func(childComplexity int, input model.DoserInput) int
-		CreateFirmata          func(childComplexity int, serialPort string, baud int) int
-		CreatePump             func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
-		CreateWaterLevelSensor func(childComplexity int, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
-		DeleteAutoTopOff       func(childComplexity int, id string) int
-		DeleteAutoWaterChange  func(childComplexity int, id string) int
-		DeleteDoser            func(childComplexity int, id string) int
-		DeleteFirmata          func(childComplexity int, id string) int
-		DeletePump             func(childComplexity int, id string) int
-		DeleteWaterLevelSensor func(childComplexity int, id string) int
-		Pump                   func(childComplexity int, pumpID string, steps int, speed float64) int
-		UpdateAutoTopOff       func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) int
-		UpdatePump             func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
-		UpdateWaterLevelSensor func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
+		CalibratePump             func(childComplexity int, pumpID string, steps int, volume float64) int
+		CreateAutoTopOff          func(childComplexity int, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) int
+		CreateAutoWaterChange     func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64) int
+		CreateDoser               func(childComplexity int, input model.DoserInput) int
+		CreateFirmata             func(childComplexity int, serialPort string, baud int) int
+		CreatePump                func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
+		CreateWaterLevelSensor    func(childComplexity int, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
+		DeleteAutoTopOff          func(childComplexity int, id string) int
+		DeleteAutoWaterChange     func(childComplexity int, id string) int
+		DeleteDoser               func(childComplexity int, id string) int
+		DeleteFirmata             func(childComplexity int, id string) int
+		DeletePump                func(childComplexity int, id string) int
+		DeleteWaterLevelSensor    func(childComplexity int, id string) int
+		Pump                      func(childComplexity int, pumpID string, steps int, speed float64) int
+		SetAutoTopOffEnabled      func(childComplexity int, id string, enabled bool) int
+		SetAutoWaterChangeEnabled func(childComplexity int, id string, enabled bool) int
+		SetDoserEnabled           func(childComplexity int, id string, enabled bool) int
+		UpdateAutoTopOff          func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) int
+		UpdatePump                func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
+		UpdateWaterLevelSensor    func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
 	}
 
 	Pump struct {
@@ -207,10 +213,13 @@ type MutationResolver interface {
 	CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error)
 	UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error)
 	DeleteAutoTopOff(ctx context.Context, id string) (bool, error)
+	SetAutoTopOffEnabled(ctx context.Context, id string, enabled bool) (bool, error)
 	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64) (*models.AutoWaterChange, error)
 	DeleteAutoWaterChange(ctx context.Context, id string) (bool, error)
+	SetAutoWaterChangeEnabled(ctx context.Context, id string, enabled bool) (bool, error)
 	CreateDoser(ctx context.Context, input model.DoserInput) (*models.Doser, error)
 	DeleteDoser(ctx context.Context, id string) (bool, error)
+	SetDoserEnabled(ctx context.Context, id string, enabled bool) (bool, error)
 	Pump(ctx context.Context, pumpID string, steps int, speed float64) (bool, error)
 }
 type PumpResolver interface {
@@ -295,6 +304,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AtoRate.Timestamp(childComplexity), true
 
+	case "AutoTopOff.enabled":
+		if e.complexity.AutoTopOff.Enabled == nil {
+			break
+		}
+
+		return e.complexity.AutoTopOff.Enabled(childComplexity), true
+
 	case "AutoTopOff.events":
 		if e.complexity.AutoTopOff.Events == nil {
 			break
@@ -355,6 +371,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AutoTopOff.Rate(childComplexity, args["window"].(*int)), true
+
+	case "AutoWaterChange.enabled":
+		if e.complexity.AutoWaterChange.Enabled == nil {
+			break
+		}
+
+		return e.complexity.AutoWaterChange.Enabled(childComplexity), true
 
 	case "AutoWaterChange.events":
 		if e.complexity.AutoWaterChange.Events == nil {
@@ -446,6 +469,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Doser.Components(childComplexity), true
+
+	case "Doser.enabled":
+		if e.complexity.Doser.Enabled == nil {
+			break
+		}
+
+		return e.complexity.Doser.Enabled(childComplexity), true
 
 	case "Doser.id":
 		if e.complexity.Doser.ID == nil {
@@ -663,6 +693,42 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Pump(childComplexity, args["pump_id"].(string), args["steps"].(int), args["speed"].(float64)), true
+
+	case "Mutation.setAutoTopOffEnabled":
+		if e.complexity.Mutation.SetAutoTopOffEnabled == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setAutoTopOffEnabled_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetAutoTopOffEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
+
+	case "Mutation.setAutoWaterChangeEnabled":
+		if e.complexity.Mutation.SetAutoWaterChangeEnabled == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setAutoWaterChangeEnabled_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetAutoWaterChangeEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
+
+	case "Mutation.setDoserEnabled":
+		if e.complexity.Mutation.SetDoserEnabled == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setDoserEnabled_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetDoserEnabled(childComplexity, args["id"].(string), args["enabled"].(bool)), true
 
 	case "Mutation.updateAutoTopOff":
 		if e.complexity.Mutation.UpdateAutoTopOff == nil {
@@ -1031,6 +1097,7 @@ type AutoTopOff {
   # The maximum volume in mL to fill in a single run.
   # Causes an alert if this volume is exceeded
   max_fill_volume: Float
+  enabled: Boolean!
 
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
@@ -1050,6 +1117,7 @@ type AutoWaterChange {
   waste_pump: Pump!
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
   exchange_rate: Float!
+  enabled: Boolean!
 
   events: [AwcEvent!]
 }
@@ -1057,6 +1125,7 @@ type AutoWaterChange {
 type Doser {
   id: ID!
   components: [DoserComponent!]
+  enabled: Boolean!
 }
 
 type DoserComponent {
@@ -1096,12 +1165,15 @@ type Mutation {
   createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
   updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
   deleteAutoTopOff(id: ID!): Boolean!
+  setAutoTopOffEnabled(id: ID!, enabled: Boolean!): Boolean!
 
   createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!): AutoWaterChange!
   deleteAutoWaterChange(id: ID!): Boolean!
+  setAutoWaterChangeEnabled(id: ID!, enabled: Boolean!): Boolean!
 
   createDoser(input: DoserInput!): Doser!
   deleteDoser(id: ID!): Boolean!
+  setDoserEnabled(id: ID!, enabled: Boolean!): Boolean!
 
   pump(pump_id: ID!, steps: Int!, speed: Float!): Boolean!
 }
@@ -1515,6 +1587,78 @@ func (ec *executionContext) field_Mutation_pump_args(ctx context.Context, rawArg
 		}
 	}
 	args["speed"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setAutoTopOffEnabled_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 bool
+	if tmp, ok := rawArgs["enabled"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("enabled"))
+		arg1, err = ec.unmarshalNBoolean2bool(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["enabled"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setAutoWaterChangeEnabled_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 bool
+	if tmp, ok := rawArgs["enabled"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("enabled"))
+		arg1, err = ec.unmarshalNBoolean2bool(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["enabled"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setDoserEnabled_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 bool
+	if tmp, ok := rawArgs["enabled"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("enabled"))
+		arg1, err = ec.unmarshalNBoolean2bool(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["enabled"] = arg1
 	return args, nil
 }
 
@@ -2171,6 +2315,40 @@ func (ec *executionContext) _AutoTopOff_max_fill_volume(ctx context.Context, fie
 	return ec.marshalOFloat2float64(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _AutoTopOff_enabled(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoTopOff",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Enabled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _AutoTopOff_events(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2374,6 +2552,40 @@ func (ec *executionContext) _AutoWaterChange_exchange_rate(ctx context.Context, 
 	res := resTmp.(float64)
 	fc.Result = res
 	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AutoWaterChange_enabled(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoWaterChange",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Enabled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoWaterChange_events(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
@@ -2705,6 +2917,40 @@ func (ec *executionContext) _Doser_components(ctx context.Context, field graphql
 	res := resTmp.([]*models.DoserComponent)
 	fc.Result = res
 	return ec.marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponentᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Doser_enabled(ctx context.Context, field graphql.CollectedField, obj *models.Doser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Doser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Enabled, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _DoserComponent_pump(ctx context.Context, field graphql.CollectedField, obj *models.DoserComponent) (ret graphql.Marshaler) {
@@ -3400,6 +3646,47 @@ func (ec *executionContext) _Mutation_deleteAutoTopOff(ctx context.Context, fiel
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_setAutoTopOffEnabled(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_setAutoTopOffEnabled_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetAutoTopOffEnabled(rctx, args["id"].(string), args["enabled"].(bool))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3482,6 +3769,47 @@ func (ec *executionContext) _Mutation_deleteAutoWaterChange(ctx context.Context,
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_setAutoWaterChangeEnabled(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_setAutoWaterChangeEnabled_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetAutoWaterChangeEnabled(rctx, args["id"].(string), args["enabled"].(bool))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_createDoser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3548,6 +3876,47 @@ func (ec *executionContext) _Mutation_deleteDoser(ctx context.Context, field gra
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().DeleteDoser(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_setDoserEnabled(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_setDoserEnabled_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetDoserEnabled(rctx, args["id"].(string), args["enabled"].(bool))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5665,6 +6034,11 @@ func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSe
 			}
 		case "max_fill_volume":
 			out.Values[i] = ec._AutoTopOff_max_fill_volume(ctx, field, obj)
+		case "enabled":
+			out.Values[i] = ec._AutoTopOff_enabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "events":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -5744,6 +6118,11 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 			})
 		case "exchange_rate":
 			out.Values[i] = ec._AutoWaterChange_exchange_rate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "enabled":
+			out.Values[i] = ec._AutoWaterChange_enabled(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
@@ -5881,6 +6260,11 @@ func (ec *executionContext) _Doser(ctx context.Context, sel ast.SelectionSet, ob
 				res = ec._Doser_components(ctx, field, obj)
 				return res
 			})
+		case "enabled":
+			out.Values[i] = ec._Doser_enabled(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -6056,6 +6440,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "setAutoTopOffEnabled":
+			out.Values[i] = ec._Mutation_setAutoTopOffEnabled(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createAutoWaterChange":
 			out.Values[i] = ec._Mutation_createAutoWaterChange(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -6066,6 +6455,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "setAutoWaterChangeEnabled":
+			out.Values[i] = ec._Mutation_setAutoWaterChangeEnabled(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createDoser":
 			out.Values[i] = ec._Mutation_createDoser(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -6073,6 +6467,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "deleteDoser":
 			out.Values[i] = ec._Mutation_deleteDoser(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "setDoserEnabled":
+			out.Values[i] = ec._Mutation_setDoserEnabled(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
