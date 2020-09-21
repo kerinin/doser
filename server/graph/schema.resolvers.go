@@ -23,7 +23,7 @@ import (
 func (r *autoTopOffResolver) Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error) {
 	m, err := obj.Pump().One(ctx, r.db)
 	if err != nil {
-		return nil, fmt.Errorf("getting ATO: %w", err)
+		return nil, fmt.Errorf("getting ATO pump: %w", err)
 	}
 
 	return m, nil
@@ -444,7 +444,7 @@ func (r *mutationResolver) SetAutoTopOffEnabled(ctx context.Context, id string, 
 		Enabled: enabled,
 	}
 
-	_, err := m.Update(ctx, r.db, boil.Infer())
+	_, err := m.Update(ctx, r.db, boil.Whitelist(models.AutoTopOffColumns.Enabled))
 	if err != nil {
 		return false, fmt.Errorf("updating auto top off: %w", err)
 	}
@@ -525,7 +525,7 @@ func (r *mutationResolver) SetAutoWaterChangeEnabled(ctx context.Context, id str
 		Enabled: enabled,
 	}
 
-	_, err := m.Update(ctx, r.db, boil.Infer())
+	_, err := m.Update(ctx, r.db, boil.Whitelist(models.AutoTopOffColumns.Enabled))
 	if err != nil {
 		return false, fmt.Errorf("updating auto water change: %w", err)
 	}
@@ -555,7 +555,7 @@ func (r *mutationResolver) SetDoserEnabled(ctx context.Context, id string, enabl
 		Enabled: enabled,
 	}
 
-	_, err := m.Update(ctx, r.db, boil.Infer())
+	_, err := m.Update(ctx, r.db, boil.Whitelist(models.AutoTopOffColumns.Enabled))
 	if err != nil {
 		return false, fmt.Errorf("updating doser: %w", err)
 	}

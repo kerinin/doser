@@ -4,40 +4,22 @@ import Grid from "@material-ui/core/Grid";
 import Box from "@material-ui/core/Box";
 import {
   createContainer,
-  Point,
-  VictoryArea,
   VictoryAxis,
   VictoryChart,
   VictoryLabel,
   VictoryLine,
-  VictoryPortal,
   VictoryScatter,
   VictoryTheme,
   VictoryTooltip,
-  VictoryVoronoiContainer,
 } from "victory";
-import Table from "@material-ui/core/Table";
-import TableBody from "@material-ui/core/TableBody";
-import TableCell from "@material-ui/core/TableCell";
-import TableContainer from "@material-ui/core/TableContainer";
-import TableHead from "@material-ui/core/TableHead";
-import TableRow from "@material-ui/core/TableRow";
 import { useTheme } from "@material-ui/core/styles";
 import { useQuery } from "graphql-hooks";
 import { useMutation } from "graphql-hooks";
-import { DataGrid } from "@material-ui/data-grid";
 
 import DoserAppBar from "./DoserAppBar";
 import EditAutoTopOff from "./EditAutoTopOff";
 import { Api as EditAutoTopOffApi } from "./EditAutoTopOff";
-import {
-  ButtonGroup,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  Typography,
-} from "@material-ui/core";
+import { Card, CardContent, CardHeader, Typography } from "@material-ui/core";
 import { useParams } from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
@@ -100,12 +82,6 @@ const QUERY = `query GetAutoTopOff($id: ID!) {
         fill_rate
         fill_interval
         max_fill_volume
-        events {
-          id
-          timestamp
-          kind
-          data
-        }
         rate(window: 21600) {
           timestamp
           rate
@@ -288,27 +264,6 @@ function Chart({ ato }) {
         axisLabelComponent={<VictoryLabel dy={-30} />}
       />
     </VictoryChart>
-  );
-}
-
-function EventsTable({ ato }) {
-  const columns = [
-    {
-      field: "timestamp",
-      headerName: "Time",
-      width: 250,
-      type: "datetime",
-      valueFormatter: ({ value }) => new Date(value * 1000).toISOString(),
-    },
-    { field: "volume", headerName: "Volume", width: 100 },
-  ];
-
-  return (
-    <React.Fragment>
-      <div style={{ height: 400, width: "100%" }}>
-        <DataGrid rows={ato.pump.history} columns={columns} pageSize={10} />
-      </div>
-    </React.Fragment>
   );
 }
 
