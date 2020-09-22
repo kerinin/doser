@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"math"
@@ -19,8 +18,7 @@ import (
 const targetDurationSec = 60
 
 type AWCJob struct {
-	eventCh          chan<- *models.AwcEvent
-	db               *sql.DB
+	controller       *AWC
 	awc              *models.AutoWaterChange
 	freshPump        *models.Pump
 	wastePump        *models.Pump
@@ -31,16 +29,14 @@ type AWCJob struct {
 }
 
 func NewAWCJob(
-	eventCh chan<- *models.AwcEvent,
-	db *sql.DB,
+	controller *AWC,
 	awc *models.AutoWaterChange,
 	freshPump, wastePump *models.Pump,
 	freshFirmata, wasteFirmata *gomata.Firmata,
 	freshCalibration, wasteCalibration *models.Calibration,
 ) *AWCJob {
 	return &AWCJob{
-		eventCh:          eventCh,
-		db:               db,
+		controller:       controller,
 		awc:              awc,
 		freshPump:        freshPump,
 		wastePump:        wastePump,
@@ -96,7 +92,7 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (j *AWCJob) event(kind string, data string, args ...interface{}) {
-	j.eventCh <- &models.AwcEvent{
+	j.controller.eventCh <- &models.AwcEvent{
 		ID:                uuid.New().String(),
 		AutoWaterChangeID: j.awc.ID,
 		Timestamp:         time.Now().Unix(),
@@ -189,7 +185,7 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 		Volume:    volume,
 		Message:   null.StringFrom(fmt.Sprintf(message, args...)),
 	}
-	err := dose.Insert(ctx, j.db, boil.Infer())
+	err := dose.Insert(ctx, j.controller.db, boil.Infer())
 	if err != nil {
 		j.event(ATOJobErrorKind, "Failure to insert dose: %w", err)
 	}

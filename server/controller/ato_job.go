@@ -2,7 +2,6 @@ package controller
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"log"
 	"sync"
@@ -18,11 +17,9 @@ import (
 )
 
 type ATOJob struct {
-	eventCh     chan<- *models.AtoEvent
-	db          *sql.DB
+	controller  *ATO
 	ato         *models.AutoTopOff
 	pump        *models.Pump
-	firmatas    *Firmatas
 	firmata     *gomata.Firmata
 	sensors     []*models.WaterLevelSensor
 	calibration *models.Calibration
@@ -30,21 +27,17 @@ type ATOJob struct {
 }
 
 func NewATOJob(
-	eventCh chan<- *models.AtoEvent,
-	db *sql.DB,
+	controller *ATO,
 	ato *models.AutoTopOff,
 	pump *models.Pump,
-	firmatas *Firmatas,
 	firmata *gomata.Firmata,
 	sensors []*models.WaterLevelSensor,
 	calibration *models.Calibration,
 ) *ATOJob {
 	return &ATOJob{
-		eventCh:     eventCh,
-		db:          db,
+		controller:  controller,
 		ato:         ato,
 		pump:        pump,
-		firmatas:    firmatas,
 		firmata:     firmata,
 		sensors:     sensors,
 		calibration: calibration,
@@ -84,7 +77,7 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 }
 
 func (j *ATOJob) event(kind string, data string, args ...interface{}) {
-	j.eventCh <- &models.AtoEvent{
+	j.controller.eventCh <- &models.AtoEvent{
 		ID:           uuid.New().String(),
 		AutoTopOffID: j.ato.ID,
 		Timestamp:    time.Now().Unix(),
@@ -105,7 +98,7 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 	// Ensure the water level sensors are functioning and water isn't currently detected
 	for _, sensor := range j.sensors {
 		// Read the sensor's current value
-		detected, err := WaterDetected(ctx, rpi, j.firmatas, sensor)
+		detected, err := WaterDetected(ctx, rpi, j.controller.firmatas, sensor)
 		if err != nil {
 			j.event(ATOJobErrorKind, "Failure reading water level sensor: %w", err)
 			return
@@ -156,7 +149,7 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 		case <-sensorTicker.C:
 			for _, sensor := range j.sensors {
 				// Read the sensor's current value
-				detected, err := WaterDetected(ctx, rpi, j.firmatas, sensor)
+				detected, err := WaterDetected(ctx, rpi, j.controller.firmatas, sensor)
 				if err != nil {
 					j.event(ATOJobErrorKind, "Failure reading water level sensor: %w", err)
 					return
@@ -201,6 +194,15 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 			return
 
 		case <-ctx.Done():
+			// If we timed out, reconnect to firmata and recreate the ATO jobs
+			if ctx.Err() == context.DeadlineExceeded {
+				err = j.controller.firmatas.Reset()
+				if err != nil {
+					log.Printf("Failed to reset firmatas: %w", err)
+				}
+				j.controller.Reset()
+			}
+
 			log.Printf("Job context cancelled, terminating")
 
 			err = j.firmata.StepperStop(int(j.pump.DeviceID))
@@ -220,7 +222,7 @@ func (j *ATOJob) recordDose(ctx context.Context, volume float64, message string,
 		Volume:    volume,
 		Message:   null.StringFrom(fmt.Sprintf(message, args...)),
 	}
-	err := dose.Insert(ctx, j.db, boil.Infer())
+	err := dose.Insert(ctx, j.controller.db, boil.Infer())
 	if err != nil {
 		j.event(ATOJobErrorKind, "Failure to insert dose: %w", err)
 	}

@@ -205,13 +205,13 @@ function Content({ ato, reload }) {
 
   return (
     <React.Fragment>
-      <Grid item xs={12}>
+      <Grid item xs={12} lg={6}>
         <EditAutoTopOffApi.Provider value={api}>
           <EditAutoTopOff />
         </EditAutoTopOffApi.Provider>
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid item xs={12} lg={6}>
         <Card>
           <CardHeader title="History" />
           <CardContent>
@@ -233,6 +233,7 @@ function Chart({ ato }) {
       minDomain={{ y: 0 }}
       domainPadding={{ y: [20, 20] }}
       scale={{ x: "time" }}
+      allowZoom={false}
       containerComponent={
         <VictoryContainer
           zoomDimension="x"
