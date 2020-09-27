@@ -23,7 +23,7 @@ func NewFirmatas(db *sql.DB) *Firmatas {
 
 func (c *Firmatas) Reset() error {
 	for _, f := range c.firmatas {
-		err := f.Disconnect
+		err := f.Disconnect()
 		if err != nil {
 			return fmt.Errorf("disconnecting firmata: %w", err)
 		}
