@@ -63,7 +63,8 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer ticker.Stop()
 
 	// Run first job immediately
-	j.runJob(ctx, maxSteps, speed)
+	jobCtx, _ := context.WithTimeout(ctx, interval)
+	j.runJob(jobCtx, maxSteps, speed)
 
 	for {
 		select {
