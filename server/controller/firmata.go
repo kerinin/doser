@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/huin/goserial"
 	"github.com/kerinin/doser/service/models"
@@ -57,36 +58,51 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 	log.Printf("Connecting to firmata at port %s", firmata.SerialPort)
 
 	f := gomata.New()
-	f.Connect(port)
-	for _, sensor := range sensors {
-		if sensor.DetectionThreshold.Valid {
-			log.Printf("Requesting analog reports for firmata %s pin %d", firmataID, sensor.Pin)
+	connected := make(chan struct{})
+	go func() {
+		f.Connect(port)
+		connected <- struct{}{}
+	}()
 
-			err = f.SetPinMode(int(sensor.Pin), gomata.AnalogPin)
-			if err != nil {
-				return nil, fmt.Errorf("setting pin mode: %w", err)
-			}
+	select {
+	case <-connected:
+		for _, sensor := range sensors {
+			if sensor.DetectionThreshold.Valid {
+				log.Printf("Requesting analog reports for firmata %s pin %d", firmataID, sensor.Pin)
 
-			err = f.ReportAnalog(int(sensor.Pin), 1)
-			if err != nil {
-				return nil, fmt.Errorf("requesting analog reports for pin %d: %w", sensor.Pin, err)
-			}
-		} else {
+				err := f.SetPinMode(int(sensor.Pin), gomata.AnalogPin)
+				if err != nil {
+					return nil, fmt.Errorf("setting pin mode: %w", err)
+				}
 
-			log.Printf("Requesting digital reports for firmata %s pin %d", firmataID, sensor.Pin)
+				err = f.ReportAnalog(int(sensor.Pin), 1)
+				if err != nil {
+					return nil, fmt.Errorf("requesting analog reports for pin %d: %w", sensor.Pin, err)
+				}
+			} else {
 
-			err = f.SetPinMode(int(sensor.Pin), gomata.PullupPin)
-			if err != nil {
-				return nil, fmt.Errorf("setting pin mode: %w", err)
-			}
+				log.Printf("Requesting digital reports for firmata %s pin %d", firmataID, sensor.Pin)
 
-			err = f.ReportDigital(int(sensor.Pin), 1)
-			if err != nil {
-				return nil, fmt.Errorf("requesting digital reports for pin %d: %w", sensor.Pin, err)
+				err := f.SetPinMode(int(sensor.Pin), gomata.PullupPin)
+				if err != nil {
+					return nil, fmt.Errorf("setting pin mode: %w", err)
+				}
+
+				err = f.ReportDigital(int(sensor.Pin), 1)
+				if err != nil {
+					return nil, fmt.Errorf("requesting digital reports for pin %d: %w", sensor.Pin, err)
+				}
 			}
 		}
-	}
-	c.firmatas[firmataID] = f
+		c.firmatas[firmataID] = f
 
-	return f, nil
+		return f, nil
+
+	case <-time.After(30 * time.Second):
+		err := f.Disconnect()
+		if err != nil {
+			log.Printf("Failed to disconnect from firmata after failing to connect: %s", err)
+		}
+		return nil, fmt.Errorf("Failed to connect to firmata")
+	}
 }
