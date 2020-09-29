@@ -8,7 +8,7 @@ require (
 	github.com/friendsofgo/errors v0.9.2
 	github.com/google/uuid v1.1.1
 	github.com/huin/goserial v0.0.0-20121012073615-7b90efdb22b1
-	github.com/kerinin/gomata v0.0.0-20200928222240-9d22f8e6d6a4
+	github.com/kerinin/gomata v0.0.0-20200929113650-23903aa17225
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron/v3 v3.0.1
@@ -26,6 +26,6 @@ require (
 	github.com/volatiletech/strmangle v0.0.1
 	github.com/warthog618/gpiod v0.5.0 // indirect
 	gobot.io/x/gobot v1.14.0
-	golang.org/x/sys v0.0.0-20200928205150-006507a75852 // indirect
+	golang.org/x/sys v0.0.0-20200929083018-4d22bbb62b3c // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )
