@@ -54,6 +54,7 @@ func (c *AWC) Run(ctx context.Context, wg *sync.WaitGroup) {
 			jobs, err = c.setupJobs(ctx, wg)
 			if err != nil {
 				log.Printf("Failed to create AWC jobs: %s", err)
+				c.Reset()
 			}
 
 		case <-ctx.Done():

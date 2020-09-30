@@ -101,7 +101,7 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 		// Read the sensor's current value
 		detected, err := WaterDetected(ctx, rpi, j.controller.firmatas, sensor)
 		if err != nil {
-			j.event(ATOJobErrorKind, "Failure reading water level sensor: %w", err)
+			j.event(ATOJobErrorKind, "Failure reading water level sensor: %s", err)
 			return
 		}
 		if detected {
