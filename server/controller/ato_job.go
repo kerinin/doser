@@ -201,6 +201,8 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 				if err != nil {
 					log.Printf("Failed to reset firmatas: %w", err)
 				}
+				// Give the firmata a second to clear the serial connection
+				<-time.After(time.Second)
 				j.controller.Reset()
 			}
 
