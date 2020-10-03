@@ -26,7 +26,7 @@ func (c *Firmatas) Reset() error {
 	for _, f := range c.firmatas {
 		err := f.Disconnect()
 		if err != nil {
-			log.Printf("Failed to disconnecto firmata: %w", err)
+			log.Printf("Failed to disconnect firmata: %w", err)
 		}
 	}
 
