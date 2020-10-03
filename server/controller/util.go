@@ -52,11 +52,8 @@ func WaterDetected(ctx context.Context, rpi *raspi.Adaptor, firmatasController *
 		val       = pins[obj.Pin].Value
 	)
 
-	if obj.Invert {
-		val *= -1
-	}
-
-	return val >= threshold, nil
+	// XOR invert
+	return obj.Invert != (val > threshold), nil
 }
 
 func gpioWaterDetected(ctx context.Context, rpi *raspi.Adaptor, obj *models.WaterLevelSensor) (bool, error) {
@@ -65,9 +62,7 @@ func gpioWaterDetected(ctx context.Context, rpi *raspi.Adaptor, obj *models.Wate
 	if err != nil {
 		return false, fmt.Errorf("reading sensor pin %s: %w", pinString, err)
 	}
-	if obj.Invert {
-		val *= -1
-	}
 
-	return val == sysfs.HIGH, nil
+	// XOR invert
+	return obj.Invert != (val == sysfs.HIGH), nil
 }
