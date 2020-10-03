@@ -16,13 +16,17 @@ type Firmatas struct {
 	db       *sql.DB
 	firmatas map[string]*gomata.Firmata
 	reset    chan struct{}
+	mx       *sync.Mutex
 }
 
 func NewFirmatas(db *sql.DB) *Firmatas {
-	return &Firmatas{db, make(map[string]*gomata.Firmata), make(chan struct{}, 1)}
+	return &Firmatas{db, make(map[string]*gomata.Firmata), make(chan struct{}, 1), &sync.Mutex{}}
 }
 
 func (c *Firmatas) Reset() error {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
 	for _, f := range c.firmatas {
 		err := f.Disconnect()
 		if err != nil {
@@ -35,6 +39,9 @@ func (c *Firmatas) Reset() error {
 }
 
 func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, error) {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
 	if f, found := c.firmatas[firmataID]; found {
 		return f, nil
 	}
