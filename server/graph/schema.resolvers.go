@@ -279,12 +279,13 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, pumpID string, ste
 	return m, nil
 }
 
-func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error) {
+func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) (*models.WaterLevelSensor, error) {
 	m := &models.WaterLevelSensor{
 		ID:        uuid.New().String(),
 		Pin:       int64(pin),
 		Kind:      kind.String(),
 		FirmataID: null.StringFromPtr(firmataID),
+		Invert:    invert,
 	}
 	if detectionThreshold != nil {
 		m.DetectionThreshold = null.Int64From(int64(*detectionThreshold))
@@ -300,12 +301,13 @@ func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, 
 	return m, nil
 }
 
-func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error) {
+func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) (*models.WaterLevelSensor, error) {
 	m := &models.WaterLevelSensor{
 		ID:        id,
 		Pin:       int64(pin),
 		Kind:      kind.String(),
 		FirmataID: null.StringFromPtr(firmataID),
+		Invert:    invert,
 	}
 	if detectionThreshold != nil {
 		m.DetectionThreshold = null.Int64From(int64(*detectionThreshold))

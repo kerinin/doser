@@ -123,7 +123,7 @@ type ComplexityRoot struct {
 		CreateDoser               func(childComplexity int, input model.DoserInput) int
 		CreateFirmata             func(childComplexity int, serialPort string, baud int) int
 		CreatePump                func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
-		CreateWaterLevelSensor    func(childComplexity int, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
+		CreateWaterLevelSensor    func(childComplexity int, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) int
 		DeleteAutoTopOff          func(childComplexity int, id string) int
 		DeleteAutoWaterChange     func(childComplexity int, id string) int
 		DeleteDoser               func(childComplexity int, id string) int
@@ -136,7 +136,7 @@ type ComplexityRoot struct {
 		SetDoserEnabled           func(childComplexity int, id string, enabled bool) int
 		UpdateAutoTopOff          func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) int
 		UpdatePump                func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
-		UpdateWaterLevelSensor    func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) int
+		UpdateWaterLevelSensor    func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) int
 	}
 
 	Pump struct {
@@ -169,6 +169,7 @@ type ComplexityRoot struct {
 		DetectionThreshold func(childComplexity int) int
 		FirmataID          func(childComplexity int) int
 		ID                 func(childComplexity int) int
+		Invert             func(childComplexity int) int
 		Kind               func(childComplexity int) int
 		Pin                func(childComplexity int) int
 		WaterDetected      func(childComplexity int) int
@@ -207,8 +208,8 @@ type MutationResolver interface {
 	UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error)
 	DeletePump(ctx context.Context, id string) (bool, error)
 	CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error)
-	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error)
-	UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int) (*models.WaterLevelSensor, error)
+	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) (*models.WaterLevelSensor, error)
+	UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) (*models.WaterLevelSensor, error)
 	DeleteWaterLevelSensor(ctx context.Context, id string) (bool, error)
 	CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error)
 	UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error)
@@ -608,7 +609,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int)), true
+		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool)), true
 
 	case "Mutation.deleteAutoTopOff":
 		if e.complexity.Mutation.DeleteAutoTopOff == nil {
@@ -764,7 +765,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateWaterLevelSensor(childComplexity, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int)), true
+		return e.complexity.Mutation.UpdateWaterLevelSensor(childComplexity, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool)), true
 
 	case "Pump.acceleration":
 		if e.complexity.Pump.Acceleration == nil {
@@ -910,6 +911,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.WaterLevelSensor.ID(childComplexity), true
+
+	case "WaterLevelSensor.invert":
+		if e.complexity.WaterLevelSensor.Invert == nil {
+			break
+		}
+
+		return e.complexity.WaterLevelSensor.Invert(childComplexity), true
 
 	case "WaterLevelSensor.kind":
 		if e.complexity.WaterLevelSensor.Kind == nil {
@@ -1080,6 +1088,8 @@ type WaterLevelSensor {
   # If present, the configured pin is assumed to be an analog input. Water 
   # is detected if the pin's voltage is greater than the given value
   detection_threshold: Int
+  # If true, invert the sensor, or negate the sensor's value if detection_threshold is set
+  invert: Boolean
 }
 
 type AutoTopOff {
@@ -1158,8 +1168,8 @@ type Mutation {
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
 
-  createWaterLevelSensor(pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int): WaterLevelSensor!
-  updateWaterLevelSensor(id: ID!, pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int): WaterLevelSensor!
+  createWaterLevelSensor(pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int, invert: Boolean!): WaterLevelSensor!
+  updateWaterLevelSensor(id: ID!, pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int, invert: Boolean!): WaterLevelSensor!
   deleteWaterLevelSensor(id: ID!): Boolean!
 
   createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
@@ -1464,6 +1474,15 @@ func (ec *executionContext) field_Mutation_createWaterLevelSensor_args(ctx conte
 		}
 	}
 	args["detection_threshold"] = arg3
+	var arg4 bool
+	if tmp, ok := rawArgs["invert"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("invert"))
+		arg4, err = ec.unmarshalNBoolean2bool(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["invert"] = arg4
 	return args, nil
 }
 
@@ -1839,6 +1858,15 @@ func (ec *executionContext) field_Mutation_updateWaterLevelSensor_args(ctx conte
 		}
 	}
 	args["detection_threshold"] = arg4
+	var arg5 bool
+	if tmp, ok := rawArgs["invert"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("invert"))
+		arg5, err = ec.unmarshalNBoolean2bool(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["invert"] = arg5
 	return args, nil
 }
 
@@ -3424,7 +3452,7 @@ func (ec *executionContext) _Mutation_createWaterLevelSensor(ctx context.Context
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateWaterLevelSensor(rctx, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int))
+		return ec.resolvers.Mutation().CreateWaterLevelSensor(rctx, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3465,7 +3493,7 @@ func (ec *executionContext) _Mutation_updateWaterLevelSensor(ctx context.Context
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateWaterLevelSensor(rctx, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int))
+		return ec.resolvers.Mutation().UpdateWaterLevelSensor(rctx, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4791,6 +4819,37 @@ func (ec *executionContext) _WaterLevelSensor_detection_threshold(ctx context.Co
 	res := resTmp.(*int)
 	fc.Result = res
 	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _WaterLevelSensor_invert(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "WaterLevelSensor",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Invert, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) ___Directive_name(ctx context.Context, field graphql.CollectedField, obj *introspection.Directive) (ret graphql.Marshaler) {
@@ -6796,6 +6855,8 @@ func (ec *executionContext) _WaterLevelSensor(ctx context.Context, sel ast.Selec
 				res = ec._WaterLevelSensor_detection_threshold(ctx, field, obj)
 				return res
 			})
+		case "invert":
+			out.Values[i] = ec._WaterLevelSensor_invert(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

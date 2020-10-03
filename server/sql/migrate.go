@@ -175,6 +175,12 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					`ALTER TABLE dosers ADD COLUMN enabled BOOLEAN NOT NULL DEFAULT 1`,
 				},
 			},
+			&migrate.Migration{
+				Id: "007 sensorinvert",
+				Up: []string{
+					`ALTER TABLE water_level_sensors ADD COLUMN invert BOOLEAN NOT NULL DEFAULT 0`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

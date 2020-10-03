@@ -82,6 +82,8 @@ type WaterLevelSensor {
   # If present, the configured pin is assumed to be an analog input. Water 
   # is detected if the pin's voltage is greater than the given value
   detection_threshold: Int
+  # If true, invert the sensor, or negate the sensor's value if detection_threshold is set
+  invert: Boolean
 }
 
 type AutoTopOff {
@@ -160,8 +162,8 @@ type Mutation {
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
 
-  createWaterLevelSensor(pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int): WaterLevelSensor!
-  updateWaterLevelSensor(id: ID!, pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int): WaterLevelSensor!
+  createWaterLevelSensor(pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int, invert: Boolean!): WaterLevelSensor!
+  updateWaterLevelSensor(id: ID!, pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int, invert: Boolean!): WaterLevelSensor!
   deleteWaterLevelSensor(id: ID!): Boolean!
 
   createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!

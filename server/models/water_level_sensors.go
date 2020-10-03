@@ -28,6 +28,7 @@ type WaterLevelSensor struct {
 	Pin                int64       `boil:"pin" json:"pin" toml:"pin" yaml:"pin"`
 	Kind               string      `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
 	DetectionThreshold null.Int64  `boil:"detection_threshold" json:"detection_threshold,omitempty" toml:"detection_threshold" yaml:"detection_threshold,omitempty"`
+	Invert             bool        `boil:"invert" json:"invert" toml:"invert" yaml:"invert"`
 
 	R *waterLevelSensorR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L waterLevelSensorL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -39,12 +40,14 @@ var WaterLevelSensorColumns = struct {
 	Pin                string
 	Kind               string
 	DetectionThreshold string
+	Invert             string
 }{
 	ID:                 "id",
 	FirmataID:          "firmata_id",
 	Pin:                "pin",
 	Kind:               "kind",
 	DetectionThreshold: "detection_threshold",
+	Invert:             "invert",
 }
 
 // Generated where
@@ -55,12 +58,14 @@ var WaterLevelSensorWhere = struct {
 	Pin                whereHelperint64
 	Kind               whereHelperstring
 	DetectionThreshold whereHelpernull_Int64
+	Invert             whereHelperbool
 }{
 	ID:                 whereHelperstring{field: "\"water_level_sensors\".\"id\""},
 	FirmataID:          whereHelpernull_String{field: "\"water_level_sensors\".\"firmata_id\""},
 	Pin:                whereHelperint64{field: "\"water_level_sensors\".\"pin\""},
 	Kind:               whereHelperstring{field: "\"water_level_sensors\".\"kind\""},
 	DetectionThreshold: whereHelpernull_Int64{field: "\"water_level_sensors\".\"detection_threshold\""},
+	Invert:             whereHelperbool{field: "\"water_level_sensors\".\"invert\""},
 }
 
 // WaterLevelSensorRels is where relationship names are stored.
@@ -87,9 +92,9 @@ func (*waterLevelSensorR) NewStruct() *waterLevelSensorR {
 type waterLevelSensorL struct{}
 
 var (
-	waterLevelSensorAllColumns            = []string{"id", "firmata_id", "pin", "kind", "detection_threshold"}
+	waterLevelSensorAllColumns            = []string{"id", "firmata_id", "pin", "kind", "detection_threshold", "invert"}
 	waterLevelSensorColumnsWithoutDefault = []string{"id", "firmata_id", "pin", "kind", "detection_threshold"}
-	waterLevelSensorColumnsWithDefault    = []string{}
+	waterLevelSensorColumnsWithDefault    = []string{"invert"}
 	waterLevelSensorPrimaryKeyColumns     = []string{"id"}
 )
 

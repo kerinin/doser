@@ -1040,7 +1040,7 @@ func testWaterLevelSensorsSelect(t *testing.T) {
 }
 
 var (
-	waterLevelSensorDBTypes = map[string]string{`ID`: `UUID`, `FirmataID`: `UUID`, `Pin`: `INT`, `Kind`: `TEXT`, `DetectionThreshold`: `INT`}
+	waterLevelSensorDBTypes = map[string]string{`ID`: `UUID`, `FirmataID`: `UUID`, `Pin`: `INT`, `Kind`: `TEXT`, `DetectionThreshold`: `INT`, `Invert`: `BOOLEAN`}
 	_                       = bytes.MinRead
 )
 
