@@ -11,7 +11,9 @@ import { GraphQLClient, ClientContext } from "graphql-hooks";
 
 import Dashboard from "./Dashboard";
 import AutoTopOff from "./AutoTopOff";
+import AutoWaterChange from "./AutoWaterChange";
 import CreateAutoTopOff from "./CreateAutoTopOff";
+import CreateAutoWaterChange from "./CreateAutoWaterChange";
 
 const theme = unstable_createMuiStrictModeTheme({
   palette: {
@@ -40,6 +42,12 @@ function App() {
             </Route>
             <Route path="/ato/:atoId">
               <AutoTopOff />
+            </Route>
+            <Route path="/awc/create">
+              <CreateAutoWaterChange />
+            </Route>
+            <Route path="/awc/:awcId">
+              <AutoWaterChange />
             </Route>
             <Route path="/">
               <Dashboard />

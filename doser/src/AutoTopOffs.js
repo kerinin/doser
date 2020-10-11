@@ -29,7 +29,7 @@ const DASHBOARD_QUERY = `query {
     }
 }`;
 
-const SET_ENABLED = `mutation SetEnabled($id: ID!, $enabled: Boolean!) {
+const SET_ENABLED = `mutation SetATOEnabled($id: ID!, $enabled: Boolean!) {
   setAutoTopOffEnabled(id: $id, enabled: $enabled)
 }`;
 

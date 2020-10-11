@@ -207,9 +207,16 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 }
 
 func (j *AWCJob) reset() {
-	err := j.controller.firmatas.Reset()
+	// NOTE: A broken AWC could lead to very bad things.
+	j.awc.Enabled = false
+	_, err := j.awc.Update(context.Background(), j.controller.db, boil.Whitelist(models.AutoWaterChangeColumns.Enabled))
 	if err != nil {
-		log.Printf("Failed to reset firmatas: %w", err)
+		log.Fatalf("Failed to disable AWC: %s", err)
+	}
+
+	err = j.controller.firmatas.Reset()
+	if err != nil {
+		log.Printf("Failed to reset firmatas: %s", err)
 	}
 	// Give the firmata a second to clear the serial connection
 	<-time.After(time.Second)
