@@ -61,6 +61,9 @@ func (c *AWC) Run(ctx context.Context, wg *sync.WaitGroup) {
 			for _, job := range jobs {
 				job.cancelFunc()
 			}
+			for _, job := range jobs {
+				job.wg.Wait()
+			}
 			return
 		}
 	}

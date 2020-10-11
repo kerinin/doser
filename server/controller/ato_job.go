@@ -46,7 +46,6 @@ func NewATOJob(
 
 func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	// Prevent termination during the run
-	wg.Add(1)
 	defer wg.Done()
 
 	log.Printf("Starting ATO job %s", j.ato.ID)
@@ -197,13 +196,8 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 		case <-ctx.Done():
 			// If we timed out, reconnect to firmata and recreate the ATO jobs
 			if ctx.Err() == context.DeadlineExceeded {
-				err = j.controller.firmatas.Reset()
-				if err != nil {
-					log.Printf("Failed to reset firmatas: %w", err)
-				}
-				// Give the firmata a second to clear the serial connection
-				<-time.After(time.Second)
-				j.controller.Reset()
+				j.reset()
+				return
 			}
 
 			log.Printf("Job context cancelled, terminating")
@@ -229,4 +223,14 @@ func (j *ATOJob) recordDose(ctx context.Context, volume float64, message string,
 	if err != nil {
 		j.event(ATOJobErrorKind, "Failure to insert dose: %w", err)
 	}
+}
+
+func (j *ATOJob) reset() {
+	err := j.controller.firmatas.Reset()
+	if err != nil {
+		log.Printf("Failed to reset firmatas: %w", err)
+	}
+	// Give the firmata a second to clear the serial connection
+	<-time.After(time.Second)
+	j.controller.Reset()
 }

@@ -62,19 +62,22 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 		j.event(AWCJobErrorKind, "Failure zeroing fresh pump: %w", err)
 	}
 
+	// NOTE: Target duration is (essentially) the duration of time the pump will
+	// be commanded to pump for. To ensure a constant pump speed, the ticker could
+	// fire faster, causing the next position to be scheduled before the previous
+	// dose completed.
 	ticker := time.NewTicker(targetDurationSec * time.Second)
 	defer ticker.Stop()
 
 	// Run first job immediately
-	j.runJob(ctx, mlPerSecond)
+	jobCtx, _ := context.WithTimeout(ctx, targetDurationSec)
+	j.runJob(jobCtx, mlPerSecond)
 
 	for {
 		select {
 		case <-ticker.C:
-			status, err := j.runJob(ctx, mlPerSecond)
-			if err != nil {
-				j.event(status, err.Error())
-			}
+			jobCtx, _ := context.WithTimeout(ctx, targetDurationSec)
+			j.runJob(jobCtx, mlPerSecond)
 
 		case <-ctx.Done():
 			err := j.freshFirmata.StepperStop(int(j.freshPump.DeviceID))
@@ -101,21 +104,33 @@ func (j *AWCJob) event(kind string, data string, args ...interface{}) {
 	}
 }
 
-func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) (string, error) {
+func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 	status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, mlPerSecond)
+	if err == context.DeadlineExceeded {
+		j.reset()
+		return
+	}
 	if err != nil {
-		return status, err
+		j.event(status, err.Error())
+		return
 	}
 
 	status, err = j.dose(ctx, "waste", j.wasteFirmata, j.wastePump, j.wasteCalibration, mlPerSecond)
-	if err != nil {
-		return status, err
+	if err == context.DeadlineExceeded {
+		j.reset()
+		return
 	}
-
-	return "", nil
+	if err != nil {
+		j.event(status, err.Error())
+		return
+	}
 }
 
 func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata, pump *models.Pump, calibration *models.Calibration, mlPerSecond float64) (string, error) {
+	// NOTE: This is a bit janky. Rather than waiting for firmata to send us a
+	// step completion message this just returns immediately. To capture the amount
+	// pumped we start each dose call by checking the state of the pump, presumably
+	// capturing the result of the last call.
 	report, err := j.getPosition(ctx, firmata, pump)
 	if err != nil {
 		return AWCJobErrorKind, fmt.Errorf("Failure getting %s pump position (aborting job run): %w", name, err)
@@ -149,7 +164,7 @@ func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata,
 		return AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
 	}
 
-	err = firmata.StepperTo(int(pump.DeviceID), int32(nextSteps))
+	err = firmata.StepperStep(int(pump.DeviceID), int32(nextSteps))
 	if err != nil {
 		return AWCJobErrorKind, fmt.Errorf("stepping %s pump (aborting job run): %w", name, err)
 	}
@@ -189,4 +204,14 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 	if err != nil {
 		j.event(ATOJobErrorKind, "Failure to insert dose: %w", err)
 	}
+}
+
+func (j *AWCJob) reset() {
+	err := j.controller.firmatas.Reset()
+	if err != nil {
+		log.Printf("Failed to reset firmatas: %w", err)
+	}
+	// Give the firmata a second to clear the serial connection
+	<-time.After(time.Second)
+	j.controller.Reset()
 }
