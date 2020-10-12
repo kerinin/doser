@@ -66,15 +66,17 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 	log.Printf("Connecting to firmata at port %s", firmata.SerialPort)
 
 	f := gomata.New()
-	connected := make(chan struct{})
+	connected := make(chan error)
 	go func() {
-		f.Connect(port)
-		log.Printf("Connected")
-		connected <- struct{}{}
+		connected <- f.Connect(port)
 	}()
 
 	select {
-	case <-connected:
+	case err := <-connected:
+		if err != nil {
+			return nil, fmt.Errorf("Connecting to firmata: %w", err)
+		}
+
 		for _, sensor := range sensors {
 			if sensor.DetectionThreshold.Valid {
 				log.Printf("Requesting analog reports for firmata %s pin %d", firmataID, sensor.Pin)
