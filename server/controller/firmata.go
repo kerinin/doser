@@ -66,7 +66,7 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 	log.Printf("Connecting to firmata at port %s", firmata.SerialPort)
 
 	f := gomata.New()
-	connected := make(chan struct{}, 1)
+	connected := make(chan struct{})
 	go func() {
 		f.Connect(port)
 		connected <- struct{}{}
