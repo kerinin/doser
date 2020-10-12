@@ -938,7 +938,7 @@ func testAutoWaterChangesSelect(t *testing.T) {
 }
 
 var (
-	autoWaterChangeDBTypes = map[string]string{`ID`: `UUID`, `FreshPumpID`: `UUID`, `WastePumpID`: `UUID`, `ExchangeRate`: `REAL`, `Enabled`: `BOOLEAN`}
+	autoWaterChangeDBTypes = map[string]string{`ID`: `UUID`, `FreshPumpID`: `UUID`, `WastePumpID`: `UUID`, `ExchangeRate`: `REAL`, `Enabled`: `BOOLEAN`, `Name`: `TEXT`}
 	_                      = bytes.MinRead
 )
 

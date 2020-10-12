@@ -1595,7 +1595,7 @@ func testPumpsSelect(t *testing.T) {
 }
 
 var (
-	pumpDBTypes = map[string]string{`ID`: `UUID`, `FirmataID`: `UUID`, `DeviceID`: `INT`, `StepPin`: `INT`, `DirPin`: `INT`, `EnPin`: `INT`, `Acceleration`: `REAL`}
+	pumpDBTypes = map[string]string{`ID`: `UUID`, `FirmataID`: `UUID`, `DeviceID`: `INT`, `StepPin`: `INT`, `DirPin`: `INT`, `EnPin`: `INT`, `Acceleration`: `REAL`, `Name`: `TEXT`}
 	_           = bytes.MinRead
 )
 

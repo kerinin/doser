@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -22,12 +23,13 @@ import (
 
 // AutoTopOff is an object representing the database table.
 type AutoTopOff struct {
-	ID            string  `boil:"id" json:"id" toml:"id" yaml:"id"`
-	PumpID        string  `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
-	FillRate      float64 `boil:"fill_rate" json:"fill_rate" toml:"fill_rate" yaml:"fill_rate"`
-	FillInterval  int64   `boil:"fill_interval" json:"fill_interval" toml:"fill_interval" yaml:"fill_interval"`
-	MaxFillVolume float64 `boil:"max_fill_volume" json:"max_fill_volume" toml:"max_fill_volume" yaml:"max_fill_volume"`
-	Enabled       bool    `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
+	ID            string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	PumpID        string      `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
+	FillRate      float64     `boil:"fill_rate" json:"fill_rate" toml:"fill_rate" yaml:"fill_rate"`
+	FillInterval  int64       `boil:"fill_interval" json:"fill_interval" toml:"fill_interval" yaml:"fill_interval"`
+	MaxFillVolume float64     `boil:"max_fill_volume" json:"max_fill_volume" toml:"max_fill_volume" yaml:"max_fill_volume"`
+	Enabled       bool        `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
+	Name          null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
 
 	R *autoTopOffR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L autoTopOffL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -40,6 +42,7 @@ var AutoTopOffColumns = struct {
 	FillInterval  string
 	MaxFillVolume string
 	Enabled       string
+	Name          string
 }{
 	ID:            "id",
 	PumpID:        "pump_id",
@@ -47,6 +50,7 @@ var AutoTopOffColumns = struct {
 	FillInterval:  "fill_interval",
 	MaxFillVolume: "max_fill_volume",
 	Enabled:       "enabled",
+	Name:          "name",
 }
 
 // Generated where
@@ -89,6 +93,29 @@ func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field
 func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
 func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
+type whereHelpernull_String struct{ field string }
+
+func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
 var AutoTopOffWhere = struct {
 	ID            whereHelperstring
 	PumpID        whereHelperstring
@@ -96,6 +123,7 @@ var AutoTopOffWhere = struct {
 	FillInterval  whereHelperint64
 	MaxFillVolume whereHelperfloat64
 	Enabled       whereHelperbool
+	Name          whereHelpernull_String
 }{
 	ID:            whereHelperstring{field: "\"auto_top_offs\".\"id\""},
 	PumpID:        whereHelperstring{field: "\"auto_top_offs\".\"pump_id\""},
@@ -103,6 +131,7 @@ var AutoTopOffWhere = struct {
 	FillInterval:  whereHelperint64{field: "\"auto_top_offs\".\"fill_interval\""},
 	MaxFillVolume: whereHelperfloat64{field: "\"auto_top_offs\".\"max_fill_volume\""},
 	Enabled:       whereHelperbool{field: "\"auto_top_offs\".\"enabled\""},
+	Name:          whereHelpernull_String{field: "\"auto_top_offs\".\"name\""},
 }
 
 // AutoTopOffRels is where relationship names are stored.
@@ -132,8 +161,8 @@ func (*autoTopOffR) NewStruct() *autoTopOffR {
 type autoTopOffL struct{}
 
 var (
-	autoTopOffAllColumns            = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume", "enabled"}
-	autoTopOffColumnsWithoutDefault = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume"}
+	autoTopOffAllColumns            = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume", "enabled", "name"}
+	autoTopOffColumnsWithoutDefault = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume", "name"}
 	autoTopOffColumnsWithDefault    = []string{"enabled"}
 	autoTopOffPrimaryKeyColumns     = []string{"id"}
 )
@@ -733,7 +762,7 @@ func (autoTopOffL) LoadWaterLevelSensors(ctx context.Context, e boil.ContextExec
 		one := new(WaterLevelSensor)
 		var localJoinCol string
 
-		err = results.Scan(&one.ID, &one.FirmataID, &one.Pin, &one.Kind, &one.DetectionThreshold, &one.Invert, &localJoinCol)
+		err = results.Scan(&one.ID, &one.FirmataID, &one.Pin, &one.Kind, &one.DetectionThreshold, &one.Invert, &one.Name, &localJoinCol)
 		if err != nil {
 			return errors.Wrap(err, "failed to scan eager loaded results for water_level_sensors")
 		}

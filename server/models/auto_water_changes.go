@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -22,11 +23,12 @@ import (
 
 // AutoWaterChange is an object representing the database table.
 type AutoWaterChange struct {
-	ID           string  `boil:"id" json:"id" toml:"id" yaml:"id"`
-	FreshPumpID  string  `boil:"fresh_pump_id" json:"fresh_pump_id" toml:"fresh_pump_id" yaml:"fresh_pump_id"`
-	WastePumpID  string  `boil:"waste_pump_id" json:"waste_pump_id" toml:"waste_pump_id" yaml:"waste_pump_id"`
-	ExchangeRate float64 `boil:"exchange_rate" json:"exchange_rate" toml:"exchange_rate" yaml:"exchange_rate"`
-	Enabled      bool    `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
+	ID           string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	FreshPumpID  string      `boil:"fresh_pump_id" json:"fresh_pump_id" toml:"fresh_pump_id" yaml:"fresh_pump_id"`
+	WastePumpID  string      `boil:"waste_pump_id" json:"waste_pump_id" toml:"waste_pump_id" yaml:"waste_pump_id"`
+	ExchangeRate float64     `boil:"exchange_rate" json:"exchange_rate" toml:"exchange_rate" yaml:"exchange_rate"`
+	Enabled      bool        `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
+	Name         null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
 
 	R *autoWaterChangeR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L autoWaterChangeL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -38,12 +40,14 @@ var AutoWaterChangeColumns = struct {
 	WastePumpID  string
 	ExchangeRate string
 	Enabled      string
+	Name         string
 }{
 	ID:           "id",
 	FreshPumpID:  "fresh_pump_id",
 	WastePumpID:  "waste_pump_id",
 	ExchangeRate: "exchange_rate",
 	Enabled:      "enabled",
+	Name:         "name",
 }
 
 // Generated where
@@ -54,12 +58,14 @@ var AutoWaterChangeWhere = struct {
 	WastePumpID  whereHelperstring
 	ExchangeRate whereHelperfloat64
 	Enabled      whereHelperbool
+	Name         whereHelpernull_String
 }{
 	ID:           whereHelperstring{field: "\"auto_water_changes\".\"id\""},
 	FreshPumpID:  whereHelperstring{field: "\"auto_water_changes\".\"fresh_pump_id\""},
 	WastePumpID:  whereHelperstring{field: "\"auto_water_changes\".\"waste_pump_id\""},
 	ExchangeRate: whereHelperfloat64{field: "\"auto_water_changes\".\"exchange_rate\""},
 	Enabled:      whereHelperbool{field: "\"auto_water_changes\".\"enabled\""},
+	Name:         whereHelpernull_String{field: "\"auto_water_changes\".\"name\""},
 }
 
 // AutoWaterChangeRels is where relationship names are stored.
@@ -89,8 +95,8 @@ func (*autoWaterChangeR) NewStruct() *autoWaterChangeR {
 type autoWaterChangeL struct{}
 
 var (
-	autoWaterChangeAllColumns            = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "enabled"}
-	autoWaterChangeColumnsWithoutDefault = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate"}
+	autoWaterChangeAllColumns            = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "enabled", "name"}
+	autoWaterChangeColumnsWithoutDefault = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "name"}
 	autoWaterChangeColumnsWithDefault    = []string{"enabled"}
 	autoWaterChangePrimaryKeyColumns     = []string{"id"}
 )

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -22,8 +23,9 @@ import (
 
 // Doser is an object representing the database table.
 type Doser struct {
-	ID      string `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Enabled bool   `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
+	ID      string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	Enabled bool        `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
+	Name    null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
 
 	R *doserR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L doserL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -32,9 +34,11 @@ type Doser struct {
 var DoserColumns = struct {
 	ID      string
 	Enabled string
+	Name    string
 }{
 	ID:      "id",
 	Enabled: "enabled",
+	Name:    "name",
 }
 
 // Generated where
@@ -42,9 +46,11 @@ var DoserColumns = struct {
 var DoserWhere = struct {
 	ID      whereHelperstring
 	Enabled whereHelperbool
+	Name    whereHelpernull_String
 }{
 	ID:      whereHelperstring{field: "\"dosers\".\"id\""},
 	Enabled: whereHelperbool{field: "\"dosers\".\"enabled\""},
+	Name:    whereHelpernull_String{field: "\"dosers\".\"name\""},
 }
 
 // DoserRels is where relationship names are stored.
@@ -68,8 +74,8 @@ func (*doserR) NewStruct() *doserR {
 type doserL struct{}
 
 var (
-	doserAllColumns            = []string{"id", "enabled"}
-	doserColumnsWithoutDefault = []string{"id"}
+	doserAllColumns            = []string{"id", "enabled", "name"}
+	doserColumnsWithoutDefault = []string{"id", "name"}
 	doserColumnsWithDefault    = []string{"enabled"}
 	doserPrimaryKeyColumns     = []string{"id"}
 )

@@ -1049,7 +1049,7 @@ func testFirmatasSelect(t *testing.T) {
 }
 
 var (
-	firmataDBTypes = map[string]string{`ID`: `UUID`, `SerialPort`: `TEXT`, `Baud`: `INT`}
+	firmataDBTypes = map[string]string{`ID`: `UUID`, `SerialPort`: `TEXT`, `Baud`: `INT`, `Name`: `TEXT`}
 	_              = bytes.MinRead
 )
 

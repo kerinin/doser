@@ -42,3 +42,31 @@ func validateAutoTopOff(ctx context.Context, tx *sql.Tx, ato *models.AutoTopOff,
 
 	return nil
 }
+
+func validateAutoWaterChange(ctx context.Context, tx *sql.Tx, awc *models.AutoWaterChange) error {
+	freshPump, err := models.FindPump(ctx, tx, awc.FreshPumpID)
+	if err != nil {
+		return fmt.Errorf("finding fresh pump: %w", err)
+	}
+
+	_, err = freshPump.Calibrations().One(ctx, tx)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("refusing to create AWC with uncalibrated fresh pump")
+	} else if err != nil {
+		return fmt.Errorf("getting pump calibration: %w", err)
+	}
+
+	wastePump, err := models.FindPump(ctx, tx, awc.WastePumpID)
+	if err != nil {
+		return fmt.Errorf("finding waste pump: %w", err)
+	}
+
+	_, err = wastePump.Calibrations().One(ctx, tx)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("refusing to create AWC with uncalibrated waste pump")
+	} else if err != nil {
+		return fmt.Errorf("getting pump calibration: %w", err)
+	}
+
+	return nil
+}

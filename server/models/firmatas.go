@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/friendsofgo/errors"
+	"github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
 	"github.com/volatiletech/sqlboiler/v4/queries"
 	"github.com/volatiletech/sqlboiler/v4/queries/qm"
@@ -22,9 +23,10 @@ import (
 
 // Firmata is an object representing the database table.
 type Firmata struct {
-	ID         string `boil:"id" json:"id" toml:"id" yaml:"id"`
-	SerialPort string `boil:"serial_port" json:"serial_port" toml:"serial_port" yaml:"serial_port"`
-	Baud       int64  `boil:"baud" json:"baud" toml:"baud" yaml:"baud"`
+	ID         string      `boil:"id" json:"id" toml:"id" yaml:"id"`
+	SerialPort string      `boil:"serial_port" json:"serial_port" toml:"serial_port" yaml:"serial_port"`
+	Baud       int64       `boil:"baud" json:"baud" toml:"baud" yaml:"baud"`
+	Name       null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
 
 	R *firmataR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L firmataL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -34,10 +36,12 @@ var FirmataColumns = struct {
 	ID         string
 	SerialPort string
 	Baud       string
+	Name       string
 }{
 	ID:         "id",
 	SerialPort: "serial_port",
 	Baud:       "baud",
+	Name:       "name",
 }
 
 // Generated where
@@ -46,10 +50,12 @@ var FirmataWhere = struct {
 	ID         whereHelperstring
 	SerialPort whereHelperstring
 	Baud       whereHelperint64
+	Name       whereHelpernull_String
 }{
 	ID:         whereHelperstring{field: "\"firmatas\".\"id\""},
 	SerialPort: whereHelperstring{field: "\"firmatas\".\"serial_port\""},
 	Baud:       whereHelperint64{field: "\"firmatas\".\"baud\""},
+	Name:       whereHelpernull_String{field: "\"firmatas\".\"name\""},
 }
 
 // FirmataRels is where relationship names are stored.
@@ -76,8 +82,8 @@ func (*firmataR) NewStruct() *firmataR {
 type firmataL struct{}
 
 var (
-	firmataAllColumns            = []string{"id", "serial_port", "baud"}
-	firmataColumnsWithoutDefault = []string{"id", "serial_port", "baud"}
+	firmataAllColumns            = []string{"id", "serial_port", "baud", "name"}
+	firmataColumnsWithoutDefault = []string{"id", "serial_port", "baud", "name"}
 	firmataColumnsWithDefault    = []string{}
 	firmataPrimaryKeyColumns     = []string{"id"}
 )

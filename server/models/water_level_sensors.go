@@ -29,6 +29,7 @@ type WaterLevelSensor struct {
 	Kind               string      `boil:"kind" json:"kind" toml:"kind" yaml:"kind"`
 	DetectionThreshold null.Int64  `boil:"detection_threshold" json:"detection_threshold,omitempty" toml:"detection_threshold" yaml:"detection_threshold,omitempty"`
 	Invert             bool        `boil:"invert" json:"invert" toml:"invert" yaml:"invert"`
+	Name               null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
 
 	R *waterLevelSensorR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L waterLevelSensorL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -41,6 +42,7 @@ var WaterLevelSensorColumns = struct {
 	Kind               string
 	DetectionThreshold string
 	Invert             string
+	Name               string
 }{
 	ID:                 "id",
 	FirmataID:          "firmata_id",
@@ -48,6 +50,7 @@ var WaterLevelSensorColumns = struct {
 	Kind:               "kind",
 	DetectionThreshold: "detection_threshold",
 	Invert:             "invert",
+	Name:               "name",
 }
 
 // Generated where
@@ -59,6 +62,7 @@ var WaterLevelSensorWhere = struct {
 	Kind               whereHelperstring
 	DetectionThreshold whereHelpernull_Int64
 	Invert             whereHelperbool
+	Name               whereHelpernull_String
 }{
 	ID:                 whereHelperstring{field: "\"water_level_sensors\".\"id\""},
 	FirmataID:          whereHelpernull_String{field: "\"water_level_sensors\".\"firmata_id\""},
@@ -66,6 +70,7 @@ var WaterLevelSensorWhere = struct {
 	Kind:               whereHelperstring{field: "\"water_level_sensors\".\"kind\""},
 	DetectionThreshold: whereHelpernull_Int64{field: "\"water_level_sensors\".\"detection_threshold\""},
 	Invert:             whereHelperbool{field: "\"water_level_sensors\".\"invert\""},
+	Name:               whereHelpernull_String{field: "\"water_level_sensors\".\"name\""},
 }
 
 // WaterLevelSensorRels is where relationship names are stored.
@@ -92,8 +97,8 @@ func (*waterLevelSensorR) NewStruct() *waterLevelSensorR {
 type waterLevelSensorL struct{}
 
 var (
-	waterLevelSensorAllColumns            = []string{"id", "firmata_id", "pin", "kind", "detection_threshold", "invert"}
-	waterLevelSensorColumnsWithoutDefault = []string{"id", "firmata_id", "pin", "kind", "detection_threshold"}
+	waterLevelSensorAllColumns            = []string{"id", "firmata_id", "pin", "kind", "detection_threshold", "invert", "name"}
+	waterLevelSensorColumnsWithoutDefault = []string{"id", "firmata_id", "pin", "kind", "detection_threshold", "name"}
 	waterLevelSensorColumnsWithDefault    = []string{"invert"}
 	waterLevelSensorPrimaryKeyColumns     = []string{"id"}
 )
@@ -578,7 +583,7 @@ func (waterLevelSensorL) LoadAutoTopOffs(ctx context.Context, e boil.ContextExec
 		one := new(AutoTopOff)
 		var localJoinCol string
 
-		err = results.Scan(&one.ID, &one.PumpID, &one.FillRate, &one.FillInterval, &one.MaxFillVolume, &one.Enabled, &localJoinCol)
+		err = results.Scan(&one.ID, &one.PumpID, &one.FillRate, &one.FillInterval, &one.MaxFillVolume, &one.Enabled, &one.Name, &localJoinCol)
 		if err != nil {
 			return errors.Wrap(err, "failed to scan eager loaded results for auto_top_offs")
 		}

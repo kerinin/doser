@@ -30,6 +30,7 @@ type Pump struct {
 	DirPin       null.Int64   `boil:"dir_pin" json:"dir_pin,omitempty" toml:"dir_pin" yaml:"dir_pin,omitempty"`
 	EnPin        null.Int64   `boil:"en_pin" json:"en_pin,omitempty" toml:"en_pin" yaml:"en_pin,omitempty"`
 	Acceleration null.Float64 `boil:"acceleration" json:"acceleration,omitempty" toml:"acceleration" yaml:"acceleration,omitempty"`
+	Name         null.String  `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
 
 	R *pumpR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L pumpL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -43,6 +44,7 @@ var PumpColumns = struct {
 	DirPin       string
 	EnPin        string
 	Acceleration string
+	Name         string
 }{
 	ID:           "id",
 	FirmataID:    "firmata_id",
@@ -51,6 +53,7 @@ var PumpColumns = struct {
 	DirPin:       "dir_pin",
 	EnPin:        "en_pin",
 	Acceleration: "acceleration",
+	Name:         "name",
 }
 
 // Generated where
@@ -109,6 +112,7 @@ var PumpWhere = struct {
 	DirPin       whereHelpernull_Int64
 	EnPin        whereHelpernull_Int64
 	Acceleration whereHelpernull_Float64
+	Name         whereHelpernull_String
 }{
 	ID:           whereHelperstring{field: "\"pumps\".\"id\""},
 	FirmataID:    whereHelperstring{field: "\"pumps\".\"firmata_id\""},
@@ -117,6 +121,7 @@ var PumpWhere = struct {
 	DirPin:       whereHelpernull_Int64{field: "\"pumps\".\"dir_pin\""},
 	EnPin:        whereHelpernull_Int64{field: "\"pumps\".\"en_pin\""},
 	Acceleration: whereHelpernull_Float64{field: "\"pumps\".\"acceleration\""},
+	Name:         whereHelpernull_String{field: "\"pumps\".\"name\""},
 }
 
 // PumpRels is where relationship names are stored.
@@ -158,8 +163,8 @@ func (*pumpR) NewStruct() *pumpR {
 type pumpL struct{}
 
 var (
-	pumpAllColumns            = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin", "acceleration"}
-	pumpColumnsWithoutDefault = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin", "acceleration"}
+	pumpAllColumns            = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin", "acceleration", "name"}
+	pumpColumnsWithoutDefault = []string{"id", "firmata_id", "device_id", "step_pin", "dir_pin", "en_pin", "acceleration", "name"}
 	pumpColumnsWithDefault    = []string{}
 	pumpPrimaryKeyColumns     = []string{"id"}
 )

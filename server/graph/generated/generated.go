@@ -72,6 +72,7 @@ type ComplexityRoot struct {
 		ID            func(childComplexity int) int
 		LevelSensors  func(childComplexity int) int
 		MaxFillVolume func(childComplexity int) int
+		Name          func(childComplexity int) int
 		Pump          func(childComplexity int) int
 		Rate          func(childComplexity int, window *int) int
 	}
@@ -82,6 +83,7 @@ type ComplexityRoot struct {
 		ExchangeRate func(childComplexity int) int
 		FreshPump    func(childComplexity int) int
 		ID           func(childComplexity int) int
+		Name         func(childComplexity int) int
 		WastePump    func(childComplexity int) int
 	}
 
@@ -102,6 +104,7 @@ type ComplexityRoot struct {
 		Components func(childComplexity int) int
 		Enabled    func(childComplexity int) int
 		ID         func(childComplexity int) int
+		Name       func(childComplexity int) int
 	}
 
 	DoserComponent struct {
@@ -112,18 +115,19 @@ type ComplexityRoot struct {
 	Firmata struct {
 		Baud       func(childComplexity int) int
 		ID         func(childComplexity int) int
+		Name       func(childComplexity int) int
 		Pumps      func(childComplexity int) int
 		SerialPort func(childComplexity int) int
 	}
 
 	Mutation struct {
 		CalibratePump             func(childComplexity int, pumpID string, steps int, volume float64) int
-		CreateAutoTopOff          func(childComplexity int, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) int
-		CreateAutoWaterChange     func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64) int
-		CreateDoser               func(childComplexity int, input model.DoserInput) int
-		CreateFirmata             func(childComplexity int, serialPort string, baud int) int
-		CreatePump                func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
-		CreateWaterLevelSensor    func(childComplexity int, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) int
+		CreateAutoTopOff          func(childComplexity int, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) int
+		CreateAutoWaterChange     func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) int
+		CreateDoser               func(childComplexity int, input model.DoserInput, name *string) int
+		CreateFirmata             func(childComplexity int, serialPort string, baud int, name *string) int
+		CreatePump                func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) int
+		CreateWaterLevelSensor    func(childComplexity int, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool, name *string) int
 		DeleteAutoTopOff          func(childComplexity int, id string) int
 		DeleteAutoWaterChange     func(childComplexity int, id string) int
 		DeleteDoser               func(childComplexity int, id string) int
@@ -134,9 +138,10 @@ type ComplexityRoot struct {
 		SetAutoTopOffEnabled      func(childComplexity int, id string, enabled bool) int
 		SetAutoWaterChangeEnabled func(childComplexity int, id string, enabled bool) int
 		SetDoserEnabled           func(childComplexity int, id string, enabled bool) int
-		UpdateAutoTopOff          func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) int
-		UpdatePump                func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) int
-		UpdateWaterLevelSensor    func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) int
+		UpdateAutoTopOff          func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) int
+		UpdateAutoWaterChange     func(childComplexity int, id string, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) int
+		UpdatePump                func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) int
+		UpdateWaterLevelSensor    func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool, name *string) int
 	}
 
 	Pump struct {
@@ -147,6 +152,7 @@ type ComplexityRoot struct {
 		Firmata      func(childComplexity int) int
 		History      func(childComplexity int) int
 		ID           func(childComplexity int) int
+		Name         func(childComplexity int) int
 		StepPin      func(childComplexity int) int
 	}
 
@@ -171,12 +177,14 @@ type ComplexityRoot struct {
 		ID                 func(childComplexity int) int
 		Invert             func(childComplexity int) int
 		Kind               func(childComplexity int) int
+		Name               func(childComplexity int) int
 		Pin                func(childComplexity int) int
 		WaterDetected      func(childComplexity int) int
 	}
 }
 
 type AutoTopOffResolver interface {
+	Name(ctx context.Context, obj *models.AutoTopOff) (*string, error)
 	Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error)
 	LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error)
 
@@ -184,6 +192,7 @@ type AutoTopOffResolver interface {
 	Rate(ctx context.Context, obj *models.AutoTopOff, window *int) ([]*model.AtoRate, error)
 }
 type AutoWaterChangeResolver interface {
+	Name(ctx context.Context, obj *models.AutoWaterChange) (*string, error)
 	FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 	WastePump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 
@@ -193,37 +202,41 @@ type DoseResolver interface {
 	Message(ctx context.Context, obj *models.Dose) (*string, error)
 }
 type DoserResolver interface {
+	Name(ctx context.Context, obj *models.Doser) (*string, error)
 	Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error)
 }
 type DoserComponentResolver interface {
 	Pump(ctx context.Context, obj *models.DoserComponent) (*models.Pump, error)
 }
 type FirmataResolver interface {
+	Name(ctx context.Context, obj *models.Firmata) (*string, error)
 	Pumps(ctx context.Context, obj *models.Firmata) ([]*models.Pump, error)
 }
 type MutationResolver interface {
-	CreateFirmata(ctx context.Context, serialPort string, baud int) (*models.Firmata, error)
+	CreateFirmata(ctx context.Context, serialPort string, baud int, name *string) (*models.Firmata, error)
 	DeleteFirmata(ctx context.Context, id string) (bool, error)
-	CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error)
-	UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error)
+	CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) (*models.Pump, error)
+	UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) (*models.Pump, error)
 	DeletePump(ctx context.Context, id string) (bool, error)
 	CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error)
-	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) (*models.WaterLevelSensor, error)
-	UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) (*models.WaterLevelSensor, error)
+	CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool, name *string) (*models.WaterLevelSensor, error)
+	UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool, name *string) (*models.WaterLevelSensor, error)
 	DeleteWaterLevelSensor(ctx context.Context, id string) (bool, error)
-	CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error)
-	UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error)
+	CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) (*models.AutoTopOff, error)
+	UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) (*models.AutoTopOff, error)
 	DeleteAutoTopOff(ctx context.Context, id string) (bool, error)
 	SetAutoTopOffEnabled(ctx context.Context, id string, enabled bool) (bool, error)
-	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64) (*models.AutoWaterChange, error)
+	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error)
+	UpdateAutoWaterChange(ctx context.Context, id string, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error)
 	DeleteAutoWaterChange(ctx context.Context, id string) (bool, error)
 	SetAutoWaterChangeEnabled(ctx context.Context, id string, enabled bool) (bool, error)
-	CreateDoser(ctx context.Context, input model.DoserInput) (*models.Doser, error)
+	CreateDoser(ctx context.Context, input model.DoserInput, name *string) (*models.Doser, error)
 	DeleteDoser(ctx context.Context, id string) (bool, error)
 	SetDoserEnabled(ctx context.Context, id string, enabled bool) (bool, error)
 	Pump(ctx context.Context, pumpID string, steps int, speed float64) (bool, error)
 }
 type PumpResolver interface {
+	Name(ctx context.Context, obj *models.Pump) (*string, error)
 	Firmata(ctx context.Context, obj *models.Pump) (*models.Firmata, error)
 
 	EnPin(ctx context.Context, obj *models.Pump) (*int, error)
@@ -241,6 +254,7 @@ type QueryResolver interface {
 	Dosers(ctx context.Context) ([]*models.Doser, error)
 }
 type WaterLevelSensorResolver interface {
+	Name(ctx context.Context, obj *models.WaterLevelSensor) (*string, error)
 	FirmataID(ctx context.Context, obj *models.WaterLevelSensor) (*string, error)
 
 	Kind(ctx context.Context, obj *models.WaterLevelSensor) (model.SensorKind, error)
@@ -354,6 +368,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AutoTopOff.MaxFillVolume(childComplexity), true
 
+	case "AutoTopOff.name":
+		if e.complexity.AutoTopOff.Name == nil {
+			break
+		}
+
+		return e.complexity.AutoTopOff.Name(childComplexity), true
+
 	case "AutoTopOff.pump":
 		if e.complexity.AutoTopOff.Pump == nil {
 			break
@@ -407,6 +428,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AutoWaterChange.ID(childComplexity), true
+
+	case "AutoWaterChange.name":
+		if e.complexity.AutoWaterChange.Name == nil {
+			break
+		}
+
+		return e.complexity.AutoWaterChange.Name(childComplexity), true
 
 	case "AutoWaterChange.waste_pump":
 		if e.complexity.AutoWaterChange.WastePump == nil {
@@ -485,6 +513,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Doser.ID(childComplexity), true
 
+	case "Doser.name":
+		if e.complexity.Doser.Name == nil {
+			break
+		}
+
+		return e.complexity.Doser.Name(childComplexity), true
+
 	case "DoserComponent.dose_rate":
 		if e.complexity.DoserComponent.DoseRate == nil {
 			break
@@ -512,6 +547,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Firmata.ID(childComplexity), true
+
+	case "Firmata.name":
+		if e.complexity.Firmata.Name == nil {
+			break
+		}
+
+		return e.complexity.Firmata.Name(childComplexity), true
 
 	case "Firmata.pumps":
 		if e.complexity.Firmata.Pumps == nil {
@@ -549,7 +591,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateAutoTopOff(childComplexity, args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_interval"].(int), args["max_fill_volume"].(float64)), true
+		return e.complexity.Mutation.CreateAutoTopOff(childComplexity, args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_interval"].(int), args["max_fill_volume"].(float64), args["name"].(*string)), true
 
 	case "Mutation.createAutoWaterChange":
 		if e.complexity.Mutation.CreateAutoWaterChange == nil {
@@ -561,7 +603,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateAutoWaterChange(childComplexity, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64)), true
+		return e.complexity.Mutation.CreateAutoWaterChange(childComplexity, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string)), true
 
 	case "Mutation.createDoser":
 		if e.complexity.Mutation.CreateDoser == nil {
@@ -573,7 +615,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateDoser(childComplexity, args["input"].(model.DoserInput)), true
+		return e.complexity.Mutation.CreateDoser(childComplexity, args["input"].(model.DoserInput), args["name"].(*string)), true
 
 	case "Mutation.createFirmata":
 		if e.complexity.Mutation.CreateFirmata == nil {
@@ -585,7 +627,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateFirmata(childComplexity, args["serial_port"].(string), args["baud"].(int)), true
+		return e.complexity.Mutation.CreateFirmata(childComplexity, args["serial_port"].(string), args["baud"].(int), args["name"].(*string)), true
 
 	case "Mutation.createPump":
 		if e.complexity.Mutation.CreatePump == nil {
@@ -597,7 +639,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreatePump(childComplexity, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64)), true
+		return e.complexity.Mutation.CreatePump(childComplexity, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64), args["name"].(*string)), true
 
 	case "Mutation.createWaterLevelSensor":
 		if e.complexity.Mutation.CreateWaterLevelSensor == nil {
@@ -609,7 +651,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool)), true
+		return e.complexity.Mutation.CreateWaterLevelSensor(childComplexity, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool), args["name"].(*string)), true
 
 	case "Mutation.deleteAutoTopOff":
 		if e.complexity.Mutation.DeleteAutoTopOff == nil {
@@ -741,7 +783,19 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateAutoTopOff(childComplexity, args["id"].(string), args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_interval"].(int), args["max_fill_volume"].(float64)), true
+		return e.complexity.Mutation.UpdateAutoTopOff(childComplexity, args["id"].(string), args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_interval"].(int), args["max_fill_volume"].(float64), args["name"].(*string)), true
+
+	case "Mutation.updateAutoWaterChange":
+		if e.complexity.Mutation.UpdateAutoWaterChange == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateAutoWaterChange_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateAutoWaterChange(childComplexity, args["id"].(string), args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string)), true
 
 	case "Mutation.updatePump":
 		if e.complexity.Mutation.UpdatePump == nil {
@@ -753,7 +807,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdatePump(childComplexity, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64)), true
+		return e.complexity.Mutation.UpdatePump(childComplexity, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64), args["name"].(*string)), true
 
 	case "Mutation.updateWaterLevelSensor":
 		if e.complexity.Mutation.UpdateWaterLevelSensor == nil {
@@ -765,7 +819,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateWaterLevelSensor(childComplexity, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool)), true
+		return e.complexity.Mutation.UpdateWaterLevelSensor(childComplexity, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool), args["name"].(*string)), true
 
 	case "Pump.acceleration":
 		if e.complexity.Pump.Acceleration == nil {
@@ -815,6 +869,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Pump.ID(childComplexity), true
+
+	case "Pump.name":
+		if e.complexity.Pump.Name == nil {
+			break
+		}
+
+		return e.complexity.Pump.Name(childComplexity), true
 
 	case "Pump.step_pin":
 		if e.complexity.Pump.StepPin == nil {
@@ -926,6 +987,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.WaterLevelSensor.Kind(childComplexity), true
 
+	case "WaterLevelSensor.name":
+		if e.complexity.WaterLevelSensor.Name == nil {
+			break
+		}
+
+		return e.complexity.WaterLevelSensor.Name(childComplexity), true
+
 	case "WaterLevelSensor.pin":
 		if e.complexity.WaterLevelSensor.Pin == nil {
 			break
@@ -1024,6 +1092,8 @@ type Query {
 # Firmata microcontroller device configuration
 type Firmata {
   id: ID!
+  # A human-readable description of the firmata
+  name: String
   pumps: [Pump!]
 
   # The serial port on the host system, ie /dev/tty...
@@ -1035,6 +1105,8 @@ type Firmata {
 # A pump driven via the AccelStepperFirmata protocol
 type Pump {
   id: ID!
+  # A human-readable description of the pump
+  name: String
   firmata: Firmata!
   # The device ID used for controlling firmata
   device_id: Int!
@@ -1071,6 +1143,8 @@ enum SensorKind {
 
 type WaterLevelSensor {
   id: ID!
+  # A human-readable description of the sensor
+  name: String
   # If present, the sensor is assumed to be attached to a firmata device
   firmata_id: ID
   # The pin to use for the sensor. 
@@ -1094,6 +1168,8 @@ type WaterLevelSensor {
 
 type AutoTopOff {
   id: ID!
+  # A human-readable description of the ATO
+  name: String
   pump: Pump!
   # Water level sensors to use when topping off.
   # Sensors of kind LOW will trigger an top off run if their value changes from HIGH to LOW
@@ -1123,6 +1199,8 @@ type AtoRate {
 
 type AutoWaterChange {
   id: ID!
+  # A human-readable description of the AWC
+  name: String
   fresh_pump: Pump!
   waste_pump: Pump!
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
@@ -1134,6 +1212,8 @@ type AutoWaterChange {
 
 type Doser {
   id: ID!
+  # A human-readable description of the doser
+  name: String
   components: [DoserComponent!]
   enabled: Boolean!
 }
@@ -1159,29 +1239,30 @@ type AwcEvent {
 }
 
 type Mutation {
-  createFirmata(serial_port: String!, baud: Int!): Firmata!
+  createFirmata(serial_port: String!, baud: Int!, name: String): Firmata!
   deleteFirmata(id: ID!): Boolean!
 
-  createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float): Pump!
-  updatePump(id: ID!, firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float): Pump!
+  createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float, name: String): Pump!
+  updatePump(id: ID!, firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float, name: String): Pump!
   deletePump(id: ID!): Boolean!
 
   calibratePump(pump_id: ID!, steps: Int!, volume: Float!): TwoPointCalibration!
 
-  createWaterLevelSensor(pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int, invert: Boolean!): WaterLevelSensor!
-  updateWaterLevelSensor(id: ID!, pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int, invert: Boolean!): WaterLevelSensor!
+  createWaterLevelSensor(pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int, invert: Boolean!, name: String, ): WaterLevelSensor!
+  updateWaterLevelSensor(id: ID!, pin: Int!, kind: SensorKind!, firmata_id: ID, detection_threshold: Int, invert: Boolean!, name: String): WaterLevelSensor!
   deleteWaterLevelSensor(id: ID!): Boolean!
 
-  createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
-  updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!): AutoTopOff!
+  createAutoTopOff(pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!, name: String): AutoTopOff!
+  updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!, name: String): AutoTopOff!
   deleteAutoTopOff(id: ID!): Boolean!
   setAutoTopOffEnabled(id: ID!, enabled: Boolean!): Boolean!
 
-  createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!): AutoWaterChange!
+  createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
+  updateAutoWaterChange(id: ID!, fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
   deleteAutoWaterChange(id: ID!): Boolean!
   setAutoWaterChangeEnabled(id: ID!, enabled: Boolean!): Boolean!
 
-  createDoser(input: DoserInput!): Doser!
+  createDoser(input: DoserInput!, name: String): Doser!
   deleteDoser(id: ID!): Boolean!
   setDoserEnabled(id: ID!, enabled: Boolean!): Boolean!
 
@@ -1300,6 +1381,15 @@ func (ec *executionContext) field_Mutation_createAutoTopOff_args(ctx context.Con
 		}
 	}
 	args["max_fill_volume"] = arg4
+	var arg5 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg5, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg5
 	return args, nil
 }
 
@@ -1333,6 +1423,15 @@ func (ec *executionContext) field_Mutation_createAutoWaterChange_args(ctx contex
 		}
 	}
 	args["exchange_rate"] = arg2
+	var arg3 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg3, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg3
 	return args, nil
 }
 
@@ -1348,6 +1447,15 @@ func (ec *executionContext) field_Mutation_createDoser_args(ctx context.Context,
 		}
 	}
 	args["input"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg1
 	return args, nil
 }
 
@@ -1372,6 +1480,15 @@ func (ec *executionContext) field_Mutation_createFirmata_args(ctx context.Contex
 		}
 	}
 	args["baud"] = arg1
+	var arg2 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg2
 	return args, nil
 }
 
@@ -1432,6 +1549,15 @@ func (ec *executionContext) field_Mutation_createPump_args(ctx context.Context, 
 		}
 	}
 	args["acceleration"] = arg5
+	var arg6 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg6, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg6
 	return args, nil
 }
 
@@ -1483,6 +1609,15 @@ func (ec *executionContext) field_Mutation_createWaterLevelSensor_args(ctx conte
 		}
 	}
 	args["invert"] = arg4
+	var arg5 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg5, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg5
 	return args, nil
 }
 
@@ -1738,6 +1873,66 @@ func (ec *executionContext) field_Mutation_updateAutoTopOff_args(ctx context.Con
 		}
 	}
 	args["max_fill_volume"] = arg5
+	var arg6 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg6, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg6
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateAutoWaterChange_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 string
+	if tmp, ok := rawArgs["fresh_pump_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fresh_pump_id"))
+		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["fresh_pump_id"] = arg1
+	var arg2 string
+	if tmp, ok := rawArgs["waste_pump_id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("waste_pump_id"))
+		arg2, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["waste_pump_id"] = arg2
+	var arg3 float64
+	if tmp, ok := rawArgs["exchange_rate"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("exchange_rate"))
+		arg3, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["exchange_rate"] = arg3
+	var arg4 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg4, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg4
 	return args, nil
 }
 
@@ -1807,6 +2002,15 @@ func (ec *executionContext) field_Mutation_updatePump_args(ctx context.Context, 
 		}
 	}
 	args["acceleration"] = arg6
+	var arg7 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg7, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg7
 	return args, nil
 }
 
@@ -1867,6 +2071,15 @@ func (ec *executionContext) field_Mutation_updateWaterLevelSensor_args(ctx conte
 		}
 	}
 	args["invert"] = arg5
+	var arg6 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg6, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg6
 	return args, nil
 }
 
@@ -2176,6 +2389,37 @@ func (ec *executionContext) _AutoTopOff_id(ctx context.Context, field graphql.Co
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _AutoTopOff_name(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoTopOff",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.AutoTopOff().Name(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _AutoTopOff_pump(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2478,6 +2722,37 @@ func (ec *executionContext) _AutoWaterChange_id(ctx context.Context, field graph
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AutoWaterChange_name(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoWaterChange",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.AutoWaterChange().Name(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoWaterChange_fresh_pump(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
@@ -2916,6 +3191,37 @@ func (ec *executionContext) _Doser_id(ctx context.Context, field graphql.Collect
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Doser_name(ctx context.Context, field graphql.CollectedField, obj *models.Doser) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Doser",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Doser().Name(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Doser_components(ctx context.Context, field graphql.CollectedField, obj *models.Doser) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3083,6 +3389,37 @@ func (ec *executionContext) _Firmata_id(ctx context.Context, field graphql.Colle
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Firmata_name(ctx context.Context, field graphql.CollectedField, obj *models.Firmata) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Firmata",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Firmata().Name(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Firmata_pumps(ctx context.Context, field graphql.CollectedField, obj *models.Firmata) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3206,7 +3543,7 @@ func (ec *executionContext) _Mutation_createFirmata(ctx context.Context, field g
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateFirmata(rctx, args["serial_port"].(string), args["baud"].(int))
+		return ec.resolvers.Mutation().CreateFirmata(rctx, args["serial_port"].(string), args["baud"].(int), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3288,7 +3625,7 @@ func (ec *executionContext) _Mutation_createPump(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreatePump(rctx, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64))
+		return ec.resolvers.Mutation().CreatePump(rctx, args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3329,7 +3666,7 @@ func (ec *executionContext) _Mutation_updatePump(ctx context.Context, field grap
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdatePump(rctx, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64))
+		return ec.resolvers.Mutation().UpdatePump(rctx, args["id"].(string), args["firmata_id"].(string), args["device_ID"].(int), args["step_pin"].(int), args["dir_pin"].(*int), args["en_pin"].(*int), args["acceleration"].(*float64), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3452,7 +3789,7 @@ func (ec *executionContext) _Mutation_createWaterLevelSensor(ctx context.Context
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateWaterLevelSensor(rctx, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool))
+		return ec.resolvers.Mutation().CreateWaterLevelSensor(rctx, args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3493,7 +3830,7 @@ func (ec *executionContext) _Mutation_updateWaterLevelSensor(ctx context.Context
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateWaterLevelSensor(rctx, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool))
+		return ec.resolvers.Mutation().UpdateWaterLevelSensor(rctx, args["id"].(string), args["pin"].(int), args["kind"].(model.SensorKind), args["firmata_id"].(*string), args["detection_threshold"].(*int), args["invert"].(bool), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3575,7 +3912,7 @@ func (ec *executionContext) _Mutation_createAutoTopOff(ctx context.Context, fiel
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateAutoTopOff(rctx, args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_interval"].(int), args["max_fill_volume"].(float64))
+		return ec.resolvers.Mutation().CreateAutoTopOff(rctx, args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_interval"].(int), args["max_fill_volume"].(float64), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3616,7 +3953,7 @@ func (ec *executionContext) _Mutation_updateAutoTopOff(ctx context.Context, fiel
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateAutoTopOff(rctx, args["id"].(string), args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_interval"].(int), args["max_fill_volume"].(float64))
+		return ec.resolvers.Mutation().UpdateAutoTopOff(rctx, args["id"].(string), args["pump_id"].(string), args["level_sensors"].([]string), args["fill_rate"].(float64), args["fill_interval"].(int), args["max_fill_volume"].(float64), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3739,7 +4076,48 @@ func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context,
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateAutoWaterChange(rctx, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64))
+		return ec.resolvers.Mutation().CreateAutoWaterChange(rctx, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.AutoWaterChange)
+	fc.Result = res
+	return ec.marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_updateAutoWaterChange(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateAutoWaterChange_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateAutoWaterChange(rctx, args["id"].(string), args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3862,7 +4240,7 @@ func (ec *executionContext) _Mutation_createDoser(ctx context.Context, field gra
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateDoser(rctx, args["input"].(model.DoserInput))
+		return ec.resolvers.Mutation().CreateDoser(rctx, args["input"].(model.DoserInput), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4034,6 +4412,37 @@ func (ec *executionContext) _Pump_id(ctx context.Context, field graphql.Collecte
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Pump_name(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Pump",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Pump().Name(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Pump_firmata(ctx context.Context, field graphql.CollectedField, obj *models.Pump) (ret graphql.Marshaler) {
@@ -4655,6 +5064,37 @@ func (ec *executionContext) _WaterLevelSensor_id(ctx context.Context, field grap
 	res := resTmp.(string)
 	fc.Result = res
 	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _WaterLevelSensor_name(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "WaterLevelSensor",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.WaterLevelSensor().Name(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _WaterLevelSensor_firmata_id(ctx context.Context, field graphql.CollectedField, obj *models.WaterLevelSensor) (ret graphql.Marshaler) {
@@ -6053,6 +6493,17 @@ func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "name":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoTopOff_name(ctx, field, obj)
+				return res
+			})
 		case "pump":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -6147,6 +6598,17 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "name":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoWaterChange_name(ctx, field, obj)
+				return res
+			})
 		case "fresh_pump":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -6308,6 +6770,17 @@ func (ec *executionContext) _Doser(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "name":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Doser_name(ctx, field, obj)
+				return res
+			})
 		case "components":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -6392,6 +6865,17 @@ func (ec *executionContext) _Firmata(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "name":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Firmata_name(ctx, field, obj)
+				return res
+			})
 		case "pumps":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -6509,6 +6993,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "updateAutoWaterChange":
+			out.Values[i] = ec._Mutation_updateAutoWaterChange(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "deleteAutoWaterChange":
 			out.Values[i] = ec._Mutation_deleteAutoWaterChange(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -6566,6 +7055,17 @@ func (ec *executionContext) _Pump(ctx context.Context, sel ast.SelectionSet, obj
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "name":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Pump_name(ctx, field, obj)
+				return res
+			})
 		case "firmata":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -6800,6 +7300,17 @@ func (ec *executionContext) _WaterLevelSensor(ctx context.Context, sel ast.Selec
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "name":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._WaterLevelSensor_name(ctx, field, obj)
+				return res
+			})
 		case "firmata_id":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {

@@ -20,6 +20,13 @@ import (
 	"gobot.io/x/gobot/platforms/raspi"
 )
 
+func (r *autoTopOffResolver) Name(ctx context.Context, obj *models.AutoTopOff) (*string, error) {
+	if !obj.Name.Valid {
+		return nil, nil
+	}
+	return &obj.Name.String, nil
+}
+
 func (r *autoTopOffResolver) Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error) {
 	m, err := obj.Pump().One(ctx, r.db)
 	if err != nil {
@@ -100,6 +107,13 @@ func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff, w
 	return rates, nil
 }
 
+func (r *autoWaterChangeResolver) Name(ctx context.Context, obj *models.AutoWaterChange) (*string, error) {
+	if !obj.Name.Valid {
+		return nil, nil
+	}
+	return &obj.Name.String, nil
+}
+
 func (r *autoWaterChangeResolver) FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error) {
 	m, err := obj.FreshPump().One(ctx, r.db)
 	if err != nil {
@@ -134,6 +148,13 @@ func (r *doseResolver) Message(ctx context.Context, obj *models.Dose) (*string, 
 	return nil, nil
 }
 
+func (r *doserResolver) Name(ctx context.Context, obj *models.Doser) (*string, error) {
+	if !obj.Name.Valid {
+		return nil, nil
+	}
+	return &obj.Name.String, nil
+}
+
 func (r *doserResolver) Components(ctx context.Context, obj *models.Doser) ([]*models.DoserComponent, error) {
 	ms, err := obj.DoserComponents().All(ctx, r.db)
 	if err != nil {
@@ -152,6 +173,13 @@ func (r *doserComponentResolver) Pump(ctx context.Context, obj *models.DoserComp
 	return m, nil
 }
 
+func (r *firmataResolver) Name(ctx context.Context, obj *models.Firmata) (*string, error) {
+	if !obj.Name.Valid {
+		return nil, nil
+	}
+	return &obj.Name.String, nil
+}
+
 func (r *firmataResolver) Pumps(ctx context.Context, obj *models.Firmata) ([]*models.Pump, error) {
 	pumps, err := obj.FirmatumPumps().All(ctx, r.db)
 	if err == sql.ErrNoRows {
@@ -164,7 +192,7 @@ func (r *firmataResolver) Pumps(ctx context.Context, obj *models.Firmata) ([]*mo
 	return pumps, nil
 }
 
-func (r *mutationResolver) CreateFirmata(ctx context.Context, serialPort string, baud int) (*models.Firmata, error) {
+func (r *mutationResolver) CreateFirmata(ctx context.Context, serialPort string, baud int, name *string) (*models.Firmata, error) {
 	m := &models.Firmata{
 		ID:         uuid.New().String(),
 		SerialPort: serialPort,
@@ -192,7 +220,7 @@ func (r *mutationResolver) DeleteFirmata(ctx context.Context, id string) (bool, 
 	return rows > 0, nil
 }
 
-func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error) {
+func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) (*models.Pump, error) {
 	m := &models.Pump{
 		ID:           uuid.New().String(),
 		FirmataID:    firmataID,
@@ -219,7 +247,7 @@ func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, dev
 	return m, nil
 }
 
-func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64) (*models.Pump, error) {
+func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) (*models.Pump, error) {
 	m := &models.Pump{
 		ID:           id,
 		FirmataID:    firmataID,
@@ -234,7 +262,12 @@ func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID 
 		m.EnPin = null.Int64From(int64(*enPin))
 	}
 
-	_, err := m.Update(ctx, r.db, boil.Infer())
+	_, err := m.Update(ctx, r.db, boil.Whitelist(
+		models.PumpColumns.FirmataID,
+		models.PumpColumns.DeviceID,
+		models.PumpColumns.StepPin,
+		models.PumpColumns.Acceleration,
+	))
 	if err != nil {
 		return nil, fmt.Errorf("inserting pump: %w", err)
 	}
@@ -279,7 +312,7 @@ func (r *mutationResolver) CalibratePump(ctx context.Context, pumpID string, ste
 	return m, nil
 }
 
-func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) (*models.WaterLevelSensor, error) {
+func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool, name *string) (*models.WaterLevelSensor, error) {
 	m := &models.WaterLevelSensor{
 		ID:        uuid.New().String(),
 		Pin:       int64(pin),
@@ -301,7 +334,7 @@ func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, 
 	return m, nil
 }
 
-func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool) (*models.WaterLevelSensor, error) {
+func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool, name *string) (*models.WaterLevelSensor, error) {
 	m := &models.WaterLevelSensor{
 		ID:        id,
 		Pin:       int64(pin),
@@ -313,7 +346,12 @@ func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string
 		m.DetectionThreshold = null.Int64From(int64(*detectionThreshold))
 	}
 
-	_, err := m.Update(ctx, r.db, boil.Infer())
+	_, err := m.Update(ctx, r.db, boil.Whitelist(
+		models.WaterLevelSensorColumns.Pin,
+		models.WaterLevelSensorColumns.Kind,
+		models.WaterLevelSensorColumns.FirmataID,
+		models.WaterLevelSensorColumns.Invert,
+	))
 	if err != nil {
 		return nil, fmt.Errorf("inserting water level sensor: %w", err)
 	}
@@ -337,7 +375,7 @@ func (r *mutationResolver) DeleteWaterLevelSensor(ctx context.Context, id string
 	return rows > 0, nil
 }
 
-func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error) {
+func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) (*models.AutoTopOff, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -382,7 +420,7 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 	return m, nil
 }
 
-func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64) (*models.AutoTopOff, error) {
+func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) (*models.AutoTopOff, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -411,7 +449,12 @@ func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pump
 		return nil, fmt.Errorf("validating auto top off: %w", err)
 	}
 
-	_, err = m.Update(ctx, tx, boil.Infer())
+	_, err = m.Update(ctx, tx, boil.Whitelist(
+		models.AutoTopOffColumns.PumpID,
+		models.AutoTopOffColumns.FillRate,
+		models.AutoTopOffColumns.FillInterval,
+		models.AutoTopOffColumns.MaxFillVolume,
+	))
 	if err != nil {
 		return nil, fmt.Errorf("inserting auto top off: %w", err)
 	}
@@ -456,7 +499,7 @@ func (r *mutationResolver) SetAutoTopOffEnabled(ctx context.Context, id string, 
 	return enabled, nil
 }
 
-func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64) (*models.AutoWaterChange, error) {
+func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -468,35 +511,16 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpI
 		err = tx.Commit()
 	}()
 
-	freshPump, err := models.FindPump(ctx, tx, freshPumpID)
-	if err != nil {
-		return nil, fmt.Errorf("finding fresh pump: %w", err)
-	}
-
-	_, err = freshPump.Calibrations().One(ctx, tx)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("refusing to create ATO with uncalibrated fresh pump")
-	} else if err != nil {
-		return nil, fmt.Errorf("getting pump calibration: %w", err)
-	}
-
-	wastePump, err := models.FindPump(ctx, tx, wastePumpID)
-	if err != nil {
-		return nil, fmt.Errorf("finding waste pump: %w", err)
-	}
-
-	_, err = wastePump.Calibrations().One(ctx, tx)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("refusing to create ATO with uncalibrated waste pump")
-	} else if err != nil {
-		return nil, fmt.Errorf("getting pump calibration: %w", err)
-	}
-
 	m := &models.AutoWaterChange{
 		ID:           uuid.New().String(),
 		FreshPumpID:  freshPumpID,
 		WastePumpID:  wastePumpID,
 		ExchangeRate: exchangeRate,
+	}
+
+	err = validateAutoWaterChange(ctx, tx, m)
+	if err != nil {
+		return nil, fmt.Errorf("validating auto top off: %w", err)
 	}
 
 	err = m.Insert(ctx, tx, boil.Infer())
@@ -505,6 +529,47 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpI
 	}
 
 	r.awcController.Reset()
+
+	return m, nil
+}
+
+func (r *mutationResolver) UpdateAutoWaterChange(ctx context.Context, id string, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+		err = tx.Commit()
+	}()
+
+	m := &models.AutoWaterChange{
+		ID:           id,
+		FreshPumpID:  freshPumpID,
+		WastePumpID:  wastePumpID,
+		ExchangeRate: exchangeRate,
+		Name:         null.StringFromPtr(name),
+	}
+
+	err = validateAutoWaterChange(ctx, tx, m)
+	if err != nil {
+		return nil, fmt.Errorf("validating auto top off: %w", err)
+	}
+
+	_, err = m.Update(ctx, tx, boil.Whitelist(
+		models.AutoWaterChangeColumns.FreshPumpID,
+		models.AutoWaterChangeColumns.WastePumpID,
+		models.AutoWaterChangeColumns.ExchangeRate,
+		models.AutoWaterChangeColumns.Name,
+	))
+	if err != nil {
+		return nil, fmt.Errorf("updating auto water change: %w", err)
+	}
+
+	r.awcController.Reset()
+	r.firmatasController.Reset()
 
 	return m, nil
 }
@@ -537,7 +602,7 @@ func (r *mutationResolver) SetAutoWaterChangeEnabled(ctx context.Context, id str
 	return enabled, nil
 }
 
-func (r *mutationResolver) CreateDoser(ctx context.Context, input model.DoserInput) (*models.Doser, error) {
+func (r *mutationResolver) CreateDoser(ctx context.Context, input model.DoserInput, name *string) (*models.Doser, error) {
 	panic(fmt.Errorf("not implemented"))
 }
 
@@ -606,6 +671,13 @@ func (r *mutationResolver) Pump(ctx context.Context, pumpID string, steps int, s
 	case <-complete:
 		return true, nil
 	}
+}
+
+func (r *pumpResolver) Name(ctx context.Context, obj *models.Pump) (*string, error) {
+	if !obj.Name.Valid {
+		return nil, nil
+	}
+	return &obj.Name.String, nil
 }
 
 func (r *pumpResolver) Firmata(ctx context.Context, obj *models.Pump) (*models.Firmata, error) {
@@ -726,6 +798,13 @@ func (r *queryResolver) Dosers(ctx context.Context) ([]*models.Doser, error) {
 	}
 
 	return ms, nil
+}
+
+func (r *waterLevelSensorResolver) Name(ctx context.Context, obj *models.WaterLevelSensor) (*string, error) {
+	if !obj.Name.Valid {
+		return nil, nil
+	}
+	return &obj.Name.String, nil
 }
 
 func (r *waterLevelSensorResolver) FirmataID(ctx context.Context, obj *models.WaterLevelSensor) (*string, error) {
