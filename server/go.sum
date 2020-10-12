@@ -271,6 +271,8 @@ github.com/kerinin/gomata v0.0.0-20201012013319-f5c987d32dd0 h1:8INZBP2lqnTMSvxm
 github.com/kerinin/gomata v0.0.0-20201012013319-f5c987d32dd0/go.mod h1:ZloN/Slk2mrD234UFzh0LSUjAdw+8h0vdN3c5F07NzM=
 github.com/kerinin/gomata v0.0.0-20201012021010-8020cb227f24 h1:EW/sgjC8I5oqjlKGhmU7KilAIOXcp8USwNTDEEvpCeg=
 github.com/kerinin/gomata v0.0.0-20201012021010-8020cb227f24/go.mod h1:aFCi1UKvV14Xw2aorQGNRGIBOKgb255gISl+sAN84D4=
+github.com/kerinin/gomata v0.0.0-20201012022557-572b43fe02f9 h1:tc0C1Zup02Wvw7U8mcmeP8cTx3Y4W6aqpZq3sfeOdzM=
+github.com/kerinin/gomata v0.0.0-20201012022557-572b43fe02f9/go.mod h1:aFCi1UKvV14Xw2aorQGNRGIBOKgb255gISl+sAN84D4=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
 github.com/kisielk/errcheck v1.2.0/go.mod h1:/BMXB+zMLi60iA8Vv6Ksmxu/1UDYcXs4uQLJ+jE2L00=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
