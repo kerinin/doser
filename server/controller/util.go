@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
@@ -44,6 +45,9 @@ func WaterDetected(ctx context.Context, rpi *raspi.Adaptor, firmatasController *
 	if err != nil {
 		return false, fmt.Errorf("getting firmata: %w", err)
 	}
+
+	// Pause a bit to let pin values arrive
+	<-time.After(10 * time.Millisecond)
 
 	var (
 		// Defaults to zero if not set
