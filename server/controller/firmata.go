@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/huin/goserial"
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
+	"github.com/tarm/serial"
 )
 
 type Firmatas struct {
@@ -57,8 +57,9 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		return nil, fmt.Errorf("getting sensors from DB: %w", err)
 	}
 
-	config := &goserial.Config{Name: firmata.SerialPort, Baud: int(firmata.Baud)}
-	port, err := goserial.OpenPort(config)
+	newConfig := serial.Config{Name: firmata.SerialPort, Baud: int(firmata.Baud), ReadTimeout: 10 * time.Second}
+	port, err := serial.OpenPort(newConfig)
+
 	if err != nil {
 		return nil, fmt.Errorf("opening serial port: %w", err)
 	}
