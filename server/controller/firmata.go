@@ -69,6 +69,7 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 	connected := make(chan struct{})
 	go func() {
 		f.Connect(port)
+		log.Printf("Connected")
 		connected <- struct{}{}
 	}()
 
