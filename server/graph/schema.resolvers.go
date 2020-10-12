@@ -686,13 +686,6 @@ func (r *pumpResolver) Firmata(ctx context.Context, obj *models.Pump) (*models.F
 		return nil, fmt.Errorf("getting firmata: %w", err)
 	}
 
-	err = r.firmatasController.Reset()
-	if err != nil {
-		return nil, fmt.Errorf("resetting firmatas: %w", err)
-	}
-	r.awcController.Reset()
-	r.atoController.Reset()
-
 	return firmata, nil
 }
 
