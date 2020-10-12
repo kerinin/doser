@@ -784,6 +784,18 @@ func (r *queryResolver) AutoWaterChanges(ctx context.Context) ([]*models.AutoWat
 	return ms, nil
 }
 
+func (r *queryResolver) AutoWaterChange(ctx context.Context, id string) (*models.AutoWaterChange, error) {
+	m, err := models.FindAutoWaterChange(ctx, r.db, id)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getting AWC: %w", err)
+	}
+
+	return m, nil
+}
+
 func (r *queryResolver) Dosers(ctx context.Context) ([]*models.Doser, error) {
 	ms, err := models.Dosers().All(ctx, r.db)
 	if err != nil {

@@ -159,6 +159,7 @@ type ComplexityRoot struct {
 	Query struct {
 		AutoTopOff        func(childComplexity int, id string) int
 		AutoTopOffs       func(childComplexity int) int
+		AutoWaterChange   func(childComplexity int, id string) int
 		AutoWaterChanges  func(childComplexity int) int
 		Dosers            func(childComplexity int) int
 		Firmatas          func(childComplexity int) int
@@ -251,6 +252,7 @@ type QueryResolver interface {
 	AutoTopOffs(ctx context.Context) ([]*models.AutoTopOff, error)
 	AutoTopOff(ctx context.Context, id string) (*models.AutoTopOff, error)
 	AutoWaterChanges(ctx context.Context) ([]*models.AutoWaterChange, error)
+	AutoWaterChange(ctx context.Context, id string) (*models.AutoWaterChange, error)
 	Dosers(ctx context.Context) ([]*models.Doser, error)
 }
 type WaterLevelSensorResolver interface {
@@ -903,6 +905,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.AutoTopOffs(childComplexity), true
 
+	case "Query.auto_water_change":
+		if e.complexity.Query.AutoWaterChange == nil {
+			break
+		}
+
+		args, err := ec.field_Query_auto_water_change_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.AutoWaterChange(childComplexity, args["id"].(string)), true
+
 	case "Query.auto_water_changes":
 		if e.complexity.Query.AutoWaterChanges == nil {
 			break
@@ -1086,6 +1100,7 @@ type Query {
   auto_top_offs: [AutoTopOff!]
   auto_top_off(id: ID!): AutoTopOff
   auto_water_changes: [AutoWaterChange!]
+  auto_water_change(id: ID!): AutoWaterChange
   dosers: [Doser!]
 }
 
@@ -2099,6 +2114,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 }
 
 func (ec *executionContext) field_Query_auto_top_off_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_auto_water_change_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
 	var arg0 string
@@ -4864,6 +4894,44 @@ func (ec *executionContext) _Query_auto_water_changes(ctx context.Context, field
 	return ec.marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChangeᚄ(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Query_auto_water_change(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Query",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Query_auto_water_change_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().AutoWaterChange(rctx, args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*models.AutoWaterChange)
+	fc.Result = res
+	return ec.marshalOAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Query_dosers(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -7226,6 +7294,17 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				res = ec._Query_auto_water_changes(ctx, field)
 				return res
 			})
+		case "auto_water_change":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_auto_water_change(ctx, field)
+				return res
+			})
 		case "dosers":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -8364,6 +8443,13 @@ func (ec *executionContext) marshalOAutoWaterChange2ᚕᚖgithubᚗcomᚋkerinin
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalOAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx context.Context, sel ast.SelectionSet, v *models.AutoWaterChange) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._AutoWaterChange(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOAwcEvent2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAwcEventᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.AwcEvent) graphql.Marshaler {

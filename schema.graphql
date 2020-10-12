@@ -12,6 +12,7 @@ type Query {
   auto_top_offs: [AutoTopOff!]
   auto_top_off(id: ID!): AutoTopOff
   auto_water_changes: [AutoWaterChange!]
+  auto_water_change(id: ID!): AutoWaterChange
   dosers: [Doser!]
 }
 
