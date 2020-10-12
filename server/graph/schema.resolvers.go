@@ -197,6 +197,7 @@ func (r *mutationResolver) CreateFirmata(ctx context.Context, serialPort string,
 		ID:         uuid.New().String(),
 		SerialPort: serialPort,
 		Baud:       int64(baud),
+		Name:       null.StringFromPtr(name),
 	}
 	err := m.Insert(ctx, r.db, boil.Infer())
 	if err != nil {
@@ -227,6 +228,7 @@ func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, dev
 		DeviceID:     int64(deviceID),
 		StepPin:      int64(stepPin),
 		Acceleration: null.Float64FromPtr(acceleration),
+		Name:         null.StringFromPtr(name),
 	}
 	if dirPin != nil {
 		m.DirPin = null.Int64From(int64(*dirPin))
@@ -235,7 +237,13 @@ func (r *mutationResolver) CreatePump(ctx context.Context, firmataID string, dev
 		m.EnPin = null.Int64From(int64(*enPin))
 	}
 
-	err := m.Insert(ctx, r.db, boil.Infer())
+	err := m.Insert(ctx, r.db, boil.Whitelist(
+		models.PumpColumns.FirmataID,
+		models.PumpColumns.DeviceID,
+		models.PumpColumns.StepPin,
+		models.PumpColumns.Acceleration,
+		models.PumpColumns.Name,
+	))
 	if err != nil {
 		return nil, fmt.Errorf("inserting pump: %w", err)
 	}
@@ -254,6 +262,7 @@ func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID 
 		DeviceID:     int64(deviceID),
 		StepPin:      int64(stepPin),
 		Acceleration: null.Float64FromPtr(acceleration),
+		Name:         null.StringFromPtr(name),
 	}
 	if dirPin != nil {
 		m.DirPin = null.Int64From(int64(*dirPin))
@@ -267,6 +276,7 @@ func (r *mutationResolver) UpdatePump(ctx context.Context, id string, firmataID 
 		models.PumpColumns.DeviceID,
 		models.PumpColumns.StepPin,
 		models.PumpColumns.Acceleration,
+		models.PumpColumns.Name,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("inserting pump: %w", err)
@@ -319,12 +329,19 @@ func (r *mutationResolver) CreateWaterLevelSensor(ctx context.Context, pin int, 
 		Kind:      kind.String(),
 		FirmataID: null.StringFromPtr(firmataID),
 		Invert:    invert,
+		Name:      null.StringFromPtr(name),
 	}
 	if detectionThreshold != nil {
 		m.DetectionThreshold = null.Int64From(int64(*detectionThreshold))
 	}
 
-	err := m.Insert(ctx, r.db, boil.Infer())
+	err := m.Insert(ctx, r.db, boil.Whitelist(
+		models.WaterLevelSensorColumns.Pin,
+		models.WaterLevelSensorColumns.Kind,
+		models.WaterLevelSensorColumns.FirmataID,
+		models.WaterLevelSensorColumns.Invert,
+		models.WaterLevelSensorColumns.Name,
+	))
 	if err != nil {
 		return nil, fmt.Errorf("inserting water level sensor: %w", err)
 	}
@@ -341,6 +358,7 @@ func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string
 		Kind:      kind.String(),
 		FirmataID: null.StringFromPtr(firmataID),
 		Invert:    invert,
+		Name:      null.StringFromPtr(name),
 	}
 	if detectionThreshold != nil {
 		m.DetectionThreshold = null.Int64From(int64(*detectionThreshold))
@@ -351,6 +369,7 @@ func (r *mutationResolver) UpdateWaterLevelSensor(ctx context.Context, id string
 		models.WaterLevelSensorColumns.Kind,
 		models.WaterLevelSensorColumns.FirmataID,
 		models.WaterLevelSensorColumns.Invert,
+		models.WaterLevelSensorColumns.Name,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("inserting water level sensor: %w", err)
@@ -393,6 +412,7 @@ func (r *mutationResolver) CreateAutoTopOff(ctx context.Context, pumpID string, 
 		FillRate:      fillRate,
 		FillInterval:  int64(fillInterval),
 		MaxFillVolume: maxFillVolume,
+		Name:          null.StringFromPtr(name),
 	}
 	waterLevelSensors := make([]*models.WaterLevelSensor, 0, len(levelSensors))
 	for _, sensor := range levelSensors {
@@ -438,6 +458,7 @@ func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pump
 		FillRate:      fillRate,
 		FillInterval:  int64(fillInterval),
 		MaxFillVolume: maxFillVolume,
+		Name:          null.StringFromPtr(name),
 	}
 	waterLevelSensors := make([]*models.WaterLevelSensor, 0, len(levelSensors))
 	for _, sensor := range levelSensors {
@@ -454,6 +475,7 @@ func (r *mutationResolver) UpdateAutoTopOff(ctx context.Context, id string, pump
 		models.AutoTopOffColumns.FillRate,
 		models.AutoTopOffColumns.FillInterval,
 		models.AutoTopOffColumns.MaxFillVolume,
+		models.AutoTopOffColumns.Name,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("inserting auto top off: %w", err)
@@ -516,6 +538,7 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpI
 		FreshPumpID:  freshPumpID,
 		WastePumpID:  wastePumpID,
 		ExchangeRate: exchangeRate,
+		Name:         null.StringFromPtr(name),
 	}
 
 	err = validateAutoWaterChange(ctx, tx, m)
