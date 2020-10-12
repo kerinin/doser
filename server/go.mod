@@ -8,7 +8,7 @@ require (
 	github.com/friendsofgo/errors v0.9.2
 	github.com/google/uuid v1.1.2
 	github.com/huin/goserial v0.0.0-20121012073615-7b90efdb22b1
-	github.com/kerinin/gomata v0.0.0-20201012022557-572b43fe02f9
+	github.com/kerinin/gomata v0.0.0-20201012023100-288e8c8be89e
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/robfig/cron/v3 v3.0.1
