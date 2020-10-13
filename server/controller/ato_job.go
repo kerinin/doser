@@ -53,7 +53,7 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	// Configure the stepper
 	var (
 		maxSteps = int32(j.ato.MaxFillVolume * float64(j.calibration.Steps) / j.calibration.Volume)
-		speed    = (int32(j.ato.FillRate*float64(time.Second)*float64(j.calibration.Steps)/j.calibration.Volume/float64(time.Minute)) / 100) * 100
+		speed    = roundedSpeed(j.ato.FillRate * float64(time.Second) * float64(j.calibration.Steps) / j.calibration.Volume / float64(time.Minute))
 	)
 	log.Printf("ATO job params - deviceID:%d maxSteps:%d speed:%d", j.pump.DeviceID, maxSteps, speed)
 

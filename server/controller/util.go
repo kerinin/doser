@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -69,4 +70,9 @@ func gpioWaterDetected(ctx context.Context, rpi *raspi.Adaptor, obj *models.Wate
 
 	// XOR invert
 	return obj.Invert != (val == sysfs.HIGH), nil
+}
+
+// Returns the given target speed rounded up to the nearest 100
+func roundedSpeed(target float64) int32 {
+	return int32(math.Ceil(target/100)) * 100
 }
