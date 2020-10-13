@@ -165,7 +165,7 @@ func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata,
 		return AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
 	}
 
-	log.Printf("Moving %s pump %d steps over %fs at speed %f", name, nextSteps, nextElapsed.Seconds(), float32(math.Floor(speed)))
+	log.Printf("Moving %s pump %f steps over %fs at speed %f", name, nextSteps, nextElapsed.Seconds(), float32(math.Floor(speed)))
 	err = firmata.StepperStep(int(pump.DeviceID), int32(nextSteps))
 	if err != nil {
 		return AWCJobErrorKind, fmt.Errorf("stepping %s pump (aborting job run): %w", name, err)
@@ -204,7 +204,7 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 	}
 	err := dose.Insert(ctx, j.controller.db, boil.Infer())
 	if err != nil {
-		j.event(ATOJobErrorKind, "Failure to insert dose: %w", err)
+		j.event(AWCJobErrorKind, "Failure to insert dose: %w", err)
 	}
 }
 

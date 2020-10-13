@@ -115,7 +115,7 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 	}
 
 	for _, awc := range awcs {
-		// Fetch resources necessary for the ATO job
+		// Fetch resources necessary for the AWC job
 		freshPump, err := awc.FreshPump().One(ctx, c.db)
 		if err != nil {
 			return nil, fmt.Errorf("getting fresh water pump (aborting job run): %w", err)
@@ -142,13 +142,13 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		}
 		freshCalibration, err := freshPump.Calibrations().One(ctx, c.db)
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("refusing to run ATO job with uncalibrated fresh pump")
+			return nil, fmt.Errorf("refusing to run AWC job with uncalibrated fresh pump")
 		} else if err != nil {
 			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
 		}
 		wasteCalibration, err := wastePump.Calibrations().One(ctx, c.db)
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("refusing to run ATO job with uncalibrated waste pump")
+			return nil, fmt.Errorf("refusing to run AWC job with uncalibrated waste pump")
 		} else if err != nil {
 			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
 		}

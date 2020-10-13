@@ -57,7 +57,7 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		return nil, fmt.Errorf("getting sensors from DB: %w", err)
 	}
 
-	newConfig := &serial.Config{Name: firmata.SerialPort, Baud: int(firmata.Baud), ReadTimeout: 10 * time.Second}
+	newConfig := &serial.Config{Name: firmata.SerialPort, Baud: int(firmata.Baud), ReadTimeout: 2 * time.Minute}
 	port, err := serial.OpenPort(newConfig)
 
 	if err != nil {
