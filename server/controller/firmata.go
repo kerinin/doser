@@ -62,7 +62,7 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		BaudRate:              uint(firmata.Baud),
 		DataBits:              8,
 		StopBits:              1,
-		InterCharacterTimeout: 60 * 1000,
+		InterCharacterTimeout: 25500,
 	}
 	port, err := serial.Open(config)
 	if err != nil {
