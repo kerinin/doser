@@ -225,7 +225,7 @@ func (j *AWCJob) reset(err error) {
 
 	// NOTE: A broken AWC could lead to very bad things.
 	j.awc.Enabled = false
-	_, err := j.awc.Update(context.Background(), j.controller.db, boil.Whitelist(models.AutoWaterChangeColumns.Enabled))
+	_, err = j.awc.Update(context.Background(), j.controller.db, boil.Whitelist(models.AutoWaterChangeColumns.Enabled))
 	if err != nil {
 		log.Fatalf("Failed to disable AWC: %s", err)
 	}
