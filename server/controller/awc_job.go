@@ -16,7 +16,7 @@ import (
 	"github.com/volatiletech/sqlboiler/v4/boil"
 )
 
-const targetDurationSec = 60
+const targetDurationSec = 30
 
 type AWCJob struct {
 	controller       *AWC
@@ -60,7 +60,7 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	err := j.freshFirmata.StepperZero(int(j.freshPump.DeviceID))
 	if err != nil {
-		j.event(AWCJobErrorKind, "Failure zeroing fresh pump: %w", err)
+		j.event(AWCJobErrorKind, "Failure zeroing fresh pump: %s", err)
 	}
 
 	// NOTE: Target duration is (essentially) the duration of time the pump will
@@ -83,11 +83,11 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 		case <-ctx.Done():
 			err := j.freshFirmata.StepperStop(int(j.freshPump.DeviceID))
 			if err != nil {
-				j.event(UncontrolledPumpKind, "Failure stopping fresh pump %s during shutdown of AWC job: %w", j.freshPump.ID, err)
+				j.event(UncontrolledPumpKind, "Failure stopping fresh pump %s during shutdown of AWC job: %s", j.freshPump.ID, err)
 			}
 			err = j.wasteFirmata.StepperStop(int(j.wastePump.DeviceID))
 			if err != nil {
-				j.event(UncontrolledPumpKind, "Failure stopping waste pump %s during shutdown of AWC job: %w", j.wastePump.ID, err)
+				j.event(UncontrolledPumpKind, "Failure stopping waste pump %s during shutdown of AWC job: %s", j.wastePump.ID, err)
 			}
 
 			return
@@ -224,7 +224,7 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 	}
 	err := dose.Insert(ctx, j.controller.db, boil.Infer())
 	if err != nil {
-		j.event(AWCJobErrorKind, "Failure to insert dose: %w", err)
+		j.event(AWCJobErrorKind, "Failure to insert dose: %s", err)
 	}
 }
 
