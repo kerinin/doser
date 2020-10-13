@@ -61,6 +61,7 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 	port, err := term.Open(
 		firmata.SerialPort,
 		term.Speed(int(firmata.Baud)),
+		term.RawMode,
 		term.ReadTimeout(2*time.Minute),
 	)
 	if err != nil {
