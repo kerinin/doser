@@ -72,13 +72,13 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer ticker.Stop()
 
 	// Run first job immediately
-	jobCtx, _ := context.WithTimeout(ctx, targetDurationSec*time.Second)
+	jobCtx, _ := context.WithTimeout(ctx, 2*targetDurationSec*time.Second)
 	j.runJob(jobCtx, mlPerSecond)
 
 	for {
 		select {
 		case <-ticker.C:
-			jobCtx, _ := context.WithTimeout(ctx, targetDurationSec*time.Second)
+			jobCtx, _ := context.WithTimeout(ctx, 2*targetDurationSec*time.Second)
 			j.runJob(jobCtx, mlPerSecond)
 
 		case <-ctx.Done():
