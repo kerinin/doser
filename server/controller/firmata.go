@@ -37,6 +37,9 @@ func (c *Firmatas) Reset() error {
 		}
 	}
 
+	// Wait for firmata to clear out
+	<-time.After(50 * time.Millisecond)
+
 	c.firmatas = make(map[string]*gomata.Firmata)
 	return nil
 }

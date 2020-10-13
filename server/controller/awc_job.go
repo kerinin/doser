@@ -183,7 +183,6 @@ func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata,
 		return nil, AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
 	}
 
-	log.Printf("Moving %s pump %f steps over %fs at speed %f", name, nextSteps, nextElapsed.Seconds(), float32(speed))
 	reportCh := firmata.AwaitStepperMoveCompletion(int32(pump.DeviceID))
 
 	err = firmata.StepperStep(int(pump.DeviceID), int32(nextSteps))
@@ -226,6 +225,7 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 	if err != nil {
 		j.event(AWCJobErrorKind, "Failure to insert dose: %s", err)
 	}
+	log.Printf("%s pumped %fmL", volume, pump.Name.String)
 }
 
 func (j *AWCJob) reset() {

@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/huin/goserial v0.0.0-20121012073615-7b90efdb22b1
 	github.com/jacobsa/go-serial v0.0.0-20180131005756-15cf729a72d4
-	github.com/kerinin/gomata v0.0.0-20201013023342-a276927c577d
+	github.com/kerinin/gomata v0.0.0-20201013030137-a13ba6fa4aa6
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v1.1.0
