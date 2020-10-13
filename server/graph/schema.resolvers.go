@@ -45,6 +45,13 @@ func (r *autoTopOffResolver) LevelSensors(ctx context.Context, obj *models.AutoT
 	return ms, nil
 }
 
+func (r *autoTopOffResolver) FillLevel(ctx context.Context, obj *models.AutoTopOff) (*model.FillLevel, error) {
+	if obj.FillLevelTimestamp.Valid && obj.FillLevelVolume.Valid {
+		return &model.FillLevel{int(obj.FillLevelTimestamp.Int64), obj.FillLevelVolume.Float64}, nil
+	}
+	return nil, nil
+}
+
 func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff) ([]*models.AtoEvent, error) {
 	events, err := obj.AtoEvents().All(ctx, r.db)
 	if err != nil {
@@ -130,6 +137,13 @@ func (r *autoWaterChangeResolver) WastePump(ctx context.Context, obj *models.Aut
 	}
 
 	return m, nil
+}
+
+func (r *autoWaterChangeResolver) FillLevel(ctx context.Context, obj *models.AutoWaterChange) (*model.FillLevel, error) {
+	if obj.FillLevelTimestamp.Valid && obj.FillLevelVolume.Valid {
+		return &model.FillLevel{int(obj.FillLevelTimestamp.Int64), obj.FillLevelVolume.Float64}, nil
+	}
+	return nil, nil
 }
 
 func (r *autoWaterChangeResolver) Events(ctx context.Context, obj *models.AutoWaterChange) ([]*models.AwcEvent, error) {
@@ -521,6 +535,25 @@ func (r *mutationResolver) SetAutoTopOffEnabled(ctx context.Context, id string, 
 	return enabled, nil
 }
 
+func (r *mutationResolver) SetATOFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoTopOff, error) {
+	m, err := models.FindAutoTopOff(ctx, r.db, id)
+	if err != nil {
+		return nil, fmt.Errorf("getting ATO: %w", err)
+	}
+
+	m.FillLevelTimestamp = null.Int64From(int64(timestamp))
+	m.FillLevelVolume = null.Float64From(volume)
+
+	_, err = m.Update(ctx, r.db, boil.Whitelist(models.AutoTopOffColumns.FillLevelTimestamp, models.AutoTopOffColumns.FillLevelVolume))
+	if err != nil {
+		return nil, fmt.Errorf("updating auto top off: %w", err)
+	}
+
+	r.atoController.Reset()
+
+	return m, nil
+}
+
 func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
@@ -623,6 +656,25 @@ func (r *mutationResolver) SetAutoWaterChangeEnabled(ctx context.Context, id str
 	r.awcController.Reset()
 
 	return enabled, nil
+}
+
+func (r *mutationResolver) SetAWCFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoWaterChange, error) {
+	m, err := models.FindAutoWaterChange(ctx, r.db, id)
+	if err != nil {
+		return nil, fmt.Errorf("getting AWC: %w", err)
+	}
+
+	m.FillLevelTimestamp = null.Int64From(int64(timestamp))
+	m.FillLevelVolume = null.Float64From(volume)
+
+	_, err = m.Update(ctx, r.db, boil.Whitelist(models.AutoWaterChangeColumns.FillLevelTimestamp, models.AutoWaterChangeColumns.FillLevelVolume))
+	if err != nil {
+		return nil, fmt.Errorf("updating auto water change: %w", err)
+	}
+
+	r.awcController.Reset()
+
+	return m, nil
 }
 
 func (r *mutationResolver) CreateDoser(ctx context.Context, input model.DoserInput, name *string) (*models.Doser, error) {

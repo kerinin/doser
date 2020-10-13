@@ -23,34 +23,40 @@ import (
 
 // AutoTopOff is an object representing the database table.
 type AutoTopOff struct {
-	ID            string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	PumpID        string      `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
-	FillRate      float64     `boil:"fill_rate" json:"fill_rate" toml:"fill_rate" yaml:"fill_rate"`
-	FillInterval  int64       `boil:"fill_interval" json:"fill_interval" toml:"fill_interval" yaml:"fill_interval"`
-	MaxFillVolume float64     `boil:"max_fill_volume" json:"max_fill_volume" toml:"max_fill_volume" yaml:"max_fill_volume"`
-	Enabled       bool        `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
-	Name          null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
+	ID                 string       `boil:"id" json:"id" toml:"id" yaml:"id"`
+	PumpID             string       `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
+	FillRate           float64      `boil:"fill_rate" json:"fill_rate" toml:"fill_rate" yaml:"fill_rate"`
+	FillInterval       int64        `boil:"fill_interval" json:"fill_interval" toml:"fill_interval" yaml:"fill_interval"`
+	MaxFillVolume      float64      `boil:"max_fill_volume" json:"max_fill_volume" toml:"max_fill_volume" yaml:"max_fill_volume"`
+	Enabled            bool         `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
+	Name               null.String  `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
+	FillLevelTimestamp null.Int64   `boil:"fill_level_timestamp" json:"fill_level_timestamp,omitempty" toml:"fill_level_timestamp" yaml:"fill_level_timestamp,omitempty"`
+	FillLevelVolume    null.Float64 `boil:"fill_level_volume" json:"fill_level_volume,omitempty" toml:"fill_level_volume" yaml:"fill_level_volume,omitempty"`
 
 	R *autoTopOffR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L autoTopOffL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var AutoTopOffColumns = struct {
-	ID            string
-	PumpID        string
-	FillRate      string
-	FillInterval  string
-	MaxFillVolume string
-	Enabled       string
-	Name          string
+	ID                 string
+	PumpID             string
+	FillRate           string
+	FillInterval       string
+	MaxFillVolume      string
+	Enabled            string
+	Name               string
+	FillLevelTimestamp string
+	FillLevelVolume    string
 }{
-	ID:            "id",
-	PumpID:        "pump_id",
-	FillRate:      "fill_rate",
-	FillInterval:  "fill_interval",
-	MaxFillVolume: "max_fill_volume",
-	Enabled:       "enabled",
-	Name:          "name",
+	ID:                 "id",
+	PumpID:             "pump_id",
+	FillRate:           "fill_rate",
+	FillInterval:       "fill_interval",
+	MaxFillVolume:      "max_fill_volume",
+	Enabled:            "enabled",
+	Name:               "name",
+	FillLevelTimestamp: "fill_level_timestamp",
+	FillLevelVolume:    "fill_level_volume",
 }
 
 // Generated where
@@ -116,22 +122,72 @@ func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
+type whereHelpernull_Int64 struct{ field string }
+
+func (w whereHelpernull_Int64) EQ(x null.Int64) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Int64) NEQ(x null.Int64) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Int64) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Int64) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelpernull_Int64) LT(x null.Int64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Int64) LTE(x null.Int64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Int64) GT(x null.Int64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Int64) GTE(x null.Int64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
+type whereHelpernull_Float64 struct{ field string }
+
+func (w whereHelpernull_Float64) EQ(x null.Float64) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Float64) NEQ(x null.Float64) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Float64) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Float64) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelpernull_Float64) LT(x null.Float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Float64) LTE(x null.Float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Float64) GT(x null.Float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Float64) GTE(x null.Float64) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+
 var AutoTopOffWhere = struct {
-	ID            whereHelperstring
-	PumpID        whereHelperstring
-	FillRate      whereHelperfloat64
-	FillInterval  whereHelperint64
-	MaxFillVolume whereHelperfloat64
-	Enabled       whereHelperbool
-	Name          whereHelpernull_String
+	ID                 whereHelperstring
+	PumpID             whereHelperstring
+	FillRate           whereHelperfloat64
+	FillInterval       whereHelperint64
+	MaxFillVolume      whereHelperfloat64
+	Enabled            whereHelperbool
+	Name               whereHelpernull_String
+	FillLevelTimestamp whereHelpernull_Int64
+	FillLevelVolume    whereHelpernull_Float64
 }{
-	ID:            whereHelperstring{field: "\"auto_top_offs\".\"id\""},
-	PumpID:        whereHelperstring{field: "\"auto_top_offs\".\"pump_id\""},
-	FillRate:      whereHelperfloat64{field: "\"auto_top_offs\".\"fill_rate\""},
-	FillInterval:  whereHelperint64{field: "\"auto_top_offs\".\"fill_interval\""},
-	MaxFillVolume: whereHelperfloat64{field: "\"auto_top_offs\".\"max_fill_volume\""},
-	Enabled:       whereHelperbool{field: "\"auto_top_offs\".\"enabled\""},
-	Name:          whereHelpernull_String{field: "\"auto_top_offs\".\"name\""},
+	ID:                 whereHelperstring{field: "\"auto_top_offs\".\"id\""},
+	PumpID:             whereHelperstring{field: "\"auto_top_offs\".\"pump_id\""},
+	FillRate:           whereHelperfloat64{field: "\"auto_top_offs\".\"fill_rate\""},
+	FillInterval:       whereHelperint64{field: "\"auto_top_offs\".\"fill_interval\""},
+	MaxFillVolume:      whereHelperfloat64{field: "\"auto_top_offs\".\"max_fill_volume\""},
+	Enabled:            whereHelperbool{field: "\"auto_top_offs\".\"enabled\""},
+	Name:               whereHelpernull_String{field: "\"auto_top_offs\".\"name\""},
+	FillLevelTimestamp: whereHelpernull_Int64{field: "\"auto_top_offs\".\"fill_level_timestamp\""},
+	FillLevelVolume:    whereHelpernull_Float64{field: "\"auto_top_offs\".\"fill_level_volume\""},
 }
 
 // AutoTopOffRels is where relationship names are stored.
@@ -161,8 +217,8 @@ func (*autoTopOffR) NewStruct() *autoTopOffR {
 type autoTopOffL struct{}
 
 var (
-	autoTopOffAllColumns            = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume", "enabled", "name"}
-	autoTopOffColumnsWithoutDefault = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume", "name"}
+	autoTopOffAllColumns            = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume", "enabled", "name", "fill_level_timestamp", "fill_level_volume"}
+	autoTopOffColumnsWithoutDefault = []string{"id", "pump_id", "fill_rate", "fill_interval", "max_fill_volume", "name", "fill_level_timestamp", "fill_level_volume"}
 	autoTopOffColumnsWithDefault    = []string{"enabled"}
 	autoTopOffPrimaryKeyColumns     = []string{"id"}
 )

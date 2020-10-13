@@ -23,49 +23,59 @@ import (
 
 // AutoWaterChange is an object representing the database table.
 type AutoWaterChange struct {
-	ID           string      `boil:"id" json:"id" toml:"id" yaml:"id"`
-	FreshPumpID  string      `boil:"fresh_pump_id" json:"fresh_pump_id" toml:"fresh_pump_id" yaml:"fresh_pump_id"`
-	WastePumpID  string      `boil:"waste_pump_id" json:"waste_pump_id" toml:"waste_pump_id" yaml:"waste_pump_id"`
-	ExchangeRate float64     `boil:"exchange_rate" json:"exchange_rate" toml:"exchange_rate" yaml:"exchange_rate"`
-	Enabled      bool        `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
-	Name         null.String `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
+	ID                 string       `boil:"id" json:"id" toml:"id" yaml:"id"`
+	FreshPumpID        string       `boil:"fresh_pump_id" json:"fresh_pump_id" toml:"fresh_pump_id" yaml:"fresh_pump_id"`
+	WastePumpID        string       `boil:"waste_pump_id" json:"waste_pump_id" toml:"waste_pump_id" yaml:"waste_pump_id"`
+	ExchangeRate       float64      `boil:"exchange_rate" json:"exchange_rate" toml:"exchange_rate" yaml:"exchange_rate"`
+	Enabled            bool         `boil:"enabled" json:"enabled" toml:"enabled" yaml:"enabled"`
+	Name               null.String  `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
+	FillLevelTimestamp null.Int64   `boil:"fill_level_timestamp" json:"fill_level_timestamp,omitempty" toml:"fill_level_timestamp" yaml:"fill_level_timestamp,omitempty"`
+	FillLevelVolume    null.Float64 `boil:"fill_level_volume" json:"fill_level_volume,omitempty" toml:"fill_level_volume" yaml:"fill_level_volume,omitempty"`
 
 	R *autoWaterChangeR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L autoWaterChangeL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var AutoWaterChangeColumns = struct {
-	ID           string
-	FreshPumpID  string
-	WastePumpID  string
-	ExchangeRate string
-	Enabled      string
-	Name         string
+	ID                 string
+	FreshPumpID        string
+	WastePumpID        string
+	ExchangeRate       string
+	Enabled            string
+	Name               string
+	FillLevelTimestamp string
+	FillLevelVolume    string
 }{
-	ID:           "id",
-	FreshPumpID:  "fresh_pump_id",
-	WastePumpID:  "waste_pump_id",
-	ExchangeRate: "exchange_rate",
-	Enabled:      "enabled",
-	Name:         "name",
+	ID:                 "id",
+	FreshPumpID:        "fresh_pump_id",
+	WastePumpID:        "waste_pump_id",
+	ExchangeRate:       "exchange_rate",
+	Enabled:            "enabled",
+	Name:               "name",
+	FillLevelTimestamp: "fill_level_timestamp",
+	FillLevelVolume:    "fill_level_volume",
 }
 
 // Generated where
 
 var AutoWaterChangeWhere = struct {
-	ID           whereHelperstring
-	FreshPumpID  whereHelperstring
-	WastePumpID  whereHelperstring
-	ExchangeRate whereHelperfloat64
-	Enabled      whereHelperbool
-	Name         whereHelpernull_String
+	ID                 whereHelperstring
+	FreshPumpID        whereHelperstring
+	WastePumpID        whereHelperstring
+	ExchangeRate       whereHelperfloat64
+	Enabled            whereHelperbool
+	Name               whereHelpernull_String
+	FillLevelTimestamp whereHelpernull_Int64
+	FillLevelVolume    whereHelpernull_Float64
 }{
-	ID:           whereHelperstring{field: "\"auto_water_changes\".\"id\""},
-	FreshPumpID:  whereHelperstring{field: "\"auto_water_changes\".\"fresh_pump_id\""},
-	WastePumpID:  whereHelperstring{field: "\"auto_water_changes\".\"waste_pump_id\""},
-	ExchangeRate: whereHelperfloat64{field: "\"auto_water_changes\".\"exchange_rate\""},
-	Enabled:      whereHelperbool{field: "\"auto_water_changes\".\"enabled\""},
-	Name:         whereHelpernull_String{field: "\"auto_water_changes\".\"name\""},
+	ID:                 whereHelperstring{field: "\"auto_water_changes\".\"id\""},
+	FreshPumpID:        whereHelperstring{field: "\"auto_water_changes\".\"fresh_pump_id\""},
+	WastePumpID:        whereHelperstring{field: "\"auto_water_changes\".\"waste_pump_id\""},
+	ExchangeRate:       whereHelperfloat64{field: "\"auto_water_changes\".\"exchange_rate\""},
+	Enabled:            whereHelperbool{field: "\"auto_water_changes\".\"enabled\""},
+	Name:               whereHelpernull_String{field: "\"auto_water_changes\".\"name\""},
+	FillLevelTimestamp: whereHelpernull_Int64{field: "\"auto_water_changes\".\"fill_level_timestamp\""},
+	FillLevelVolume:    whereHelpernull_Float64{field: "\"auto_water_changes\".\"fill_level_volume\""},
 }
 
 // AutoWaterChangeRels is where relationship names are stored.
@@ -95,8 +105,8 @@ func (*autoWaterChangeR) NewStruct() *autoWaterChangeR {
 type autoWaterChangeL struct{}
 
 var (
-	autoWaterChangeAllColumns            = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "enabled", "name"}
-	autoWaterChangeColumnsWithoutDefault = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "name"}
+	autoWaterChangeAllColumns            = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "enabled", "name", "fill_level_timestamp", "fill_level_volume"}
+	autoWaterChangeColumnsWithoutDefault = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "name", "fill_level_timestamp", "fill_level_volume"}
 	autoWaterChangeColumnsWithDefault    = []string{"enabled"}
 	autoWaterChangePrimaryKeyColumns     = []string{"id"}
 )

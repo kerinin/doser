@@ -22,6 +22,11 @@ type DoserInput struct {
 	Components []*DoserComponentInput `json:"components"`
 }
 
+type FillLevel struct {
+	Timestamp int     `json:"timestamp"`
+	Volume    float64 `json:"volume"`
+}
+
 type SensorKind string
 
 const (

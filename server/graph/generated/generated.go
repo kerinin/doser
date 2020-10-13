@@ -68,6 +68,7 @@ type ComplexityRoot struct {
 		Enabled       func(childComplexity int) int
 		Events        func(childComplexity int) int
 		FillInterval  func(childComplexity int) int
+		FillLevel     func(childComplexity int) int
 		FillRate      func(childComplexity int) int
 		ID            func(childComplexity int) int
 		LevelSensors  func(childComplexity int) int
@@ -81,6 +82,7 @@ type ComplexityRoot struct {
 		Enabled      func(childComplexity int) int
 		Events       func(childComplexity int) int
 		ExchangeRate func(childComplexity int) int
+		FillLevel    func(childComplexity int) int
 		FreshPump    func(childComplexity int) int
 		ID           func(childComplexity int) int
 		Name         func(childComplexity int) int
@@ -112,6 +114,11 @@ type ComplexityRoot struct {
 		Pump     func(childComplexity int) int
 	}
 
+	FillLevel struct {
+		Timestamp func(childComplexity int) int
+		Volume    func(childComplexity int) int
+	}
+
 	Firmata struct {
 		Baud       func(childComplexity int) int
 		ID         func(childComplexity int) int
@@ -135,6 +142,8 @@ type ComplexityRoot struct {
 		DeletePump                func(childComplexity int, id string) int
 		DeleteWaterLevelSensor    func(childComplexity int, id string) int
 		Pump                      func(childComplexity int, pumpID string, steps int, speed float64) int
+		SetATOFillLevel           func(childComplexity int, id string, timestamp int, volume float64) int
+		SetAWCFillLevel           func(childComplexity int, id string, timestamp int, volume float64) int
 		SetAutoTopOffEnabled      func(childComplexity int, id string, enabled bool) int
 		SetAutoWaterChangeEnabled func(childComplexity int, id string, enabled bool) int
 		SetDoserEnabled           func(childComplexity int, id string, enabled bool) int
@@ -189,6 +198,7 @@ type AutoTopOffResolver interface {
 	Pump(ctx context.Context, obj *models.AutoTopOff) (*models.Pump, error)
 	LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error)
 
+	FillLevel(ctx context.Context, obj *models.AutoTopOff) (*model.FillLevel, error)
 	Events(ctx context.Context, obj *models.AutoTopOff) ([]*models.AtoEvent, error)
 	Rate(ctx context.Context, obj *models.AutoTopOff, window *int) ([]*model.AtoRate, error)
 }
@@ -197,6 +207,7 @@ type AutoWaterChangeResolver interface {
 	FreshPump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 	WastePump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 
+	FillLevel(ctx context.Context, obj *models.AutoWaterChange) (*model.FillLevel, error)
 	Events(ctx context.Context, obj *models.AutoWaterChange) ([]*models.AwcEvent, error)
 }
 type DoseResolver interface {
@@ -227,10 +238,12 @@ type MutationResolver interface {
 	UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) (*models.AutoTopOff, error)
 	DeleteAutoTopOff(ctx context.Context, id string) (bool, error)
 	SetAutoTopOffEnabled(ctx context.Context, id string, enabled bool) (bool, error)
+	SetATOFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoTopOff, error)
 	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error)
 	UpdateAutoWaterChange(ctx context.Context, id string, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error)
 	DeleteAutoWaterChange(ctx context.Context, id string) (bool, error)
 	SetAutoWaterChangeEnabled(ctx context.Context, id string, enabled bool) (bool, error)
+	SetAWCFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoWaterChange, error)
 	CreateDoser(ctx context.Context, input model.DoserInput, name *string) (*models.Doser, error)
 	DeleteDoser(ctx context.Context, id string) (bool, error)
 	SetDoserEnabled(ctx context.Context, id string, enabled bool) (bool, error)
@@ -342,6 +355,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AutoTopOff.FillInterval(childComplexity), true
 
+	case "AutoTopOff.fill_level":
+		if e.complexity.AutoTopOff.FillLevel == nil {
+			break
+		}
+
+		return e.complexity.AutoTopOff.FillLevel(childComplexity), true
+
 	case "AutoTopOff.fill_rate":
 		if e.complexity.AutoTopOff.FillRate == nil {
 			break
@@ -416,6 +436,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AutoWaterChange.ExchangeRate(childComplexity), true
+
+	case "AutoWaterChange.fill_level":
+		if e.complexity.AutoWaterChange.FillLevel == nil {
+			break
+		}
+
+		return e.complexity.AutoWaterChange.FillLevel(childComplexity), true
 
 	case "AutoWaterChange.fresh_pump":
 		if e.complexity.AutoWaterChange.FreshPump == nil {
@@ -535,6 +562,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.DoserComponent.Pump(childComplexity), true
+
+	case "FillLevel.timestamp":
+		if e.complexity.FillLevel.Timestamp == nil {
+			break
+		}
+
+		return e.complexity.FillLevel.Timestamp(childComplexity), true
+
+	case "FillLevel.volume":
+		if e.complexity.FillLevel.Volume == nil {
+			break
+		}
+
+		return e.complexity.FillLevel.Volume(childComplexity), true
 
 	case "Firmata.baud":
 		if e.complexity.Firmata.Baud == nil {
@@ -738,6 +779,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.Pump(childComplexity, args["pump_id"].(string), args["steps"].(int), args["speed"].(float64)), true
+
+	case "Mutation.setATOFillLevel":
+		if e.complexity.Mutation.SetATOFillLevel == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setATOFillLevel_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetATOFillLevel(childComplexity, args["id"].(string), args["timestamp"].(int), args["volume"].(float64)), true
+
+	case "Mutation.setAWCFillLevel":
+		if e.complexity.Mutation.SetAWCFillLevel == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setAWCFillLevel_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetAWCFillLevel(childComplexity, args["id"].(string), args["timestamp"].(int), args["volume"].(float64)), true
 
 	case "Mutation.setAutoTopOffEnabled":
 		if e.complexity.Mutation.SetAutoTopOffEnabled == nil {
@@ -1181,6 +1246,13 @@ type WaterLevelSensor {
   invert: Boolean
 }
 
+type FillLevel {
+  # The time when the volume was measured
+  timestamp: Int!
+  # The volume remaining in mL
+  volume: Float!
+}
+
 type AutoTopOff {
   id: ID!
   # A human-readable description of the ATO
@@ -1199,6 +1271,9 @@ type AutoTopOff {
   # Causes an alert if this volume is exceeded
   max_fill_volume: Float
   enabled: Boolean!
+
+  # The last-measured volume of fresh water remaining
+  fill_level: FillLevel
 
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
@@ -1221,6 +1296,9 @@ type AutoWaterChange {
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
   exchange_rate: Float!
   enabled: Boolean!
+
+  # The last-measured volume of salt water remaining
+  fill_level: FillLevel
 
   events: [AwcEvent!]
 }
@@ -1271,11 +1349,13 @@ type Mutation {
   updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!, name: String): AutoTopOff!
   deleteAutoTopOff(id: ID!): Boolean!
   setAutoTopOffEnabled(id: ID!, enabled: Boolean!): Boolean!
+  setATOFillLevel(id: ID!, timestamp: Int!, volume: Float!): AutoTopOff!
 
   createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
   updateAutoWaterChange(id: ID!, fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
   deleteAutoWaterChange(id: ID!): Boolean!
   setAutoWaterChangeEnabled(id: ID!, enabled: Boolean!): Boolean!
+  setAWCFillLevel(id: ID!, timestamp: Int!, volume: Float!): AutoWaterChange!
 
   createDoser(input: DoserInput!, name: String): Doser!
   deleteDoser(id: ID!): Boolean!
@@ -1756,6 +1836,72 @@ func (ec *executionContext) field_Mutation_pump_args(ctx context.Context, rawArg
 		}
 	}
 	args["speed"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setATOFillLevel_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["timestamp"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("timestamp"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["timestamp"] = arg1
+	var arg2 float64
+	if tmp, ok := rawArgs["volume"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("volume"))
+		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["volume"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setAWCFillLevel_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 int
+	if tmp, ok := rawArgs["timestamp"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("timestamp"))
+		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["timestamp"] = arg1
+	var arg2 float64
+	if tmp, ok := rawArgs["volume"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("volume"))
+		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["volume"] = arg2
 	return args, nil
 }
 
@@ -2651,6 +2797,37 @@ func (ec *executionContext) _AutoTopOff_enabled(ctx context.Context, field graph
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _AutoTopOff_fill_level(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoTopOff",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.AutoTopOff().FillLevel(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.FillLevel)
+	fc.Result = res
+	return ec.marshalOFillLevel2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevel(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _AutoTopOff_events(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -2919,6 +3096,37 @@ func (ec *executionContext) _AutoWaterChange_enabled(ctx context.Context, field 
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AutoWaterChange_fill_level(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoWaterChange",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.AutoWaterChange().FillLevel(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.FillLevel)
+	fc.Result = res
+	return ec.marshalOFillLevel2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevel(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoWaterChange_events(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
@@ -3369,6 +3577,74 @@ func (ec *executionContext) _DoserComponent_dose_rate(ctx context.Context, field
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.DoseRate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _FillLevel_timestamp(ctx context.Context, field graphql.CollectedField, obj *model.FillLevel) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "FillLevel",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Timestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _FillLevel_volume(ctx context.Context, field graphql.CollectedField, obj *model.FillLevel) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "FillLevel",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Volume, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4082,6 +4358,47 @@ func (ec *executionContext) _Mutation_setAutoTopOffEnabled(ctx context.Context, 
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _Mutation_setATOFillLevel(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_setATOFillLevel_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetATOFillLevel(rctx, args["id"].(string), args["timestamp"].(int), args["volume"].(float64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.AutoTopOff)
+	fc.Result = res
+	return ec.marshalNAutoTopOff2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoTopOff(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -4244,6 +4561,47 @@ func (ec *executionContext) _Mutation_setAutoWaterChangeEnabled(ctx context.Cont
 	res := resTmp.(bool)
 	fc.Result = res
 	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_setAWCFillLevel(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_setAWCFillLevel_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetAWCFillLevel(rctx, args["id"].(string), args["timestamp"].(int), args["volume"].(float64))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.AutoWaterChange)
+	fc.Result = res
+	return ec.marshalNAutoWaterChange2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐAutoWaterChange(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _Mutation_createDoser(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
@@ -6617,6 +6975,17 @@ func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSe
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "fill_level":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoTopOff_fill_level(ctx, field, obj)
+				return res
+			})
 		case "events":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -6715,6 +7084,17 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}
+		case "fill_level":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoWaterChange_fill_level(ctx, field, obj)
+				return res
+			})
 		case "events":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -6917,6 +7297,38 @@ func (ec *executionContext) _DoserComponent(ctx context.Context, sel ast.Selecti
 	return out
 }
 
+var fillLevelImplementors = []string{"FillLevel"}
+
+func (ec *executionContext) _FillLevel(ctx context.Context, sel ast.SelectionSet, obj *model.FillLevel) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, fillLevelImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("FillLevel")
+		case "timestamp":
+			out.Values[i] = ec._FillLevel_timestamp(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "volume":
+			out.Values[i] = ec._FillLevel_volume(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var firmataImplementors = []string{"Firmata"}
 
 func (ec *executionContext) _Firmata(ctx context.Context, sel ast.SelectionSet, obj *models.Firmata) graphql.Marshaler {
@@ -7056,6 +7468,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
+		case "setATOFillLevel":
+			out.Values[i] = ec._Mutation_setATOFillLevel(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createAutoWaterChange":
 			out.Values[i] = ec._Mutation_createAutoWaterChange(ctx, field)
 			if out.Values[i] == graphql.Null {
@@ -7073,6 +7490,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			}
 		case "setAutoWaterChangeEnabled":
 			out.Values[i] = ec._Mutation_setAutoWaterChangeEnabled(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "setAWCFillLevel":
+			out.Values[i] = ec._Mutation_setAWCFillLevel(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
@@ -8634,6 +9056,13 @@ func (ec *executionContext) marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerinin�
 	}
 	wg.Wait()
 	return ret
+}
+
+func (ec *executionContext) marshalOFillLevel2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevel(ctx context.Context, sel ast.SelectionSet, v *model.FillLevel) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._FillLevel(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOFirmata2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmataᚄ(ctx context.Context, sel ast.SelectionSet, v []*models.Firmata) graphql.Marshaler {

@@ -192,6 +192,15 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					`ALTER TABLE dosers ADD COLUMN name TEXT`,
 				},
 			},
+			&migrate.Migration{
+				Id: "009 fill_level",
+				Up: []string{
+					`ALTER TABLE auto_top_offs ADD COLUMN fill_level_timestamp INT`,
+					`ALTER TABLE auto_top_offs ADD COLUMN fill_level_volume REAL`,
+					`ALTER TABLE auto_water_changes ADD COLUMN fill_level_timestamp INT`,
+					`ALTER TABLE auto_water_changes ADD COLUMN fill_level_volume REAL`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

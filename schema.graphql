@@ -93,6 +93,13 @@ type WaterLevelSensor {
   invert: Boolean
 }
 
+type FillLevel {
+  # The time when the volume was measured
+  timestamp: Int!
+  # The volume remaining in mL
+  volume: Float!
+}
+
 type AutoTopOff {
   id: ID!
   # A human-readable description of the ATO
@@ -111,6 +118,9 @@ type AutoTopOff {
   # Causes an alert if this volume is exceeded
   max_fill_volume: Float
   enabled: Boolean!
+
+  # The last-measured volume of fresh water remaining
+  fill_level: FillLevel
 
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
@@ -133,6 +143,9 @@ type AutoWaterChange {
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
   exchange_rate: Float!
   enabled: Boolean!
+
+  # The last-measured volume of salt water remaining
+  fill_level: FillLevel
 
   events: [AwcEvent!]
 }
@@ -183,11 +196,13 @@ type Mutation {
   updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!, name: String): AutoTopOff!
   deleteAutoTopOff(id: ID!): Boolean!
   setAutoTopOffEnabled(id: ID!, enabled: Boolean!): Boolean!
+  setATOFillLevel(id: ID!, timestamp: Int!, volume: Float!): AutoTopOff!
 
   createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
   updateAutoWaterChange(id: ID!, fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
   deleteAutoWaterChange(id: ID!): Boolean!
   setAutoWaterChangeEnabled(id: ID!, enabled: Boolean!): Boolean!
+  setAWCFillLevel(id: ID!, timestamp: Int!, volume: Float!): AutoWaterChange!
 
   createDoser(input: DoserInput!, name: String): Doser!
   deleteDoser(id: ID!): Boolean!
