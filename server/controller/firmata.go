@@ -29,6 +29,7 @@ func (c *Firmatas) Reset() error {
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
+	log.Printf("Resetting firmatas")
 	for _, f := range c.firmatas {
 		err := f.Disconnect()
 		if err != nil {
@@ -62,7 +63,7 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		firmata.SerialPort,
 		term.Speed(int(firmata.Baud)),
 		term.RawMode,
-		term.ReadTimeout(2*time.Minute),
+		// term.ReadTimeout(2*time.Minute),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("opening serial port: %w", err)
