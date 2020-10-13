@@ -146,8 +146,9 @@ func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata,
 	}
 
 	var (
-		nextTime    = time.Now().Add(targetDurationSec * time.Second)
-		nextElapsed = nextTime.Sub(time.Now())
+		now         = time.Now()
+		nextTime    = now.Add(targetDurationSec * time.Second)
+		nextElapsed = nextTime.Sub(now)
 		nextSteps   = mlPerSecond * float64(nextElapsed/time.Second) * float64(calibration.Steps) / calibration.Volume
 		speed       = nextSteps / targetDurationSec
 	)
@@ -164,6 +165,7 @@ func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata,
 		return AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
 	}
 
+	log.Printf("Moving %s pump %d steps over %fs at speed %f", name, nextSteps, nextElapsed.Seconds(), float32(math.Floor(speed)))
 	err = firmata.StepperStep(int(pump.DeviceID), int32(nextSteps))
 	if err != nil {
 		return AWCJobErrorKind, fmt.Errorf("stepping %s pump (aborting job run): %w", name, err)
