@@ -60,7 +60,7 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 	config := serial.OpenOptions{
 		PortName:              firmata.SerialPort,
 		BaudRate:              uint(firmata.Baud),
-		DataBits:              8,
+		DataBits:              7,
 		StopBits:              1,
 		InterCharacterTimeout: 25500,
 	}
