@@ -136,7 +136,7 @@ func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 	select {
 	case report := <-wasteDone:
 		volume := float64(report.Position) * j.wasteCalibration.Volume / float64(j.wasteCalibration.Steps)
-		j.recordDose(ctx, j.freshPump, volume, "AWC waste pump")
+		j.recordDose(ctx, j.wastePump, volume, "AWC waste pump")
 	case <-ctx.Done():
 		// If we timed out, reconnect to firmata and recreate the ATO jobs
 		if ctx.Err() == context.DeadlineExceeded {
