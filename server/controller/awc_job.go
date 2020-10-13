@@ -217,7 +217,7 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 	if err != nil {
 		j.event(AWCJobErrorKind, "Failure to insert dose: %s", err)
 	}
-	log.Printf("%s pumped %fmL", volume, pump.Name.String)
+	log.Printf("%s pumped %fmL", pump.Name.String, volume)
 }
 
 func (j *AWCJob) reset(err error) {
