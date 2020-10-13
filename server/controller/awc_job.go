@@ -106,7 +106,7 @@ func (j *AWCJob) event(kind string, data string, args ...interface{}) {
 }
 
 func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
-	status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, mlPerSecond)
+	freshDone, status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, mlPerSecond)
 	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
 		j.reset()
 		return
@@ -116,25 +116,54 @@ func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 		return
 	}
 
-	status, err = j.dose(ctx, "waste", j.wasteFirmata, j.wastePump, j.wasteCalibration, mlPerSecond)
+	wasteDone, status, err := j.dose(ctx, "waste", j.wasteFirmata, j.wastePump, j.wasteCalibration, mlPerSecond)
 	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
 		j.reset()
 		return
 	}
 	if err != nil {
 		j.event(status, err.Error())
+		return
+	}
+
+	select {
+	case <-freshDone:
+		log.Printf("Fresh complete")
+	case <-ctx.Done():
+		// If we timed out, reconnect to firmata and recreate the ATO jobs
+		if ctx.Err() == context.DeadlineExceeded {
+			j.reset()
+			return
+		}
+
+		log.Printf("Job context cancelled, terminating")
+
+		return
+	}
+	select {
+	case <-wasteDone:
+		log.Printf("Waste complete")
+	case <-ctx.Done():
+		// If we timed out, reconnect to firmata and recreate the ATO jobs
+		if ctx.Err() == context.DeadlineExceeded {
+			j.reset()
+			return
+		}
+
+		log.Printf("Job context cancelled, terminating")
+
 		return
 	}
 }
 
-func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata, pump *models.Pump, calibration *models.Calibration, mlPerSecond float64) (string, error) {
+func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata, pump *models.Pump, calibration *models.Calibration, mlPerSecond float64) (<-chan gomata.StepperPosition, string, error) {
 	// NOTE: This is a bit janky. Rather than waiting for firmata to send us a
 	// step completion message this just returns immediately. To capture the amount
 	// pumped we start each dose call by checking the state of the pump, presumably
 	// capturing the result of the last call.
 	report, err := j.getPosition(ctx, firmata, pump)
 	if err != nil {
-		return AWCJobErrorKind, fmt.Errorf("Failure getting %s pump position (aborting job run): %w", name, err)
+		return nil, AWCJobErrorKind, fmt.Errorf("Failure getting %s pump position (aborting job run): %w", name, err)
 	}
 	if report.Position > 0 {
 		volume := float64(report.Position) * calibration.Volume / float64(calibration.Steps)
@@ -143,7 +172,7 @@ func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata,
 
 	err = firmata.StepperZero(int(pump.DeviceID))
 	if err != nil {
-		return AWCJobErrorKind, fmt.Errorf("Failure zeroing %s pump speed (aborting job run): %w", name, err)
+		return nil, AWCJobErrorKind, fmt.Errorf("Failure zeroing %s pump speed (aborting job run): %w", name, err)
 	}
 
 	var (
@@ -157,22 +186,24 @@ func (j *AWCJob) dose(ctx context.Context, name string, firmata *gomata.Firmata,
 	if pump.Acceleration.Valid {
 		err = firmata.StepperSetAcceleration(int(pump.DeviceID), float32(pump.Acceleration.Float64))
 		if err != nil {
-			return AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
+			return nil, AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
 		}
 	}
 
 	err = firmata.StepperSetSpeed(int(pump.DeviceID), float32(speed))
 	if err != nil {
-		return AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
+		return nil, AWCJobErrorKind, fmt.Errorf("Failure setting %s pump speed (aborting job run): %w", name, err)
 	}
 
 	log.Printf("Moving %s pump %f steps over %fs at speed %f", name, nextSteps, nextElapsed.Seconds(), float32(speed))
+	reportCh := firmata.AwaitStepperMoveCompletion(int32(pump.DeviceID))
+
 	err = firmata.StepperStep(int(pump.DeviceID), int32(nextSteps))
 	if err != nil {
-		return AWCJobErrorKind, fmt.Errorf("stepping %s pump (aborting job run): %w", name, err)
+		return nil, AWCJobErrorKind, fmt.Errorf("stepping %s pump (aborting job run): %w", name, err)
 	}
 
-	return "", nil
+	return reportCh, "", nil
 }
 
 func (j *AWCJob) getPosition(ctx context.Context, firmata *gomata.Firmata, pump *models.Pump) (*gomata.StepperPosition, error) {

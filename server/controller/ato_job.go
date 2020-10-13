@@ -202,10 +202,6 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 
 			log.Printf("Job context cancelled, terminating")
 
-			err = j.firmata.StepperStop(int(j.pump.DeviceID))
-			if err != nil {
-				j.event(UncontrolledPumpKind, "Failure stopping pump %s during shutdown of ATO job: %w", j.pump.ID, err)
-			}
 			return
 		}
 	}
