@@ -60,6 +60,7 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	err := j.freshFirmata.StepperZero(int(j.freshPump.DeviceID))
 	if err != nil {
+		j.reset(err)
 		j.event(AWCJobErrorKind, "Failure zeroing fresh pump: %s", err)
 	}
 
@@ -81,15 +82,6 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 			j.runJob(jobCtx, mlPerSecond)
 
 		case <-ctx.Done():
-			err := j.freshFirmata.StepperStop(int(j.freshPump.DeviceID))
-			if err != nil {
-				j.event(UncontrolledPumpKind, "Failure stopping fresh pump %s during shutdown of AWC job: %s", j.freshPump.ID, err)
-			}
-			err = j.wasteFirmata.StepperStop(int(j.wastePump.DeviceID))
-			if err != nil {
-				j.event(UncontrolledPumpKind, "Failure stopping waste pump %s during shutdown of AWC job: %s", j.wastePump.ID, err)
-			}
-
 			return
 		}
 	}
@@ -108,7 +100,7 @@ func (j *AWCJob) event(kind string, data string, args ...interface{}) {
 func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 	freshDone, status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, mlPerSecond)
 	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
-		j.reset()
+		j.reset(err)
 		return
 	}
 	if err != nil {
@@ -118,7 +110,7 @@ func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 
 	wasteDone, status, err := j.dose(ctx, "waste", j.wasteFirmata, j.wastePump, j.wasteCalibration, mlPerSecond)
 	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
-		j.reset()
+		j.reset(err)
 		return
 	}
 	if err != nil {
@@ -133,7 +125,7 @@ func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 	case <-ctx.Done():
 		// If we timed out, reconnect to firmata and recreate the ATO jobs
 		if ctx.Err() == context.DeadlineExceeded {
-			j.reset()
+			j.reset(ctx.Err())
 			return
 		}
 
@@ -148,7 +140,7 @@ func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 	case <-ctx.Done():
 		// If we timed out, reconnect to firmata and recreate the ATO jobs
 		if ctx.Err() == context.DeadlineExceeded {
-			j.reset()
+			j.reset(ctx.Err())
 			return
 		}
 
@@ -228,8 +220,8 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 	log.Printf("%s pumped %fmL", volume, pump.Name.String)
 }
 
-func (j *AWCJob) reset() {
-	log.Printf("Resetting AWC job")
+func (j *AWCJob) reset(err error) {
+	log.Printf("Resetting AWC job: %s", err)
 
 	// NOTE: A broken AWC could lead to very bad things.
 	j.awc.Enabled = false
