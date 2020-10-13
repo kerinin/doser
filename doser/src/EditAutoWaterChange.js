@@ -25,6 +25,7 @@ import { Typography } from "@material-ui/core";
 const QUERY = `query {
     pumps {
         id
+        name
     }
 }`;
 
@@ -53,10 +54,6 @@ function Content() {
   const classes = useStyles();
   const api = useContext(Api);
 
-  const handleSelectSensor = (id) => {
-    api.addSensor(id);
-  };
-
   if (loading) return <CardContent />;
   if (error) return <CardContent>Failed to load pumps</CardContent>;
 
@@ -77,7 +74,7 @@ function Content() {
             >
               {data.pumps.map((s) => (
                 <MenuItem key={s.id} value={s.id}>
-                  {s.id}
+                  {s.name || s.id}
                 </MenuItem>
               ))}
             </Select>
@@ -92,7 +89,7 @@ function Content() {
             >
               {data.pumps.map((s) => (
                 <MenuItem key={s.id} value={s.id}>
-                  {s.id}
+                  {s.name || s.id}
                 </MenuItem>
               ))}
             </Select>

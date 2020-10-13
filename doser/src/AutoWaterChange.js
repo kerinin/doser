@@ -110,7 +110,7 @@ function AutoWaterChange({ id }) {
       </Grid>
     );
 
-  if (!data.auto_top_off)
+  if (!data.auto_water_change)
     return (
       <React.Fragment>
         <DoserAppBar />
