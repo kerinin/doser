@@ -65,6 +65,7 @@ type ComplexityRoot struct {
 	}
 
 	AutoTopOff struct {
+		BurnDown      func(childComplexity int) int
 		Enabled       func(childComplexity int) int
 		Events        func(childComplexity int) int
 		FillInterval  func(childComplexity int) int
@@ -79,6 +80,7 @@ type ComplexityRoot struct {
 	}
 
 	AutoWaterChange struct {
+		BurnDown     func(childComplexity int) int
 		Enabled      func(childComplexity int) int
 		Events       func(childComplexity int) int
 		ExchangeRate func(childComplexity int) int
@@ -199,6 +201,7 @@ type AutoTopOffResolver interface {
 	LevelSensors(ctx context.Context, obj *models.AutoTopOff) ([]*models.WaterLevelSensor, error)
 
 	FillLevel(ctx context.Context, obj *models.AutoTopOff) (*model.FillLevel, error)
+	BurnDown(ctx context.Context, obj *models.AutoTopOff) ([]*model.FillLevel, error)
 	Events(ctx context.Context, obj *models.AutoTopOff) ([]*models.AtoEvent, error)
 	Rate(ctx context.Context, obj *models.AutoTopOff, window *int) ([]*model.AtoRate, error)
 }
@@ -208,6 +211,7 @@ type AutoWaterChangeResolver interface {
 	WastePump(ctx context.Context, obj *models.AutoWaterChange) (*models.Pump, error)
 
 	FillLevel(ctx context.Context, obj *models.AutoWaterChange) (*model.FillLevel, error)
+	BurnDown(ctx context.Context, obj *models.AutoWaterChange) ([]*model.FillLevel, error)
 	Events(ctx context.Context, obj *models.AutoWaterChange) ([]*models.AwcEvent, error)
 }
 type DoseResolver interface {
@@ -334,6 +338,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AtoRate.Timestamp(childComplexity), true
 
+	case "AutoTopOff.burn_down":
+		if e.complexity.AutoTopOff.BurnDown == nil {
+			break
+		}
+
+		return e.complexity.AutoTopOff.BurnDown(childComplexity), true
+
 	case "AutoTopOff.enabled":
 		if e.complexity.AutoTopOff.Enabled == nil {
 			break
@@ -415,6 +426,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.AutoTopOff.Rate(childComplexity, args["window"].(*int)), true
+
+	case "AutoWaterChange.burn_down":
+		if e.complexity.AutoWaterChange.BurnDown == nil {
+			break
+		}
+
+		return e.complexity.AutoWaterChange.BurnDown(childComplexity), true
 
 	case "AutoWaterChange.enabled":
 		if e.complexity.AutoWaterChange.Enabled == nil {
@@ -1272,8 +1290,10 @@ type AutoTopOff {
   max_fill_volume: Float
   enabled: Boolean!
 
-  # The last-measured volume of fresh water remaining
+  # The last-measured volume of fresh water 
   fill_level: FillLevel
+  # The volume of fresh water over time since the last-measured volume
+  burn_down: [FillLevel!]
 
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
@@ -1299,6 +1319,8 @@ type AutoWaterChange {
 
   # The last-measured volume of salt water remaining
   fill_level: FillLevel
+  # The volume of waste water over time since the last-measured volume
+  burn_down: [FillLevel!]
 
   events: [AwcEvent!]
 }
@@ -2828,6 +2850,37 @@ func (ec *executionContext) _AutoTopOff_fill_level(ctx context.Context, field gr
 	return ec.marshalOFillLevel2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevel(ctx, field.Selections, res)
 }
 
+func (ec *executionContext) _AutoTopOff_burn_down(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoTopOff",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.AutoTopOff().BurnDown(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.FillLevel)
+	fc.Result = res
+	return ec.marshalOFillLevel2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevelᚄ(ctx, field.Selections, res)
+}
+
 func (ec *executionContext) _AutoTopOff_events(ctx context.Context, field graphql.CollectedField, obj *models.AutoTopOff) (ret graphql.Marshaler) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -3127,6 +3180,37 @@ func (ec *executionContext) _AutoWaterChange_fill_level(ctx context.Context, fie
 	res := resTmp.(*model.FillLevel)
 	fc.Result = res
 	return ec.marshalOFillLevel2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevel(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AutoWaterChange_burn_down(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoWaterChange",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.AutoWaterChange().BurnDown(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.FillLevel)
+	fc.Result = res
+	return ec.marshalOFillLevel2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevelᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) _AutoWaterChange_events(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
@@ -6986,6 +7070,17 @@ func (ec *executionContext) _AutoTopOff(ctx context.Context, sel ast.SelectionSe
 				res = ec._AutoTopOff_fill_level(ctx, field, obj)
 				return res
 			})
+		case "burn_down":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoTopOff_burn_down(ctx, field, obj)
+				return res
+			})
 		case "events":
 			field := field
 			out.Concurrently(i, func() (res graphql.Marshaler) {
@@ -7093,6 +7188,17 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 					}
 				}()
 				res = ec._AutoWaterChange_fill_level(ctx, field, obj)
+				return res
+			})
+		case "burn_down":
+			field := field
+			out.Concurrently(i, func() (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._AutoWaterChange_burn_down(ctx, field, obj)
 				return res
 			})
 		case "events":
@@ -8263,6 +8369,16 @@ func (ec *executionContext) unmarshalNDoserInput2githubᚗcomᚋkerininᚋdoser�
 	return res, graphql.WrapErrorWithInputPath(ctx, err)
 }
 
+func (ec *executionContext) marshalNFillLevel2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevel(ctx context.Context, sel ast.SelectionSet, v *model.FillLevel) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	return ec._FillLevel(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNFirmata2githubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx context.Context, sel ast.SelectionSet, v models.Firmata) graphql.Marshaler {
 	return ec._Firmata(ctx, sel, &v)
 }
@@ -9046,6 +9162,46 @@ func (ec *executionContext) marshalODoserComponent2ᚕᚖgithubᚗcomᚋkerinin�
 				defer wg.Done()
 			}
 			ret[i] = ec.marshalNDoserComponent2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐDoserComponent(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+	return ret
+}
+
+func (ec *executionContext) marshalOFillLevel2ᚕᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevelᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.FillLevel) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNFillLevel2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋgraphᚋmodelᚐFillLevel(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)

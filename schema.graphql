@@ -119,8 +119,10 @@ type AutoTopOff {
   max_fill_volume: Float
   enabled: Boolean!
 
-  # The last-measured volume of fresh water remaining
+  # The last-measured volume of fresh water 
   fill_level: FillLevel
+  # The volume of fresh water over time since the last-measured volume
+  burn_down: [FillLevel!]
 
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
@@ -146,6 +148,8 @@ type AutoWaterChange {
 
   # The last-measured volume of salt water remaining
   fill_level: FillLevel
+  # The volume of waste water over time since the last-measured volume
+  burn_down: [FillLevel!]
 
   events: [AwcEvent!]
 }

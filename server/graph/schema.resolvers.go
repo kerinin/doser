@@ -46,9 +46,35 @@ func (r *autoTopOffResolver) LevelSensors(ctx context.Context, obj *models.AutoT
 }
 
 func (r *autoTopOffResolver) FillLevel(ctx context.Context, obj *models.AutoTopOff) (*model.FillLevel, error) {
-	if obj.FillLevelTimestamp.Valid && obj.FillLevelVolume.Valid {
-		return &model.FillLevel{int(obj.FillLevelTimestamp.Int64), obj.FillLevelVolume.Float64}, nil
+	if !obj.FillLevelTimestamp.Valid || !obj.FillLevelVolume.Valid {
+		return nil, nil
 	}
+	return &model.FillLevel{int(obj.FillLevelTimestamp.Int64), obj.FillLevelVolume.Float64}, nil
+}
+
+func (r *autoTopOffResolver) BurnDown(ctx context.Context, obj *models.AutoTopOff) ([]*model.FillLevel, error) {
+	if !obj.FillLevelTimestamp.Valid || !obj.FillLevelVolume.Valid {
+		return nil, nil
+	}
+
+	p := &models.Pump{ID: obj.PumpID}
+	doses, err := p.Doses(
+		models.DoseWhere.Timestamp.GT(obj.FillLevelTimestamp.Int64),
+	).All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting pump doses: %w", err)
+	}
+
+	fillLevels := make([]*model.FillLevel, 0, len(doses))
+	cumulative := float64(0)
+	for _, dose := range doses {
+		cumulative -= dose.Volume
+		fillLevels = append(fillLevels, &model.FillLevel{
+			Timestamp: int(dose.Timestamp),
+			Volume:    obj.FillLevelVolume.Float64 - cumulative,
+		})
+	}
+
 	return nil, nil
 }
 
@@ -140,9 +166,35 @@ func (r *autoWaterChangeResolver) WastePump(ctx context.Context, obj *models.Aut
 }
 
 func (r *autoWaterChangeResolver) FillLevel(ctx context.Context, obj *models.AutoWaterChange) (*model.FillLevel, error) {
-	if obj.FillLevelTimestamp.Valid && obj.FillLevelVolume.Valid {
-		return &model.FillLevel{int(obj.FillLevelTimestamp.Int64), obj.FillLevelVolume.Float64}, nil
+	if !obj.FillLevelTimestamp.Valid || !obj.FillLevelVolume.Valid {
+		return nil, nil
 	}
+	return &model.FillLevel{int(obj.FillLevelTimestamp.Int64), obj.FillLevelVolume.Float64}, nil
+}
+
+func (r *autoWaterChangeResolver) BurnDown(ctx context.Context, obj *models.AutoWaterChange) ([]*model.FillLevel, error) {
+	if !obj.FillLevelTimestamp.Valid || !obj.FillLevelVolume.Valid {
+		return nil, nil
+	}
+
+	p := &models.Pump{ID: obj.FreshPumpID}
+	doses, err := p.Doses(
+		models.DoseWhere.Timestamp.GT(obj.FillLevelTimestamp.Int64),
+	).All(ctx, r.db)
+	if err != nil {
+		return nil, fmt.Errorf("getting pump doses: %w", err)
+	}
+
+	fillLevels := make([]*model.FillLevel, 0, len(doses))
+	cumulative := float64(0)
+	for _, dose := range doses {
+		cumulative -= dose.Volume
+		fillLevels = append(fillLevels, &model.FillLevel{
+			Timestamp: int(dose.Timestamp),
+			Volume:    obj.FillLevelVolume.Float64 - cumulative,
+		})
+	}
+
 	return nil, nil
 }
 
