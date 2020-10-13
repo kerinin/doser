@@ -2,7 +2,9 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"sync"
 	"time"
@@ -105,7 +107,7 @@ func (j *AWCJob) event(kind string, data string, args ...interface{}) {
 
 func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 	status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, mlPerSecond)
-	if err == context.DeadlineExceeded {
+	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
 		j.reset()
 		return
 	}
@@ -115,7 +117,7 @@ func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 	}
 
 	status, err = j.dose(ctx, "waste", j.wasteFirmata, j.wastePump, j.wasteCalibration, mlPerSecond)
-	if err == context.DeadlineExceeded {
+	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
 		j.reset()
 		return
 	}
@@ -208,6 +210,8 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 }
 
 func (j *AWCJob) reset() {
+	log.Printf("Resetting AWC job")
+
 	// NOTE: A broken AWC could lead to very bad things.
 	j.awc.Enabled = false
 	_, err := j.awc.Update(context.Background(), j.controller.db, boil.Whitelist(models.AutoWaterChangeColumns.Enabled))
