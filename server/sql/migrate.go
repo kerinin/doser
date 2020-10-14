@@ -201,6 +201,22 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					`ALTER TABLE auto_water_changes ADD COLUMN fill_level_volume REAL`,
 				},
 			},
+			&migrate.Migration{
+				Id: "010 calibration_timestamp",
+				Up: []string{
+					`DROP TABLE calibrations`,
+					`CREATE TABLE calibrations(
+						id UUID NOT NULL,
+						pump_id UUID NOT NULL,
+						timestamp INT NOT NULL,
+						steps INT NOT NULL,
+						volume REAL NOT NULL,
+
+						PRIMARY KEY (id)
+						FOREIGN KEY(pump_id) REFERENCES pumps(id)
+					)`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

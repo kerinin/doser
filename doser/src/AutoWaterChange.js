@@ -15,6 +15,8 @@ import {
 import { useTheme } from "@material-ui/core/styles";
 import { useQuery } from "graphql-hooks";
 import { useMutation } from "graphql-hooks";
+import Button from "@material-ui/core/Button";
+import Popover from "@material-ui/core/Popover";
 
 import DoserAppBar from "./DoserAppBar";
 import EditAutoWaterChange from "./EditAutoWaterChange";
@@ -76,6 +78,10 @@ const QUERY = `query GetAutoWaterChange($id: ID!) {
           id
         }
         exchange_rate
+        burn_down {
+          timestamp
+          volume
+        }
     }
 }`;
 
@@ -179,7 +185,71 @@ function Content({ awc, reload }) {
           <EditAutoWaterChange />
         </EditAutoWaterChangeApi.Provider>
       </Grid>
+
+      <Grid item xs={12} lg={6}>
+        <Card>
+          <CardHeader title="History" />
+          <Remaining volume={null} />
+          <CardContent>
+            <Chart awc={awc} />
+          </CardContent>
+        </Card>
+      </Grid>
     </React.Fragment>
+  );
+}
+
+function Remaining({ volume }) {
+  if (volume == null)
+    return (
+      <CardContent>
+        unknown mL remaining
+        <Button color="primary">Edit</Button>
+        <Popover>
+          <Typography>New value...</Typography>
+        </Popover>
+      </CardContent>
+    );
+
+  return <CardContent>100mL remaining</CardContent>;
+}
+
+function Chart({ awc }) {
+  const victoryTheme = useVictoryTheme();
+  const VictoryContainer = createContainer("zoom", "voronoi");
+
+  if (awc.burn_down == null) return <></>;
+
+  return (
+    <VictoryChart
+      theme={victoryTheme}
+      minDomain={{ y: 0 }}
+      domainPadding={{ y: [20, 20] }}
+      scale={{ x: "time" }}
+      allowZoom={false}
+      containerComponent={
+        <VictoryContainer
+          zoomDimension="x"
+          zoomDomain={{
+            x: [new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), Date.now()],
+          }}
+        />
+      }
+    >
+      <VictoryLine
+        interpolation="bundle"
+        data={awc.burn_down.map(({ timestamp, rate }) => ({
+          x: new Date(timestamp * 1000),
+          y: rate,
+        }))}
+      />
+      <VictoryAxis />
+      <VictoryAxis
+        dependentAxis
+        label="Remaining (mL)"
+        axisLabelComponent={<VictoryLabel dy={-30} />}
+      />
+    </VictoryChart>
   );
 }
 

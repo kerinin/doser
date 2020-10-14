@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kerinin/doser/service/controller"
@@ -371,10 +372,11 @@ func (r *mutationResolver) DeletePump(ctx context.Context, id string) (bool, err
 
 func (r *mutationResolver) CalibratePump(ctx context.Context, pumpID string, steps int, volume float64) (*models.Calibration, error) {
 	m := &models.Calibration{
-		ID:     uuid.New().String(),
-		PumpID: pumpID,
-		Steps:  int64(steps),
-		Volume: volume,
+		ID:        uuid.New().String(),
+		PumpID:    pumpID,
+		Timestamp: time.Now().Unix(),
+		Steps:     int64(steps),
+		Volume:    volume,
 	}
 	err := m.Insert(ctx, r.db, boil.Infer())
 	if err != nil {
@@ -821,7 +823,7 @@ func (r *pumpResolver) EnPin(ctx context.Context, obj *models.Pump) (*int, error
 }
 
 func (r *pumpResolver) Calibration(ctx context.Context, obj *models.Pump) (*models.Calibration, error) {
-	calibration, err := obj.Calibrations().One(ctx, r.db)
+	calibration, err := obj.Calibrations(qm.OrderBy(models.CalibrationColumns.Timestamp)).One(ctx, r.db)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}

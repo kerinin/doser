@@ -677,7 +677,7 @@ func testCalibrationsSelect(t *testing.T) {
 }
 
 var (
-	calibrationDBTypes = map[string]string{`ID`: `UUID`, `PumpID`: `UUID`, `Steps`: `INT`, `Volume`: `REAL`}
+	calibrationDBTypes = map[string]string{`ID`: `UUID`, `PumpID`: `UUID`, `Timestamp`: `INT`, `Steps`: `INT`, `Volume`: `REAL`}
 	_                  = bytes.MinRead
 )
 

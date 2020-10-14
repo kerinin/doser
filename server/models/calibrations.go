@@ -22,39 +22,44 @@ import (
 
 // Calibration is an object representing the database table.
 type Calibration struct {
-	ID     string  `boil:"id" json:"id" toml:"id" yaml:"id"`
-	PumpID string  `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
-	Steps  int64   `boil:"steps" json:"steps" toml:"steps" yaml:"steps"`
-	Volume float64 `boil:"volume" json:"volume" toml:"volume" yaml:"volume"`
+	ID        string  `boil:"id" json:"id" toml:"id" yaml:"id"`
+	PumpID    string  `boil:"pump_id" json:"pump_id" toml:"pump_id" yaml:"pump_id"`
+	Timestamp int64   `boil:"timestamp" json:"timestamp" toml:"timestamp" yaml:"timestamp"`
+	Steps     int64   `boil:"steps" json:"steps" toml:"steps" yaml:"steps"`
+	Volume    float64 `boil:"volume" json:"volume" toml:"volume" yaml:"volume"`
 
 	R *calibrationR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L calibrationL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var CalibrationColumns = struct {
-	ID     string
-	PumpID string
-	Steps  string
-	Volume string
+	ID        string
+	PumpID    string
+	Timestamp string
+	Steps     string
+	Volume    string
 }{
-	ID:     "id",
-	PumpID: "pump_id",
-	Steps:  "steps",
-	Volume: "volume",
+	ID:        "id",
+	PumpID:    "pump_id",
+	Timestamp: "timestamp",
+	Steps:     "steps",
+	Volume:    "volume",
 }
 
 // Generated where
 
 var CalibrationWhere = struct {
-	ID     whereHelperstring
-	PumpID whereHelperstring
-	Steps  whereHelperint64
-	Volume whereHelperfloat64
+	ID        whereHelperstring
+	PumpID    whereHelperstring
+	Timestamp whereHelperint64
+	Steps     whereHelperint64
+	Volume    whereHelperfloat64
 }{
-	ID:     whereHelperstring{field: "\"calibrations\".\"id\""},
-	PumpID: whereHelperstring{field: "\"calibrations\".\"pump_id\""},
-	Steps:  whereHelperint64{field: "\"calibrations\".\"steps\""},
-	Volume: whereHelperfloat64{field: "\"calibrations\".\"volume\""},
+	ID:        whereHelperstring{field: "\"calibrations\".\"id\""},
+	PumpID:    whereHelperstring{field: "\"calibrations\".\"pump_id\""},
+	Timestamp: whereHelperint64{field: "\"calibrations\".\"timestamp\""},
+	Steps:     whereHelperint64{field: "\"calibrations\".\"steps\""},
+	Volume:    whereHelperfloat64{field: "\"calibrations\".\"volume\""},
 }
 
 // CalibrationRels is where relationship names are stored.
@@ -78,8 +83,8 @@ func (*calibrationR) NewStruct() *calibrationR {
 type calibrationL struct{}
 
 var (
-	calibrationAllColumns            = []string{"id", "pump_id", "steps", "volume"}
-	calibrationColumnsWithoutDefault = []string{"id", "pump_id", "steps", "volume"}
+	calibrationAllColumns            = []string{"id", "pump_id", "timestamp", "steps", "volume"}
+	calibrationColumnsWithoutDefault = []string{"id", "pump_id", "timestamp", "steps", "volume"}
 	calibrationColumnsWithDefault    = []string{}
 	calibrationPrimaryKeyColumns     = []string{"id"}
 )
