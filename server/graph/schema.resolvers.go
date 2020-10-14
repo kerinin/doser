@@ -823,7 +823,7 @@ func (r *pumpResolver) EnPin(ctx context.Context, obj *models.Pump) (*int, error
 }
 
 func (r *pumpResolver) Calibration(ctx context.Context, obj *models.Pump) (*models.Calibration, error) {
-	calibration, err := obj.Calibrations(qm.OrderBy(models.CalibrationColumns.Timestamp)).One(ctx, r.db)
+	calibration, err := obj.Calibrations(qm.OrderBy("timestamp DESC")).One(ctx, r.db)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
