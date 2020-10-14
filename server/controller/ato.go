@@ -9,6 +9,7 @@ import (
 
 	"github.com/kerinin/doser/service/models"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 type ATO struct {
@@ -132,7 +133,7 @@ func (c *ATO) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		if err != nil {
 			return nil, fmt.Errorf("getting sensors (aborting job run): %w", err)
 		}
-		calibration, err := pump.Calibrations().One(ctx, c.db)
+		calibration, err := pump.Calibrations(qm.OrderBy(models.CalibrationColumns.Timestamp)).One(ctx, c.db)
 		if err != nil {
 			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
 		}
