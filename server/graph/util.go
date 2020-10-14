@@ -30,7 +30,7 @@ func validateAutoTopOff(ctx context.Context, tx *sql.Tx, ato *models.AutoTopOff,
 		return fmt.Errorf("finding ATO pump: %w", err)
 	}
 
-	_, err = pump.Calibrations(qm.OrderBy(models.CalibrationColumns.Timestamp)).One(ctx, tx)
+	_, err = pump.Calibrations(qm.OrderBy("timestamp DESC")).One(ctx, tx)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("refusing to create ATO with uncalibrated pump")
 	} else if err != nil {
@@ -50,7 +50,7 @@ func validateAutoWaterChange(ctx context.Context, tx *sql.Tx, awc *models.AutoWa
 		return fmt.Errorf("finding fresh pump: %w", err)
 	}
 
-	_, err = freshPump.Calibrations(qm.OrderBy(models.CalibrationColumns.Timestamp)).One(ctx, tx)
+	_, err = freshPump.Calibrations(qm.OrderBy("timestamp DESC")).One(ctx, tx)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("refusing to create AWC with uncalibrated fresh pump")
 	} else if err != nil {
@@ -62,7 +62,7 @@ func validateAutoWaterChange(ctx context.Context, tx *sql.Tx, awc *models.AutoWa
 		return fmt.Errorf("finding waste pump: %w", err)
 	}
 
-	_, err = wastePump.Calibrations(qm.OrderBy(models.CalibrationColumns.Timestamp)).One(ctx, tx)
+	_, err = wastePump.Calibrations(qm.OrderBy("timestamp DESC")).One(ctx, tx)
 	if err == sql.ErrNoRows {
 		return fmt.Errorf("refusing to create AWC with uncalibrated waste pump")
 	} else if err != nil {

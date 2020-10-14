@@ -143,13 +143,13 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 			c.firmatas.Reset()
 			return nil, fmt.Errorf("configuring waste pump: %w", err)
 		}
-		freshCalibration, err := freshPump.Calibrations(qm.OrderBy(models.CalibrationColumns.Timestamp)).One(ctx, c.db)
+		freshCalibration, err := freshPump.Calibrations(qm.OrderBy("timestamp DESC")).One(ctx, c.db)
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("refusing to run AWC job with uncalibrated fresh pump")
 		} else if err != nil {
 			return nil, fmt.Errorf("getting pump calibration (aborting job run): %w", err)
 		}
-		wasteCalibration, err := wastePump.Calibrations(qm.OrderBy(models.CalibrationColumns.Timestamp)).One(ctx, c.db)
+		wasteCalibration, err := wastePump.Calibrations(qm.OrderBy("timestamp DESC")).One(ctx, c.db)
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("refusing to run AWC job with uncalibrated waste pump")
 		} else if err != nil {
