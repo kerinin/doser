@@ -69,7 +69,7 @@ func (r *autoTopOffResolver) BurnDown(ctx context.Context, obj *models.AutoTopOf
 	fillLevels := make([]*model.FillLevel, 0, len(doses))
 	cumulative := float64(0)
 	for _, dose := range doses {
-		cumulative -= dose.Volume
+		cumulative += dose.Volume
 		fillLevels = append(fillLevels, &model.FillLevel{
 			Timestamp: int(dose.Timestamp),
 			Volume:    obj.FillLevelVolume.Float64 - cumulative,
@@ -189,7 +189,7 @@ func (r *autoWaterChangeResolver) BurnDown(ctx context.Context, obj *models.Auto
 	fillLevels := make([]*model.FillLevel, 0, len(doses))
 	cumulative := float64(0)
 	for _, dose := range doses {
-		cumulative -= dose.Volume
+		cumulative += dose.Volume
 		fillLevels = append(fillLevels, &model.FillLevel{
 			Timestamp: int(dose.Timestamp),
 			Volume:    obj.FillLevelVolume.Float64 - cumulative,
