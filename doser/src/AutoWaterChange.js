@@ -16,7 +16,13 @@ import { useTheme } from "@material-ui/core/styles";
 import { useQuery } from "graphql-hooks";
 import { useMutation } from "graphql-hooks";
 import Button from "@material-ui/core/Button";
-import Popover from "@material-ui/core/Popover";
+import Popovoer from "@material-ui/core/Popover";
+import Dialog from "@material-ui/core/Dialog";
+import DialogActions from "@material-ui/core/DialogActions";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogContentText from "@material-ui/core/DialogContentText";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import TextField from "@material-ui/core/TextField";
 
 import DoserAppBar from "./DoserAppBar";
 import EditAutoWaterChange from "./EditAutoWaterChange";
@@ -30,6 +36,9 @@ const useStyles = makeStyles((theme) => ({
   },
   line: {
     stroke: theme.palette.primary.main,
+  },
+  popover: {
+    padding: theme.spacing(2),
   },
 }));
 
@@ -91,6 +100,15 @@ const EDIT = `mutation EditAutoWaterChange($id: ID!, $fresh_pump_id: ID!, $waste
         fresh_pump_id: $fresh_pump_id,
         waste_pump_id: $waste_pump_id,
         exchange_rate: $exchange_rate,
+    ) {
+        id
+    }
+}`;
+
+const SET_FILL = `mutation SetFillLevel($id: ID!, $volume: Float!) {
+    setAWCFillLevel(
+        id: $id,
+        volume: $volume,
     ) {
         id
     }
@@ -189,7 +207,10 @@ function Content({ awc, reload }) {
       <Grid item xs={12} lg={6}>
         <Card>
           <CardHeader title="History" />
-          <Remaining volume={null} />
+          <Remaining
+            awc_id={awc.id}
+            volume={awc.burn_down && awc.burn_down.pop().volume}
+          />
           <CardContent>
             <Chart awc={awc} />
           </CardContent>
@@ -199,19 +220,57 @@ function Content({ awc, reload }) {
   );
 }
 
-function Remaining({ volume }) {
-  if (volume == null)
-    return (
-      <CardContent>
-        unknown mL remaining
-        <Button color="primary">Edit</Button>
-        <Popover>
-          <Typography>New value...</Typography>
-        </Popover>
-      </CardContent>
-    );
+function Remaining({ awc_id, volume }) {
+  const classes = useStyles();
 
-  return <CardContent>100mL remaining</CardContent>;
+  const [open, setOpen] = React.useState(false);
+  const [remaining, setRemaining] = React.useState(0);
+
+  const [setFillLevel, { error }] = useMutation(SET_FILL);
+
+  const handleClickOpen = () => {
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOpen(false);
+    setFillLevel({ variables: { id: awc_id, volume: remaining } });
+  };
+
+  if (error) return <Typography>Failed to set current volume</Typography>;
+
+  return (
+    <CardContent>
+      {volume == null ? "unknown" : volume} mL remaining
+      <Button color="primary" onClick={handleClickOpen}>
+        Edit
+      </Button>
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle id="form-dialog-title">Record Remaining</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Enter the current volume of fresh saltwater in milliliters.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="remaining"
+            label="Remaining"
+            onChange={(e) => setRemaining(e.target.value)}
+            fullWidth
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleClose} color="primary">
+            Cancel
+          </Button>
+          <Button onClick={handleClose} color="primary">
+            Record
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </CardContent>
+  );
 }
 
 function Chart({ awc }) {

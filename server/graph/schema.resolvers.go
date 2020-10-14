@@ -589,13 +589,13 @@ func (r *mutationResolver) SetAutoTopOffEnabled(ctx context.Context, id string, 
 	return enabled, nil
 }
 
-func (r *mutationResolver) SetATOFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoTopOff, error) {
+func (r *mutationResolver) SetATOFillLevel(ctx context.Context, id string, volume float64) (*models.AutoTopOff, error) {
 	m, err := models.FindAutoTopOff(ctx, r.db, id)
 	if err != nil {
 		return nil, fmt.Errorf("getting ATO: %w", err)
 	}
 
-	m.FillLevelTimestamp = null.Int64From(int64(timestamp))
+	m.FillLevelTimestamp = null.Int64From(time.Now().Unix())
 	m.FillLevelVolume = null.Float64From(volume)
 
 	_, err = m.Update(ctx, r.db, boil.Whitelist(models.AutoTopOffColumns.FillLevelTimestamp, models.AutoTopOffColumns.FillLevelVolume))
@@ -712,13 +712,13 @@ func (r *mutationResolver) SetAutoWaterChangeEnabled(ctx context.Context, id str
 	return enabled, nil
 }
 
-func (r *mutationResolver) SetAWCFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoWaterChange, error) {
+func (r *mutationResolver) SetAWCFillLevel(ctx context.Context, id string, volume float64) (*models.AutoWaterChange, error) {
 	m, err := models.FindAutoWaterChange(ctx, r.db, id)
 	if err != nil {
 		return nil, fmt.Errorf("getting AWC: %w", err)
 	}
 
-	m.FillLevelTimestamp = null.Int64From(int64(timestamp))
+	m.FillLevelTimestamp = null.Int64From(time.Now().Unix())
 	m.FillLevelVolume = null.Float64From(volume)
 
 	_, err = m.Update(ctx, r.db, boil.Whitelist(models.AutoWaterChangeColumns.FillLevelTimestamp, models.AutoWaterChangeColumns.FillLevelVolume))

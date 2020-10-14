@@ -144,8 +144,8 @@ type ComplexityRoot struct {
 		DeletePump                func(childComplexity int, id string) int
 		DeleteWaterLevelSensor    func(childComplexity int, id string) int
 		Pump                      func(childComplexity int, pumpID string, steps int, speed float64) int
-		SetATOFillLevel           func(childComplexity int, id string, timestamp int, volume float64) int
-		SetAWCFillLevel           func(childComplexity int, id string, timestamp int, volume float64) int
+		SetATOFillLevel           func(childComplexity int, id string, volume float64) int
+		SetAWCFillLevel           func(childComplexity int, id string, volume float64) int
 		SetAutoTopOffEnabled      func(childComplexity int, id string, enabled bool) int
 		SetAutoWaterChangeEnabled func(childComplexity int, id string, enabled bool) int
 		SetDoserEnabled           func(childComplexity int, id string, enabled bool) int
@@ -242,12 +242,12 @@ type MutationResolver interface {
 	UpdateAutoTopOff(ctx context.Context, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) (*models.AutoTopOff, error)
 	DeleteAutoTopOff(ctx context.Context, id string) (bool, error)
 	SetAutoTopOffEnabled(ctx context.Context, id string, enabled bool) (bool, error)
-	SetATOFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoTopOff, error)
+	SetATOFillLevel(ctx context.Context, id string, volume float64) (*models.AutoTopOff, error)
 	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error)
 	UpdateAutoWaterChange(ctx context.Context, id string, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error)
 	DeleteAutoWaterChange(ctx context.Context, id string) (bool, error)
 	SetAutoWaterChangeEnabled(ctx context.Context, id string, enabled bool) (bool, error)
-	SetAWCFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoWaterChange, error)
+	SetAWCFillLevel(ctx context.Context, id string, volume float64) (*models.AutoWaterChange, error)
 	CreateDoser(ctx context.Context, input model.DoserInput, name *string) (*models.Doser, error)
 	DeleteDoser(ctx context.Context, id string) (bool, error)
 	SetDoserEnabled(ctx context.Context, id string, enabled bool) (bool, error)
@@ -808,7 +808,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetATOFillLevel(childComplexity, args["id"].(string), args["timestamp"].(int), args["volume"].(float64)), true
+		return e.complexity.Mutation.SetATOFillLevel(childComplexity, args["id"].(string), args["volume"].(float64)), true
 
 	case "Mutation.setAWCFillLevel":
 		if e.complexity.Mutation.SetAWCFillLevel == nil {
@@ -820,7 +820,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.SetAWCFillLevel(childComplexity, args["id"].(string), args["timestamp"].(int), args["volume"].(float64)), true
+		return e.complexity.Mutation.SetAWCFillLevel(childComplexity, args["id"].(string), args["volume"].(float64)), true
 
 	case "Mutation.setAutoTopOffEnabled":
 		if e.complexity.Mutation.SetAutoTopOffEnabled == nil {
@@ -1371,13 +1371,13 @@ type Mutation {
   updateAutoTopOff(id: ID!, pump_id: ID!, level_sensors: [ID!]!, fill_rate: Float!, fill_interval: Int!, max_fill_volume: Float!, name: String): AutoTopOff!
   deleteAutoTopOff(id: ID!): Boolean!
   setAutoTopOffEnabled(id: ID!, enabled: Boolean!): Boolean!
-  setATOFillLevel(id: ID!, timestamp: Int!, volume: Float!): AutoTopOff!
+  setATOFillLevel(id: ID!, volume: Float!): AutoTopOff!
 
   createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
   updateAutoWaterChange(id: ID!, fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
   deleteAutoWaterChange(id: ID!): Boolean!
   setAutoWaterChangeEnabled(id: ID!, enabled: Boolean!): Boolean!
-  setAWCFillLevel(id: ID!, timestamp: Int!, volume: Float!): AutoWaterChange!
+  setAWCFillLevel(id: ID!, volume: Float!): AutoWaterChange!
 
   createDoser(input: DoserInput!, name: String): Doser!
   deleteDoser(id: ID!): Boolean!
@@ -1873,24 +1873,15 @@ func (ec *executionContext) field_Mutation_setATOFillLevel_args(ctx context.Cont
 		}
 	}
 	args["id"] = arg0
-	var arg1 int
-	if tmp, ok := rawArgs["timestamp"]; ok {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("timestamp"))
-		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["timestamp"] = arg1
-	var arg2 float64
+	var arg1 float64
 	if tmp, ok := rawArgs["volume"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("volume"))
-		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		arg1, err = ec.unmarshalNFloat2float64(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["volume"] = arg2
+	args["volume"] = arg1
 	return args, nil
 }
 
@@ -1906,24 +1897,15 @@ func (ec *executionContext) field_Mutation_setAWCFillLevel_args(ctx context.Cont
 		}
 	}
 	args["id"] = arg0
-	var arg1 int
-	if tmp, ok := rawArgs["timestamp"]; ok {
-		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("timestamp"))
-		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["timestamp"] = arg1
-	var arg2 float64
+	var arg1 float64
 	if tmp, ok := rawArgs["volume"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("volume"))
-		arg2, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		arg1, err = ec.unmarshalNFloat2float64(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["volume"] = arg2
+	args["volume"] = arg1
 	return args, nil
 }
 
@@ -4466,7 +4448,7 @@ func (ec *executionContext) _Mutation_setATOFillLevel(ctx context.Context, field
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetATOFillLevel(rctx, args["id"].(string), args["timestamp"].(int), args["volume"].(float64))
+		return ec.resolvers.Mutation().SetATOFillLevel(rctx, args["id"].(string), args["volume"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4671,7 +4653,7 @@ func (ec *executionContext) _Mutation_setAWCFillLevel(ctx context.Context, field
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().SetAWCFillLevel(rctx, args["id"].(string), args["timestamp"].(int), args["volume"].(float64))
+		return ec.resolvers.Mutation().SetAWCFillLevel(rctx, args["id"].(string), args["volume"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
