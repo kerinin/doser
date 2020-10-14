@@ -76,7 +76,7 @@ func (r *autoTopOffResolver) BurnDown(ctx context.Context, obj *models.AutoTopOf
 		})
 	}
 
-	return nil, nil
+	return fillLevels, nil
 }
 
 func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff) ([]*models.AtoEvent, error) {
@@ -196,7 +196,7 @@ func (r *autoWaterChangeResolver) BurnDown(ctx context.Context, obj *models.Auto
 		})
 	}
 
-	return nil, nil
+	return fillLevels, nil
 }
 
 func (r *autoWaterChangeResolver) Events(ctx context.Context, obj *models.AutoWaterChange) ([]*models.AwcEvent, error) {
@@ -712,7 +712,7 @@ func (r *mutationResolver) SetAutoWaterChangeEnabled(ctx context.Context, id str
 	return enabled, nil
 }
 
-func (r *mutationResolver) SetAWCFillLevel(ctx context.Context, id string, volume float64) (*models.AutoWaterChange, error) {
+func (r *mutationResolver) SetAWCFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoWaterChange, error) {
 	m, err := models.FindAutoWaterChange(ctx, r.db, id)
 	if err != nil {
 		return nil, fmt.Errorf("getting AWC: %w", err)
