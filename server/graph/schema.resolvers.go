@@ -712,7 +712,7 @@ func (r *mutationResolver) SetAutoWaterChangeEnabled(ctx context.Context, id str
 	return enabled, nil
 }
 
-func (r *mutationResolver) SetAWCFillLevel(ctx context.Context, id string, timestamp int, volume float64) (*models.AutoWaterChange, error) {
+func (r *mutationResolver) SetAWCFillLevel(ctx context.Context, id string, volume float64) (*models.AutoWaterChange, error) {
 	m, err := models.FindAutoWaterChange(ctx, r.db, id)
 	if err != nil {
 		return nil, fmt.Errorf("getting AWC: %w", err)
