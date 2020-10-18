@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/huin/goserial v0.0.0-20121012073615-7b90efdb22b1
 	github.com/jacobsa/go-serial v0.0.0-20180131005756-15cf729a72d4
-	github.com/kerinin/gomata v0.0.0-20201013030137-a13ba6fa4aa6
+	github.com/kerinin/gomata v0.0.0-20201018175748-c97b40e83ea1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v1.1.0
@@ -29,6 +29,6 @@ require (
 	github.com/volatiletech/strmangle v0.0.1
 	github.com/warthog618/gpiod v0.5.0 // indirect
 	gobot.io/x/gobot v1.14.0
-	golang.org/x/sys v0.0.0-20201009025420-dfb3f7c4e634 // indirect
+	golang.org/x/sys v0.0.0-20201018121011-98379d014ca7 // indirect
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 )

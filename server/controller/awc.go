@@ -131,7 +131,6 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		}
 		err = ConfigurePump(freshPump, freshFirmata)
 		if err != nil {
-			c.firmatas.Reset()
 			return nil, fmt.Errorf("configuring fresh pump: %w", err)
 		}
 		wasteFirmata, err := c.firmatas.Get(ctx, wastePump.FirmataID)
@@ -140,7 +139,6 @@ func (c *AWC) setupJobs(ctx context.Context, wg *sync.WaitGroup) (jobs map[strin
 		}
 		err = ConfigurePump(wastePump, wasteFirmata)
 		if err != nil {
-			c.firmatas.Reset()
 			return nil, fmt.Errorf("configuring waste pump: %w", err)
 		}
 		freshCalibration, err := freshPump.Calibrations(qm.OrderBy("timestamp DESC")).One(ctx, c.db)

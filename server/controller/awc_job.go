@@ -231,11 +231,5 @@ func (j *AWCJob) reset(err error) {
 		log.Fatalf("Failed to disable AWC: %s", err)
 	}
 
-	err = j.controller.firmatas.Reset()
-	if err != nil {
-		log.Printf("Failed to reset firmatas: %s", err)
-	}
-	// Give the firmata a second to clear the serial connection
-	<-time.After(time.Second)
 	j.controller.Reset()
 }

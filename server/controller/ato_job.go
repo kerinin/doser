@@ -222,11 +222,5 @@ func (j *ATOJob) recordDose(ctx context.Context, volume float64, message string,
 }
 
 func (j *ATOJob) reset() {
-	err := j.controller.firmatas.Reset()
-	if err != nil {
-		log.Printf("Failed to reset firmatas: %w", err)
-	}
-	// Give the firmata a second to clear the serial connection
-	<-time.After(time.Second)
 	j.controller.Reset()
 }

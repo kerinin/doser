@@ -11,7 +11,6 @@ import (
 	// "github.com/jacobsa/go-serial/serial"
 	"github.com/kerinin/doser/service/models"
 	"github.com/kerinin/gomata"
-	"github.com/pkg/term"
 )
 
 type Firmatas struct {
@@ -31,14 +30,11 @@ func (c *Firmatas) Reset() error {
 
 	log.Printf("Resetting firmatas")
 	for _, f := range c.firmatas {
-		err := f.Disconnect()
+		err := f.Close()
 		if err != nil {
-			log.Printf("Failed to disconnect firmata: %w", err)
+			log.Printf("Failed to close firmata: %w", err)
 		}
 	}
-
-	// Wait for firmata to clear out
-	<-time.After(50 * time.Millisecond)
 
 	c.firmatas = make(map[string]*gomata.Firmata)
 	return nil
@@ -62,21 +58,10 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		return nil, fmt.Errorf("getting sensors from DB: %w", err)
 	}
 
-	port, err := term.Open(
-		firmata.SerialPort,
-		term.Speed(int(firmata.Baud)),
-		term.RawMode,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("opening serial port: %w", err)
-	}
-
-	log.Printf("Connecting to firmata at port %s", firmata.SerialPort)
-
-	f := gomata.New()
+	f := gomata.New(firmata.SerialPort, int(firmata.Baud))
 	connected := make(chan error)
 	go func() {
-		connected <- f.Connect(port)
+		connected <- f.Connect()
 	}()
 
 	select {
@@ -118,10 +103,6 @@ func (c *Firmatas) Get(ctx context.Context, firmataID string) (*gomata.Firmata, 
 		return f, nil
 
 	case <-time.After(30 * time.Second):
-		err := f.Disconnect()
-		if err != nil {
-			log.Printf("Failed to disconnect from firmata after failing to connect: %s", err)
-		}
 		return nil, fmt.Errorf("Failed to connect to firmata")
 	}
 }
