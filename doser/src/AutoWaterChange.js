@@ -209,7 +209,7 @@ function Content({ awc, reload }) {
           <CardHeader title="History" />
           <Remaining
             awc_id={awc.id}
-            volume={awc.burn_down && awc.burn_down.pop().volume}
+            volume={awc.burn_down != null && awc.burn_down.pop().volume}
           />
           <CardContent>
             <Chart awc={awc} />
@@ -297,9 +297,9 @@ function Chart({ awc }) {
     >
       <VictoryLine
         interpolation="bundle"
-        data={awc.burn_down.map(({ timestamp, rate }) => ({
+        data={awc.burn_down.map(({ timestamp, volume }) => ({
           x: new Date(timestamp * 1000),
-          y: rate,
+          y: volume,
         }))}
       />
       <VictoryAxis />

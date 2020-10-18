@@ -217,6 +217,12 @@ func Migrate(db *sql.DB, driver string) (int, error) {
 					)`,
 				},
 			},
+			&migrate.Migration{
+				Id: "011 salinity_adjustment",
+				Up: []string{
+					`ALTER TABLE auto_water_changes ADD COLUMN salinity_adjustment REAL NOT NULL DEFAULT 0.0`,
+				},
+			},
 		},
 	}
 	return migrate.Exec(db, driver, migrations, migrate.Up)

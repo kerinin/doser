@@ -55,7 +55,8 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	var (
 		// Exchange rate is in L/day, stepper is in steps/sec
-		mlPerSecond = j.awc.ExchangeRate * 1000 / 24 / 60 / 60
+		freshMlPerSecond = (j.awc.ExchangeRate*1000 + j.awc.SalinityAdjustment) / 24 / 60 / 60
+		wasteMlPerSecond = (j.awc.ExchangeRate*1000 - j.awc.SalinityAdjustment) / 24 / 60 / 60
 	)
 
 	err := j.freshFirmata.StepperZero(int(j.freshPump.DeviceID))
@@ -73,13 +74,13 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	// Run first job immediately
 	jobCtx, _ := context.WithTimeout(ctx, 2*targetDurationSec*time.Second)
-	j.runJob(jobCtx, mlPerSecond)
+	j.runJob(jobCtx, freshMlPerSecond, wasteMlPerSecond)
 
 	for {
 		select {
 		case <-ticker.C:
 			jobCtx, _ := context.WithTimeout(ctx, 2*targetDurationSec*time.Second)
-			j.runJob(jobCtx, mlPerSecond)
+			j.runJob(jobCtx, freshMlPerSecond, wasteMlPerSecond)
 
 		case <-ctx.Done():
 			return
@@ -97,8 +98,8 @@ func (j *AWCJob) event(kind string, data string, args ...interface{}) {
 	}
 }
 
-func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
-	freshDone, status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, mlPerSecond)
+func (j *AWCJob) runJob(ctx context.Context, freshMlPerSecond, wasteMlPerSecond float64) {
+	freshDone, status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, freshMlPerSecond)
 	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
 		j.reset(err)
 		return
@@ -108,7 +109,7 @@ func (j *AWCJob) runJob(ctx context.Context, mlPerSecond float64) {
 		return
 	}
 
-	wasteDone, status, err := j.dose(ctx, "waste", j.wasteFirmata, j.wastePump, j.wasteCalibration, mlPerSecond)
+	wasteDone, status, err := j.dose(ctx, "waste", j.wasteFirmata, j.wastePump, j.wasteCalibration, wasteMlPerSecond)
 	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
 		j.reset(err)
 		return

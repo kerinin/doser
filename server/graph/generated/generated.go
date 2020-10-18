@@ -80,15 +80,16 @@ type ComplexityRoot struct {
 	}
 
 	AutoWaterChange struct {
-		BurnDown     func(childComplexity int) int
-		Enabled      func(childComplexity int) int
-		Events       func(childComplexity int) int
-		ExchangeRate func(childComplexity int) int
-		FillLevel    func(childComplexity int) int
-		FreshPump    func(childComplexity int) int
-		ID           func(childComplexity int) int
-		Name         func(childComplexity int) int
-		WastePump    func(childComplexity int) int
+		BurnDown           func(childComplexity int) int
+		Enabled            func(childComplexity int) int
+		Events             func(childComplexity int) int
+		ExchangeRate       func(childComplexity int) int
+		FillLevel          func(childComplexity int) int
+		FreshPump          func(childComplexity int) int
+		ID                 func(childComplexity int) int
+		Name               func(childComplexity int) int
+		SalinityAdjustment func(childComplexity int) int
+		WastePump          func(childComplexity int) int
 	}
 
 	AwcEvent struct {
@@ -132,7 +133,7 @@ type ComplexityRoot struct {
 	Mutation struct {
 		CalibratePump             func(childComplexity int, pumpID string, steps int, volume float64) int
 		CreateAutoTopOff          func(childComplexity int, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) int
-		CreateAutoWaterChange     func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) int
+		CreateAutoWaterChange     func(childComplexity int, freshPumpID string, wastePumpID string, exchangeRate float64, name *string, salinityAdjustment float64) int
 		CreateDoser               func(childComplexity int, input model.DoserInput, name *string) int
 		CreateFirmata             func(childComplexity int, serialPort string, baud int, name *string) int
 		CreatePump                func(childComplexity int, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) int
@@ -150,7 +151,7 @@ type ComplexityRoot struct {
 		SetAutoWaterChangeEnabled func(childComplexity int, id string, enabled bool) int
 		SetDoserEnabled           func(childComplexity int, id string, enabled bool) int
 		UpdateAutoTopOff          func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) int
-		UpdateAutoWaterChange     func(childComplexity int, id string, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) int
+		UpdateAutoWaterChange     func(childComplexity int, id string, freshPumpID *string, wastePumpID *string, exchangeRate *float64, name *string, salinityAdjustment *float64) int
 		UpdatePump                func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) int
 		UpdateWaterLevelSensor    func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool, name *string) int
 	}
@@ -243,8 +244,8 @@ type MutationResolver interface {
 	DeleteAutoTopOff(ctx context.Context, id string) (bool, error)
 	SetAutoTopOffEnabled(ctx context.Context, id string, enabled bool) (bool, error)
 	SetATOFillLevel(ctx context.Context, id string, volume float64) (*models.AutoTopOff, error)
-	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error)
-	UpdateAutoWaterChange(ctx context.Context, id string, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error)
+	CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string, salinityAdjustment float64) (*models.AutoWaterChange, error)
+	UpdateAutoWaterChange(ctx context.Context, id string, freshPumpID *string, wastePumpID *string, exchangeRate *float64, name *string, salinityAdjustment *float64) (*models.AutoWaterChange, error)
 	DeleteAutoWaterChange(ctx context.Context, id string) (bool, error)
 	SetAutoWaterChangeEnabled(ctx context.Context, id string, enabled bool) (bool, error)
 	SetAWCFillLevel(ctx context.Context, id string, volume float64) (*models.AutoWaterChange, error)
@@ -483,6 +484,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.AutoWaterChange.Name(childComplexity), true
 
+	case "AutoWaterChange.salinity_adjustment":
+		if e.complexity.AutoWaterChange.SalinityAdjustment == nil {
+			break
+		}
+
+		return e.complexity.AutoWaterChange.SalinityAdjustment(childComplexity), true
+
 	case "AutoWaterChange.waste_pump":
 		if e.complexity.AutoWaterChange.WastePump == nil {
 			break
@@ -664,7 +672,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateAutoWaterChange(childComplexity, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string)), true
+		return e.complexity.Mutation.CreateAutoWaterChange(childComplexity, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string), args["salinity_adjustment"].(float64)), true
 
 	case "Mutation.createDoser":
 		if e.complexity.Mutation.CreateDoser == nil {
@@ -880,7 +888,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Mutation.UpdateAutoWaterChange(childComplexity, args["id"].(string), args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string)), true
+		return e.complexity.Mutation.UpdateAutoWaterChange(childComplexity, args["id"].(string), args["fresh_pump_id"].(*string), args["waste_pump_id"].(*string), args["exchange_rate"].(*float64), args["name"].(*string), args["salinity_adjustment"].(*float64)), true
 
 	case "Mutation.updatePump":
 		if e.complexity.Mutation.UpdatePump == nil {
@@ -1315,6 +1323,8 @@ type AutoWaterChange {
   waste_pump: Pump!
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
   exchange_rate: Float!
+  # A volume in mL/day added to the fresh and subtracted from the waste volume.
+  salinity_adjustment: Float!
   enabled: Boolean!
 
   # The last-measured volume of salt water remaining
@@ -1373,8 +1383,8 @@ type Mutation {
   setAutoTopOffEnabled(id: ID!, enabled: Boolean!): Boolean!
   setATOFillLevel(id: ID!, volume: Float!): AutoTopOff!
 
-  createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
-  updateAutoWaterChange(id: ID!, fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
+  createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String, salinity_adjustment: Float!): AutoWaterChange!
+  updateAutoWaterChange(id: ID!, fresh_pump_id: ID, waste_pump_id: ID, exchange_rate: Float, name: String, salinity_adjustment: Float): AutoWaterChange!
   deleteAutoWaterChange(id: ID!): Boolean!
   setAutoWaterChangeEnabled(id: ID!, enabled: Boolean!): Boolean!
   setAWCFillLevel(id: ID!, volume: Float!): AutoWaterChange!
@@ -1549,6 +1559,15 @@ func (ec *executionContext) field_Mutation_createAutoWaterChange_args(ctx contex
 		}
 	}
 	args["name"] = arg3
+	var arg4 float64
+	if tmp, ok := rawArgs["salinity_adjustment"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("salinity_adjustment"))
+		arg4, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["salinity_adjustment"] = arg4
 	return args, nil
 }
 
@@ -2062,28 +2081,28 @@ func (ec *executionContext) field_Mutation_updateAutoWaterChange_args(ctx contex
 		}
 	}
 	args["id"] = arg0
-	var arg1 string
+	var arg1 *string
 	if tmp, ok := rawArgs["fresh_pump_id"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("fresh_pump_id"))
-		arg1, err = ec.unmarshalNID2string(ctx, tmp)
+		arg1, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["fresh_pump_id"] = arg1
-	var arg2 string
+	var arg2 *string
 	if tmp, ok := rawArgs["waste_pump_id"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("waste_pump_id"))
-		arg2, err = ec.unmarshalNID2string(ctx, tmp)
+		arg2, err = ec.unmarshalOID2ᚖstring(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
 	args["waste_pump_id"] = arg2
-	var arg3 float64
+	var arg3 *float64
 	if tmp, ok := rawArgs["exchange_rate"]; ok {
 		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("exchange_rate"))
-		arg3, err = ec.unmarshalNFloat2float64(ctx, tmp)
+		arg3, err = ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -2098,6 +2117,15 @@ func (ec *executionContext) field_Mutation_updateAutoWaterChange_args(ctx contex
 		}
 	}
 	args["name"] = arg4
+	var arg5 *float64
+	if tmp, ok := rawArgs["salinity_adjustment"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("salinity_adjustment"))
+		arg5, err = ec.unmarshalOFloat2ᚖfloat64(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["salinity_adjustment"] = arg5
 	return args, nil
 }
 
@@ -3083,6 +3111,40 @@ func (ec *executionContext) _AutoWaterChange_exchange_rate(ctx context.Context, 
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return obj.ExchangeRate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(float64)
+	fc.Result = res
+	return ec.marshalNFloat2float64(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _AutoWaterChange_salinity_adjustment(ctx context.Context, field graphql.CollectedField, obj *models.AutoWaterChange) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "AutoWaterChange",
+		Field:    field,
+		Args:     nil,
+		IsMethod: false,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SalinityAdjustment, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4489,7 +4551,7 @@ func (ec *executionContext) _Mutation_createAutoWaterChange(ctx context.Context,
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateAutoWaterChange(rctx, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string))
+		return ec.resolvers.Mutation().CreateAutoWaterChange(rctx, args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string), args["salinity_adjustment"].(float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4530,7 +4592,7 @@ func (ec *executionContext) _Mutation_updateAutoWaterChange(ctx context.Context,
 	fc.Args = args
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().UpdateAutoWaterChange(rctx, args["id"].(string), args["fresh_pump_id"].(string), args["waste_pump_id"].(string), args["exchange_rate"].(float64), args["name"].(*string))
+		return ec.resolvers.Mutation().UpdateAutoWaterChange(rctx, args["id"].(string), args["fresh_pump_id"].(*string), args["waste_pump_id"].(*string), args["exchange_rate"].(*float64), args["name"].(*string), args["salinity_adjustment"].(*float64))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7153,6 +7215,11 @@ func (ec *executionContext) _AutoWaterChange(ctx context.Context, sel ast.Select
 			})
 		case "exchange_rate":
 			out.Values[i] = ec._AutoWaterChange_exchange_rate(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
+		case "salinity_adjustment":
+			out.Values[i] = ec._AutoWaterChange_salinity_adjustment(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&invalids, 1)
 			}

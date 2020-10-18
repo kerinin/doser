@@ -144,6 +144,8 @@ type AutoWaterChange {
   waste_pump: Pump!
   # The rate in L/day to exchange (each pump will deliver this many liters each day)
   exchange_rate: Float!
+  # A volume in mL/day added to the fresh and subtracted from the waste volume.
+  salinity_adjustment: Float!
   enabled: Boolean!
 
   # The last-measured volume of salt water remaining
@@ -202,8 +204,8 @@ type Mutation {
   setAutoTopOffEnabled(id: ID!, enabled: Boolean!): Boolean!
   setATOFillLevel(id: ID!, volume: Float!): AutoTopOff!
 
-  createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
-  updateAutoWaterChange(id: ID!, fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String): AutoWaterChange!
+  createAutoWaterChange(fresh_pump_id: ID!, waste_pump_id: ID!, exchange_rate: Float!, name: String, salinity_adjustment: Float!): AutoWaterChange!
+  updateAutoWaterChange(id: ID!, fresh_pump_id: ID, waste_pump_id: ID, exchange_rate: Float, name: String, salinity_adjustment: Float): AutoWaterChange!
   deleteAutoWaterChange(id: ID!): Boolean!
   setAutoWaterChangeEnabled(id: ID!, enabled: Boolean!): Boolean!
   setAWCFillLevel(id: ID!, volume: Float!): AutoWaterChange!

@@ -608,7 +608,7 @@ func (r *mutationResolver) SetATOFillLevel(ctx context.Context, id string, volum
 	return m, nil
 }
 
-func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error) {
+func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpID string, wastePumpID string, exchangeRate float64, name *string, salinityAdjustment float64) (*models.AutoWaterChange, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -621,11 +621,12 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpI
 	}()
 
 	m := &models.AutoWaterChange{
-		ID:           uuid.New().String(),
-		FreshPumpID:  freshPumpID,
-		WastePumpID:  wastePumpID,
-		ExchangeRate: exchangeRate,
-		Name:         null.StringFromPtr(name),
+		ID:                 uuid.New().String(),
+		FreshPumpID:        freshPumpID,
+		WastePumpID:        wastePumpID,
+		ExchangeRate:       exchangeRate,
+		Name:               null.StringFromPtr(name),
+		SalinityAdjustment: salinityAdjustment,
 	}
 
 	err = validateAutoWaterChange(ctx, tx, m)
@@ -643,7 +644,7 @@ func (r *mutationResolver) CreateAutoWaterChange(ctx context.Context, freshPumpI
 	return m, nil
 }
 
-func (r *mutationResolver) UpdateAutoWaterChange(ctx context.Context, id string, freshPumpID string, wastePumpID string, exchangeRate float64, name *string) (*models.AutoWaterChange, error) {
+func (r *mutationResolver) UpdateAutoWaterChange(ctx context.Context, id string, freshPumpID *string, wastePumpID *string, exchangeRate *float64, name *string, salinityAdjustment *float64) (*models.AutoWaterChange, error) {
 	tx, err := r.db.Begin()
 	if err != nil {
 		return nil, fmt.Errorf("starting transaction: %w", err)
@@ -655,12 +656,29 @@ func (r *mutationResolver) UpdateAutoWaterChange(ctx context.Context, id string,
 		err = tx.Commit()
 	}()
 
+	columns := []string{}
 	m := &models.AutoWaterChange{
-		ID:           id,
-		FreshPumpID:  freshPumpID,
-		WastePumpID:  wastePumpID,
-		ExchangeRate: exchangeRate,
-		Name:         null.StringFromPtr(name),
+		ID: id,
+	}
+	if freshPumpID != nil {
+		m.FreshPumpID = *freshPumpID
+		columns = append(columns, models.AutoWaterChangeColumns.FreshPumpID)
+	}
+	if wastePumpID != nil {
+		m.WastePumpID = *wastePumpID
+		columns = append(columns, models.AutoWaterChangeColumns.WastePumpID)
+	}
+	if exchangeRate != nil {
+		m.ExchangeRate = *exchangeRate
+		columns = append(columns, models.AutoWaterChangeColumns.ExchangeRate)
+	}
+	if name != nil {
+		m.Name = null.StringFromPtr(name)
+		columns = append(columns, models.AutoWaterChangeColumns.Name)
+	}
+	if salinityAdjustment != nil {
+		m.SalinityAdjustment = *salinityAdjustment
+		columns = append(columns, models.AutoWaterChangeColumns.SalinityAdjustment)
 	}
 
 	err = validateAutoWaterChange(ctx, tx, m)
@@ -668,12 +686,7 @@ func (r *mutationResolver) UpdateAutoWaterChange(ctx context.Context, id string,
 		return nil, fmt.Errorf("validating auto top off: %w", err)
 	}
 
-	_, err = m.Update(ctx, tx, boil.Whitelist(
-		models.AutoWaterChangeColumns.FreshPumpID,
-		models.AutoWaterChangeColumns.WastePumpID,
-		models.AutoWaterChangeColumns.ExchangeRate,
-		models.AutoWaterChangeColumns.Name,
-	))
+	_, err = m.Update(ctx, tx, boil.Whitelist(columns...))
 	if err != nil {
 		return nil, fmt.Errorf("updating auto water change: %w", err)
 	}

@@ -31,6 +31,7 @@ type AutoWaterChange struct {
 	Name               null.String  `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
 	FillLevelTimestamp null.Int64   `boil:"fill_level_timestamp" json:"fill_level_timestamp,omitempty" toml:"fill_level_timestamp" yaml:"fill_level_timestamp,omitempty"`
 	FillLevelVolume    null.Float64 `boil:"fill_level_volume" json:"fill_level_volume,omitempty" toml:"fill_level_volume" yaml:"fill_level_volume,omitempty"`
+	SalinityAdjustment float64      `boil:"salinity_adjustment" json:"salinity_adjustment" toml:"salinity_adjustment" yaml:"salinity_adjustment"`
 
 	R *autoWaterChangeR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L autoWaterChangeL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -45,6 +46,7 @@ var AutoWaterChangeColumns = struct {
 	Name               string
 	FillLevelTimestamp string
 	FillLevelVolume    string
+	SalinityAdjustment string
 }{
 	ID:                 "id",
 	FreshPumpID:        "fresh_pump_id",
@@ -54,6 +56,7 @@ var AutoWaterChangeColumns = struct {
 	Name:               "name",
 	FillLevelTimestamp: "fill_level_timestamp",
 	FillLevelVolume:    "fill_level_volume",
+	SalinityAdjustment: "salinity_adjustment",
 }
 
 // Generated where
@@ -67,6 +70,7 @@ var AutoWaterChangeWhere = struct {
 	Name               whereHelpernull_String
 	FillLevelTimestamp whereHelpernull_Int64
 	FillLevelVolume    whereHelpernull_Float64
+	SalinityAdjustment whereHelperfloat64
 }{
 	ID:                 whereHelperstring{field: "\"auto_water_changes\".\"id\""},
 	FreshPumpID:        whereHelperstring{field: "\"auto_water_changes\".\"fresh_pump_id\""},
@@ -76,6 +80,7 @@ var AutoWaterChangeWhere = struct {
 	Name:               whereHelpernull_String{field: "\"auto_water_changes\".\"name\""},
 	FillLevelTimestamp: whereHelpernull_Int64{field: "\"auto_water_changes\".\"fill_level_timestamp\""},
 	FillLevelVolume:    whereHelpernull_Float64{field: "\"auto_water_changes\".\"fill_level_volume\""},
+	SalinityAdjustment: whereHelperfloat64{field: "\"auto_water_changes\".\"salinity_adjustment\""},
 }
 
 // AutoWaterChangeRels is where relationship names are stored.
@@ -105,9 +110,9 @@ func (*autoWaterChangeR) NewStruct() *autoWaterChangeR {
 type autoWaterChangeL struct{}
 
 var (
-	autoWaterChangeAllColumns            = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "enabled", "name", "fill_level_timestamp", "fill_level_volume"}
+	autoWaterChangeAllColumns            = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "enabled", "name", "fill_level_timestamp", "fill_level_volume", "salinity_adjustment"}
 	autoWaterChangeColumnsWithoutDefault = []string{"id", "fresh_pump_id", "waste_pump_id", "exchange_rate", "name", "fill_level_timestamp", "fill_level_volume"}
-	autoWaterChangeColumnsWithDefault    = []string{"enabled"}
+	autoWaterChangeColumnsWithDefault    = []string{"enabled", "salinity_adjustment"}
 	autoWaterChangePrimaryKeyColumns     = []string{"id"}
 )
 
