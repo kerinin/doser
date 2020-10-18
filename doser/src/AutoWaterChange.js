@@ -87,6 +87,7 @@ const QUERY = `query GetAutoWaterChange($id: ID!) {
           id
         }
         exchange_rate
+        salinity_adjustment
         burn_down {
           timestamp
           volume
@@ -94,12 +95,13 @@ const QUERY = `query GetAutoWaterChange($id: ID!) {
     }
 }`;
 
-const EDIT = `mutation EditAutoWaterChange($id: ID!, $fresh_pump_id: ID!, $waste_pump_id: ID!, $exchange_rate: Float!) {
+const EDIT = `mutation EditAutoWaterChange($id: ID!, $fresh_pump_id: ID!, $waste_pump_id: ID!, $exchange_rate: Float!, $salinity_adjustment: Float!) {
     updateAutoWaterChange(
         id: $id,
         fresh_pump_id: $fresh_pump_id,
         waste_pump_id: $waste_pump_id,
         exchange_rate: $exchange_rate,
+        salinity_adjustment: $salinity_adjustment,
     ) {
         id
     }
@@ -165,6 +167,9 @@ function Content({ awc, reload }) {
   const [freshPump, setFreshPump] = React.useState(awc.fresh_pump.id);
   const [wastePump, setWastePump] = React.useState(awc.waste_pump.id);
   const [exchangeRate, setExchangeRate] = React.useState(awc.exchange_rate);
+  const [salinityAdjustment, setSalinityAdjustment] = React.useState(
+    awc.salinity_adjustment
+  );
 
   function cancel() {
     setFreshPump(awc.fresh_pump.id);
@@ -178,6 +183,7 @@ function Content({ awc, reload }) {
         fresh_pump_id: freshPump,
         waste_pump_id: wastePump,
         exchange_rate: exchangeRate,
+        salinity_adjustment: salinityAdjustment,
       },
     }).then(({ error }) => {
       if (!error) reload();
@@ -191,6 +197,8 @@ function Content({ awc, reload }) {
     setWastePump,
     exchangeRate,
     setExchangeRate,
+    salinityAdjustment,
+    setSalinityAdjustment,
     cancel,
     submit,
     error,

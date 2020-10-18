@@ -103,6 +103,15 @@ function Content() {
               onChange={(e) => api.setExchangeRate(e.target.value)}
             />
           </FormControl>
+          <FormControl className={classes.formControl}>
+            <TextField
+              id="input-salinity-adjustment"
+              label="Salinity Adjustment"
+              helperText="mL/day"
+              value={api.salinityAdjustment}
+              onChange={(e) => api.setSalinityAdjustment(e.target.value)}
+            />
+          </FormControl>
         </Grid>
       </Grid>
     </CardContent>
