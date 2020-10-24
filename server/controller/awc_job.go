@@ -73,14 +73,16 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer ticker.Stop()
 
 	// Run first job immediately
-	jobCtx, _ := context.WithTimeout(ctx, 2*targetDurationSec*time.Second)
+	jobCtx, jobCancel := context.WithTimeout(ctx, 2*targetDurationSec*time.Second)
 	j.runJob(jobCtx, freshMlPerSecond, wasteMlPerSecond)
+	jobCancel()
 
 	for {
 		select {
 		case <-ticker.C:
-			jobCtx, _ := context.WithTimeout(ctx, 2*targetDurationSec*time.Second)
+			jobCtx, jobCancel := context.WithTimeout(ctx, 2*targetDurationSec*time.Second)
 			j.runJob(jobCtx, freshMlPerSecond, wasteMlPerSecond)
+			jobCancel()
 
 		case <-ctx.Done():
 			return
@@ -106,6 +108,9 @@ func (j *AWCJob) runJob(ctx context.Context, freshMlPerSecond, wasteMlPerSecond 
 	}
 	if err != nil {
 		j.event(status, err.Error())
+		if errors.Is(err, gomata.ErrNotConnected) {
+			j.controller.Reset()
+		}
 		return
 	}
 

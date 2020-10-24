@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -62,14 +63,16 @@ func (j *ATOJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 	defer ticker.Stop()
 
 	// Run first job immediately
-	jobCtx, _ := context.WithTimeout(ctx, interval)
+	jobCtx, jobCancel := context.WithTimeout(ctx, interval)
 	j.runJob(jobCtx, maxSteps, speed)
+	jobCancel()
 
 	for {
 		select {
 		case <-ticker.C:
-			jobCtx, _ := context.WithTimeout(ctx, interval)
+			jobCtx, jobCancel := context.WithTimeout(ctx, interval)
 			j.runJob(jobCtx, maxSteps, speed)
+			jobCancel()
 		case <-ctx.Done():
 			return
 		}
@@ -91,7 +94,7 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 	rpi := raspi.NewAdaptor()
 	err := rpi.Connect()
 	if err != nil {
-		j.event(ATOJobErrorKind, "Failure connecting to  RPi (aborting job run): %w", err)
+		j.event(ATOJobErrorKind, "Failure connecting to  RPi (aborting job run): %s", err)
 		return
 	}
 
@@ -111,28 +114,31 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 
 	err = j.firmata.StepperZero(int(j.pump.DeviceID))
 	if err != nil {
-		j.event(ATOJobErrorKind, "Failure zeroing stepper (aborting job run): %w", err)
+		j.event(ATOJobErrorKind, "Failure zeroing stepper (aborting job run): %s", err)
+		if errors.Is(err, gomata.ErrNotConnected) {
+			j.controller.Reset()
+		}
 		return
 	}
 
 	if j.pump.Acceleration.Valid {
 		err = j.firmata.StepperSetAcceleration(int(j.pump.DeviceID), float32(j.pump.Acceleration.Float64))
 		if err != nil {
-			j.event(ATOJobErrorKind, "Failure setting pump speed: %w", err)
+			j.event(ATOJobErrorKind, "Failure setting pump speed: %s", err)
 			return
 		}
 	}
 
 	err = j.firmata.StepperSetSpeed(int(j.pump.DeviceID), float32(speed))
 	if err != nil {
-		j.event(ATOJobErrorKind, "Failure setting pump speed (aborting job run): %w", err)
+		j.event(ATOJobErrorKind, "Failure setting pump speed (aborting job run): %s", err)
 		return
 	}
 
 	// Command the stepper to pump the maximum fill volume (we'll interrupt it when a sensor is triggered)
 	err = j.firmata.StepperStep(int(j.pump.DeviceID), int32(maxSteps))
 	if err != nil {
-		j.event(ATOJobErrorKind, "Failure stepping pump (aborting job run): %w", err)
+		j.event(ATOJobErrorKind, "Failure stepping pump (aborting job run): %s", err)
 		return
 	}
 
@@ -151,7 +157,7 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 				// Read the sensor's current value
 				detected, err := WaterDetected(ctx, rpi, j.controller.firmatas, sensor)
 				if err != nil {
-					j.event(ATOJobErrorKind, "Failure reading water level sensor: %w", err)
+					j.event(ATOJobErrorKind, "Failure reading water level sensor: %s", err)
 					return
 				}
 				if !detected {
@@ -164,7 +170,7 @@ func (j *ATOJob) runJob(ctx context.Context, maxSteps, speed int32) {
 
 				err = j.firmata.StepperStop(int(j.pump.DeviceID))
 				if err != nil {
-					j.event(UncontrolledPumpKind, "Failure stopping pump %s after sensor detected water: %w", j.pump.ID, err)
+					j.event(UncontrolledPumpKind, "Failure stopping pump %s after sensor detected water: %s", j.pump.ID, err)
 					return
 				}
 
@@ -217,7 +223,7 @@ func (j *ATOJob) recordDose(ctx context.Context, volume float64, message string,
 	}
 	err := dose.Insert(ctx, j.controller.db, boil.Infer())
 	if err != nil {
-		j.event(ATOJobErrorKind, "Failure to insert dose: %w", err)
+		j.event(ATOJobErrorKind, "Failure to insert dose: %s", err)
 	}
 }
 
