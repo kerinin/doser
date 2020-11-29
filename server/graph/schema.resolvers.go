@@ -276,6 +276,47 @@ func (r *mutationResolver) CreateFirmata(ctx context.Context, serialPort string,
 	return m, nil
 }
 
+func (r *mutationResolver) UpdateFirmata(ctx context.Context, id string, serialPort *string, baud *int, name *string) (*models.Firmata, error) {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+		err = tx.Commit()
+	}()
+
+	columns := []string{}
+	m := &models.Firmata{
+		ID: id,
+	}
+	if serialPort != nil {
+		m.SerialPort = *serialPort
+		columns = append(columns, models.FirmataColumns.SerialPort)
+	}
+	if baud != nil {
+		m.Baud = int64(*baud)
+		columns = append(columns, models.FirmataColumns.Baud)
+	}
+	if name != nil {
+		m.Name = null.StringFromPtr(name)
+		columns = append(columns, models.FirmataColumns.Name)
+	}
+
+	_, err = m.Update(ctx, tx, boil.Whitelist(columns...))
+	if err != nil {
+		return nil, fmt.Errorf("inserting auto top off: %w", err)
+	}
+
+	r.atoController.Reset()
+	r.awcController.Reset()
+	r.firmatasController.Reset()
+
+	return m, nil
+}
+
 func (r *mutationResolver) DeleteFirmata(ctx context.Context, id string) (bool, error) {
 	f := &models.Firmata{ID: id}
 	rows, err := f.Delete(ctx, r.db)

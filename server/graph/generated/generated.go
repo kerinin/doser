@@ -152,6 +152,7 @@ type ComplexityRoot struct {
 		SetDoserEnabled           func(childComplexity int, id string, enabled bool) int
 		UpdateAutoTopOff          func(childComplexity int, id string, pumpID string, levelSensors []string, fillRate float64, fillInterval int, maxFillVolume float64, name *string) int
 		UpdateAutoWaterChange     func(childComplexity int, id string, freshPumpID *string, wastePumpID *string, exchangeRate *float64, name *string, salinityAdjustment *float64) int
+		UpdateFirmata             func(childComplexity int, id string, serialPort *string, baud *int, name *string) int
 		UpdatePump                func(childComplexity int, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) int
 		UpdateWaterLevelSensor    func(childComplexity int, id string, pin int, kind model.SensorKind, firmataID *string, detectionThreshold *int, invert bool, name *string) int
 	}
@@ -231,6 +232,7 @@ type FirmataResolver interface {
 }
 type MutationResolver interface {
 	CreateFirmata(ctx context.Context, serialPort string, baud int, name *string) (*models.Firmata, error)
+	UpdateFirmata(ctx context.Context, id string, serialPort *string, baud *int, name *string) (*models.Firmata, error)
 	DeleteFirmata(ctx context.Context, id string) (bool, error)
 	CreatePump(ctx context.Context, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) (*models.Pump, error)
 	UpdatePump(ctx context.Context, id string, firmataID string, deviceID int, stepPin int, dirPin *int, enPin *int, acceleration *float64, name *string) (*models.Pump, error)
@@ -890,6 +892,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.UpdateAutoWaterChange(childComplexity, args["id"].(string), args["fresh_pump_id"].(*string), args["waste_pump_id"].(*string), args["exchange_rate"].(*float64), args["name"].(*string), args["salinity_adjustment"].(*float64)), true
 
+	case "Mutation.updateFirmata":
+		if e.complexity.Mutation.UpdateFirmata == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateFirmata_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateFirmata(childComplexity, args["id"].(string), args["serial_port"].(*string), args["baud"].(*int), args["name"].(*string)), true
+
 	case "Mutation.updatePump":
 		if e.complexity.Mutation.UpdatePump == nil {
 			break
@@ -1365,6 +1379,7 @@ type AwcEvent {
 
 type Mutation {
   createFirmata(serial_port: String!, baud: Int!, name: String): Firmata!
+  updateFirmata(id: ID!, serial_port: String, baud: Int, name: String): Firmata!
   deleteFirmata(id: ID!): Boolean!
 
   createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float, name: String): Pump!
@@ -2126,6 +2141,48 @@ func (ec *executionContext) field_Mutation_updateAutoWaterChange_args(ctx contex
 		}
 	}
 	args["salinity_adjustment"] = arg5
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateFirmata_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["serial_port"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("serial_port"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["serial_port"] = arg1
+	var arg2 *int
+	if tmp, ok := rawArgs["baud"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("baud"))
+		arg2, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["baud"] = arg2
+	var arg3 *string
+	if tmp, ok := rawArgs["name"]; ok {
+		ctx := graphql.WithFieldInputContext(ctx, graphql.NewFieldInputWithField("name"))
+		arg3, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["name"] = arg3
 	return args, nil
 }
 
@@ -3978,6 +4035,47 @@ func (ec *executionContext) _Mutation_createFirmata(ctx context.Context, field g
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
 		return ec.resolvers.Mutation().CreateFirmata(rctx, args["serial_port"].(string), args["baud"].(int), args["name"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*models.Firmata)
+	fc.Result = res
+	return ec.marshalNFirmata2ᚖgithubᚗcomᚋkerininᚋdoserᚋserviceᚋmodelsᚐFirmata(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) _Mutation_updateFirmata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	fc := &graphql.FieldContext{
+		Object:   "Mutation",
+		Field:    field,
+		Args:     nil,
+		IsMethod: true,
+	}
+
+	ctx = graphql.WithFieldContext(ctx, fc)
+	rawArgs := field.ArgumentMap(ec.Variables)
+	args, err := ec.field_Mutation_updateFirmata_args(ctx, rawArgs)
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	fc.Args = args
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateFirmata(rctx, args["id"].(string), args["serial_port"].(*string), args["baud"].(*int), args["name"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -7560,6 +7658,11 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			out.Values[i] = graphql.MarshalString("Mutation")
 		case "createFirmata":
 			out.Values[i] = ec._Mutation_createFirmata(ctx, field)
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "updateFirmata":
+			out.Values[i] = ec._Mutation_updateFirmata(ctx, field)
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}

@@ -186,6 +186,7 @@ type AwcEvent {
 
 type Mutation {
   createFirmata(serial_port: String!, baud: Int!, name: String): Firmata!
+  updateFirmata(id: ID!, serial_port: String, baud: Int, name: String): Firmata!
   deleteFirmata(id: ID!): Boolean!
 
   createPump(firmata_id: ID!, device_ID: Int!, step_pin: Int!, dir_pin: Int, en_pin: Int, acceleration: Float, name: String): Pump!
