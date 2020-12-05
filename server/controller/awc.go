@@ -40,7 +40,7 @@ func (c *AWC) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	jobs, err := c.setupJobs(ctx, wg)
 	if err != nil {
-		log.Printf("Failed to create initial AWC jobs: %s", err)
+		panic(fmt.Sprintf("Failed to create initial AWC jobs: %s", err))
 	}
 
 	for {
