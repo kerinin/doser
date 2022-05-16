@@ -59,6 +59,14 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 		wasteMlPerSecond = (j.awc.ExchangeRate*1000 - j.awc.SalinityAdjustment) / 24 / 60 / 60
 	)
 
+	// Handle salinity adjustment greater than the change amount gracefully
+	if freshMlPerSecond < 0 {
+		freshMlPerSecond = 0
+	}
+	if wasteMlPerSecond < 0 {
+		wasteMlPerSecond = 0
+	}
+
 	err := j.freshFirmata.StepperZero(int(j.freshPump.DeviceID))
 	if err != nil {
 		j.reset(err)
