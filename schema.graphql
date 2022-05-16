@@ -124,6 +124,7 @@ type AutoTopOff {
   # The volume of fresh water over time since the last-measured volume
   burn_down: [FillLevel!]
 
+  # Events over the past month
   events: [AtoEvent!]
   # Window specifies the number of seconds over which to compute rates. 
   # Defaults to 3600 (1 hour)
@@ -153,6 +154,7 @@ type AutoWaterChange {
   # The volume of waste water over time since the last-measured volume
   burn_down: [FillLevel!]
 
+  # Events over the past month
   events: [AwcEvent!]
 }
 
