@@ -61,6 +61,7 @@ func (r *autoTopOffResolver) BurnDown(ctx context.Context, obj *models.AutoTopOf
 	p := &models.Pump{ID: obj.PumpID}
 	doses, err := p.Doses(
 		models.DoseWhere.Timestamp.GT(obj.FillLevelTimestamp.Int64),
+		qm.Limit(100),
 	).All(ctx, r.db)
 	if err != nil {
 		return nil, fmt.Errorf("getting pump doses: %w", err)
@@ -94,7 +95,10 @@ func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff)
 
 func (r *autoTopOffResolver) Rate(ctx context.Context, obj *models.AutoTopOff, window *int) ([]*model.AtoRate, error) {
 	pump := &models.Pump{ID: obj.PumpID}
-	doses, err := pump.Doses(qm.OrderBy(models.DoseColumns.Timestamp)).All(ctx, r.db)
+	doses, err := pump.Doses(
+		qm.OrderBy(models.DoseColumns.Timestamp),
+		qm.Limit(100),
+	).All(ctx, r.db)
 	if err != nil {
 		return nil, fmt.Errorf("getting dose history: %w", err)
 	}
@@ -185,6 +189,7 @@ func (r *autoWaterChangeResolver) BurnDown(ctx context.Context, obj *models.Auto
 	p := &models.Pump{ID: obj.FreshPumpID}
 	doses, err := p.Doses(
 		models.DoseWhere.Timestamp.GT(obj.FillLevelTimestamp.Int64),
+		qm.Limit(100),
 	).All(ctx, r.db)
 	if err != nil {
 		return nil, fmt.Errorf("getting pump doses: %w", err)
@@ -903,7 +908,9 @@ func (r *pumpResolver) Acceleration(ctx context.Context, obj *models.Pump) (*flo
 }
 
 func (r *pumpResolver) History(ctx context.Context, obj *models.Pump) ([]*models.Dose, error) {
-	doses, err := obj.Doses().All(ctx, r.db)
+	doses, err := obj.Doses(
+		qm.Limit(100),
+	).All(ctx, r.db)
 	if err != nil {
 		return nil, fmt.Errorf("getting dose history: %w", err)
 	}
