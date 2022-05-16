@@ -80,8 +80,10 @@ func (r *autoTopOffResolver) BurnDown(ctx context.Context, obj *models.AutoTopOf
 }
 
 func (r *autoTopOffResolver) Events(ctx context.Context, obj *models.AutoTopOff) ([]*models.AtoEvent, error) {
+	// limit to last week
 	events, err := obj.AtoEvents(
-		models.AtoEventWhere.Timestamp.GT(time.Now().AddDate(0, -1, 0).Unix()),
+		models.AtoEventWhere.Timestamp.GT(time.Now().AddDate(0, 0, -7).Unix()),
+		qm.Limit(100),
 	).All(ctx, r.db)
 	if err != nil {
 		return nil, fmt.Errorf("getting ATO events: %w", err)
@@ -203,7 +205,8 @@ func (r *autoWaterChangeResolver) BurnDown(ctx context.Context, obj *models.Auto
 
 func (r *autoWaterChangeResolver) Events(ctx context.Context, obj *models.AutoWaterChange) ([]*models.AwcEvent, error) {
 	events, err := obj.AwcEvents(
-		models.AtoEventWhere.Timestamp.GT(time.Now().AddDate(0, -1, 0).Unix()),
+		models.AtoEventWhere.Timestamp.GT(time.Now().AddDate(0, 0, -7).Unix()),
+		qm.Limit(100),
 	).All(ctx, r.db)
 	if err != nil {
 		return nil, fmt.Errorf("getting AWC events: %w", err)

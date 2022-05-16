@@ -22,3 +22,27 @@ Set of pumps that always run at different times.
 Configurable dose rate for each pump (mL/day)
 Each pump adds a specific additive.
 Eventually the dosing rate could be driven by an automated tester.
+
+## Installing
+
+SSH into the rpi
+
+```sh
+ssh rpi
+```
+
+Build and install the server
+
+```sh
+cd ~/doser
+git pull https://github.com/kerinin/doser.git
+cd server/cmd/doser
+go install
+```
+
+
+Restart the daemon and make sure it starts OK
+
+```sh
+sudo systemctl restart doser && sudo journalctl -u doser -f
+```
