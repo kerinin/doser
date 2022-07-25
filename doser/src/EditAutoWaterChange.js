@@ -107,7 +107,7 @@ function Content() {
             <TextField
               id="input-salinity-adjustment"
               label="Salinity Adjustment"
-              helperText="mL/day"
+              helperText="mL/day added to waste exchange rate - positive values reduce salinity by replacing tank water with ATO water."
               value={api.salinityAdjustment}
               onChange={(e) => api.setSalinityAdjustment(e.target.value)}
             />
