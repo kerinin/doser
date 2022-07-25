@@ -55,7 +55,8 @@ func (j *AWCJob) Run(ctx context.Context, wg *sync.WaitGroup) {
 
 	var (
 		// Exchange rate is in L/day, stepper is in steps/sec
-		freshMlPerSecond = (j.awc.ExchangeRate*1000 + j.awc.SalinityAdjustment) / 24 / 60 / 60
+		freshMlPerSecond = j.awc.ExchangeRate * 1000 / 24 / 60 / 60
+		// Change waste rate to adjust salinity
 		wasteMlPerSecond = (j.awc.ExchangeRate*1000 - j.awc.SalinityAdjustment) / 24 / 60 / 60
 	)
 

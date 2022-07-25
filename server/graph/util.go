@@ -45,6 +45,14 @@ func validateAutoTopOff(ctx context.Context, tx *sql.Tx, ato *models.AutoTopOff,
 }
 
 func validateAutoWaterChange(ctx context.Context, tx *sql.Tx, awc *models.AutoWaterChange) error {
+	if awc.ExchangeRate < 0 {
+		return fmt.Errorf("Exchange rate must be positive")
+	}
+
+	if (awc.ExchangeRate*1000)-awc.SalinityAdjustment < 0 {
+		return fmt.Errorf("Salinity adjustment would produce negative waste water pump rate")
+	}
+
 	freshPump, err := models.FindPump(ctx, tx, awc.FreshPumpID)
 	if err != nil {
 		return fmt.Errorf("finding fresh pump: %w", err)
