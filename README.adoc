@@ -40,6 +40,12 @@ cd server/cmd/doser
 go install
 ```
 
+Install the service
+
+```sh
+sudo cp server/doser.service /lib/systemd/system/
+sudo systemctl start doser.service
+```
 
 Restart the daemon and make sure it starts OK
 
