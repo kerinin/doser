@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/kerinin/doser/service/models"
 	"github.com/volatiletech/sqlboiler/v4/boil"
@@ -84,6 +85,11 @@ func (c *ATO) writeEvents(ctx context.Context, wg *sync.WaitGroup) {
 				log.Printf("Failed to persist ATO event %+v: %w", event, err)
 			} else {
 				log.Printf("ATO Event: %+v", event)
+			}
+
+			_, err = models.AtoEvents(models.AtoEventWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix())).DeleteAll(ctx, c.db)
+			if err != nil {
+				log.Printf("Failed to cleanup ATO events: %s", err)
 			}
 		case <-ctx.Done():
 			return

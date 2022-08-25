@@ -232,6 +232,12 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 	if err != nil {
 		j.event(AWCJobErrorKind, "Failure to insert dose: %s", err)
 	}
+
+	_, err = models.Doses(models.DoseWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix())).DeleteAll(ctx, j.controller.db)
+	if err != nil {
+		j.event(AWCJobErrorKind, "Failure to cleanup doses: %s", err)
+	}
+
 	log.Printf("%s pumped %fmL", pump.Name.String, volume)
 }
 

@@ -225,6 +225,11 @@ func (j *ATOJob) recordDose(ctx context.Context, volume float64, message string,
 	if err != nil {
 		j.event(ATOJobErrorKind, "Failure to insert dose: %s", err)
 	}
+
+	_, err = models.Doses(models.DoseWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix())).DeleteAll(ctx, j.controller.db)
+	if err != nil {
+		j.event(ATOJobErrorKind, "Failure to cleanup doses: %s", err)
+	}
 }
 
 func (j *ATOJob) reset() {
