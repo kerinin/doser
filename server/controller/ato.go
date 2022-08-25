@@ -87,7 +87,7 @@ func (c *ATO) writeEvents(ctx context.Context, wg *sync.WaitGroup) {
 				log.Printf("ATO Event: %+v", event)
 			}
 
-			_, err = models.AtoEvents(models.AtoEventWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix())).DeleteAll(ctx, c.db)
+			_, err = models.AtoEvents(models.AtoEventWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix()), qm.Limit(10000)).DeleteAll(ctx, c.db)
 			if err != nil {
 				log.Printf("Failed to cleanup ATO events: %s", err)
 			}

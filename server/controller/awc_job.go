@@ -14,6 +14,7 @@ import (
 	"github.com/kerinin/gomata"
 	null "github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
+	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 )
 
 const targetDurationSec = 30
@@ -233,7 +234,7 @@ func (j *AWCJob) recordDose(ctx context.Context, pump *models.Pump, volume float
 		j.event(AWCJobErrorKind, "Failure to insert dose: %s", err)
 	}
 
-	_, err = models.Doses(models.DoseWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix())).DeleteAll(ctx, j.controller.db)
+	_, err = models.Doses(models.DoseWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix()), qm.Limit(10000)).DeleteAll(ctx, j.controller.db)
 	if err != nil {
 		j.event(AWCJobErrorKind, "Failure to cleanup doses: %s", err)
 	}

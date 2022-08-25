@@ -87,7 +87,7 @@ func (c *AWC) writeEvents(ctx context.Context, wg *sync.WaitGroup) {
 				log.Printf("AWC Event: %+v", event)
 			}
 
-			_, err = models.AwcEvents(models.AwcEventWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix())).DeleteAll(ctx, c.db)
+			_, err = models.AwcEvents(models.AwcEventWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix()), qm.Limit(10000)).DeleteAll(ctx, c.db)
 			if err != nil {
 				log.Printf("Failed to cleanup AWC events: %s", err)
 			}
