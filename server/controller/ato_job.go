@@ -14,7 +14,6 @@ import (
 	"github.com/kerinin/gomata"
 	null "github.com/volatiletech/null/v8"
 	"github.com/volatiletech/sqlboiler/v4/boil"
-	"github.com/volatiletech/sqlboiler/v4/queries/qm"
 	"gobot.io/x/gobot/platforms/raspi"
 )
 
@@ -227,7 +226,7 @@ func (j *ATOJob) recordDose(ctx context.Context, volume float64, message string,
 		j.event(ATOJobErrorKind, "Failure to insert dose: %s", err)
 	}
 
-	_, err = models.Doses(models.DoseWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix()), qm.Limit(10000)).DeleteAll(ctx, j.controller.db)
+	_, err = models.Doses(models.DoseWhere.Timestamp.LT(time.Now().Add(-90*24*time.Hour).Unix())).DeleteAll(ctx, j.controller.db)
 	if err != nil {
 		j.event(ATOJobErrorKind, "Failure to cleanup doses: %s", err)
 	}
