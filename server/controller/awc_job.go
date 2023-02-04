@@ -111,15 +111,8 @@ func (j *AWCJob) event(kind string, data string, args ...interface{}) {
 
 func (j *AWCJob) runJob(ctx context.Context, freshMlPerSecond, wasteMlPerSecond float64) {
 	freshDone, status, err := j.dose(ctx, "fresh", j.freshFirmata, j.freshPump, j.freshCalibration, freshMlPerSecond)
-	if err == context.DeadlineExceeded || errors.Is(err, io.EOF) {
-		j.reset(err)
-		return
-	}
 	if err != nil {
-		j.event(status, err.Error())
-		if errors.Is(err, gomata.ErrNotConnected) {
-			j.controller.Reset()
-		}
+		j.reset(err)
 		return
 	}
 
